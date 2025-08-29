@@ -145,7 +145,9 @@
             
             // Load from localStorage on component mount
             useEffect(() => {
-                // Try to load the new unified state first
+                let dataLoaded = false;
+                
+                // Try to load the primary state
                 const savedState = localStorage.getItem('dashBashState');
                 if (savedState) {
                     try {
@@ -154,23 +156,73 @@
                         setPrices(state.prices || []);
                         setMessages(state.messages || messages);
                         setCategories(state.categories || []);
+                        dataLoaded = true;
+                        console.log('Data loaded from primary storage');
                     } catch (e) {
                         console.error('Error loading saved state:', e);
                     }
-                } else {
-                    // Fallback to old addressBookCategories for backward compatibility
+                }
+                
+                // Try backup if primary failed
+                if (!dataLoaded) {
+                    const backupState = localStorage.getItem('dashBashStateBackup');
+                    if (backupState) {
+                        try {
+                            const state = JSON.parse(backupState);
+                            setTarget(state.target || '120');
+                            setPrices(state.prices || []);
+                            setMessages(state.messages || messages);
+                            setCategories(state.categories || []);
+                            dataLoaded = true;
+                            console.log('Data loaded from backup storage');
+                        } catch (e) {
+                            console.error('Error loading backup state:', e);
+                        }
+                    }
+                }
+                
+                // Fallback to old addressBookCategories for backward compatibility
+                if (!dataLoaded) {
                     const savedCategories = localStorage.getItem('addressBookCategories');
                     if (savedCategories) {
                         try {
                             setCategories(JSON.parse(savedCategories));
+                            console.log('Data loaded from legacy storage');
                         } catch (e) {
                             console.error('Error loading saved categories:', e);
                         }
                     }
                 }
+                
                 lucide.createIcons();
             }, []);
             
+            // Auto-save functionality - saves whenever data changes
+            useEffect(() => {
+                // Skip the very first render to avoid saving empty state
+                const hasData = categories.length > 0 || prices.length > 0 || 
+                               (messages.length > 0 && messages.some(m => m !== messages[0]));
+                
+                if (hasData || target !== '120') {
+                    try {
+                        const state = {
+                            target,
+                            prices,
+                            messages,
+                            categories,
+                            timestamp: new Date().toISOString(),
+                            version: '2.0'
+                        };
+                        localStorage.setItem('dashBashState', JSON.stringify(state));
+                        // Also save to backup key for redundancy
+                        localStorage.setItem('dashBashStateBackup', JSON.stringify(state));
+                        console.log('Auto-saved at', new Date().toLocaleTimeString());
+                    } catch (e) {
+                        console.error('Auto-save failed:', e);
+                    }
+                }
+            }, [target, prices, messages, categories]);
+
             // Update current time every minute
             useEffect(() => {
                 const interval = setInterval(() => {
@@ -1282,6 +1334,13 @@
                                         {/* Save/Load Section */}
                                         <div className="space-y-2">
                                             <h3 className="text-sm font-medium text-gray-300 mb-2">Local Storage</h3>
+                                            <div className="bg-green-900/30 border border-green-800 rounded-lg px-3 py-2 mb-2">
+                                                <div className="flex items-center gap-2 text-green-400 text-xs">
+                                                    <Icon name="check-circle" size={14} />
+                                                    <span className="font-medium">Auto-Save Enabled</span>
+                                                </div>
+                                                <p className="text-gray-400 text-xs mt-1">Your data is automatically saved as you make changes</p>
+                                            </div>
                                             <div className="flex gap-2">
                                                 <button
                                                     onClick={saveAllToLocalStorage}
