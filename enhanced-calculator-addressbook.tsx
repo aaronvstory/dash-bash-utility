@@ -1,0 +1,1284 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Trash2, Plus, Copy, ChevronDown, ChevronUp, Edit2, Save, X, GripVertical, Clock, MapPin, Calculator, MessageSquare, Building2, Settings, Download, Upload, RefreshCw, FolderOpen } from 'lucide-react';
+
+const EnhancedCalculator = () => {
+  const [target, setTarget] = useState('120');
+  const [prices, setPrices] = useState([]);
+  const [currentPrice, setCurrentPrice] = useState('');
+  const priceInputRef = useRef(null);
+  
+  // Collapsible sections state
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState(true);
+  const [isMessagesOpen, setIsMessagesOpen] = useState(false);
+  const [isAddressBookOpen, setIsAddressBookOpen] = useState(false);
+  const [isStateManagementOpen, setIsStateManagementOpen] = useState(false);
+  const [collapsedCategories, setCollapsedCategories] = useState({});
+  const [collapsedStores, setCollapsedStores] = useState({});
+  const [draggedStore, setDraggedStore] = useState({ categoryId: -1, storeIndex: -1 });
+  
+  // State management
+  const [availableExports, setAvailableExports] = useState([]);
+  const [importNotification, setImportNotification] = useState('');
+  
+  // Quick messages state
+  const [editingIndex, setEditingIndex] = useState(-1);
+  const [editText, setEditText] = useState('');
+  const [draggedIndex, setDraggedIndex] = useState(-1);
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [newMessageText, setNewMessageText] = useState('');
+  const [copyNotification, setCopyNotification] = useState('');
+  const [messages, setMessages] = useState([
+    "Ok someone got it! darn it i just noticed i put the tip so high by accident :( can u help change the tip to $0 pls?",
+    "Thanks, have a great day! <3",
+    "Yes",
+    "AGENT",
+    "hi can u pls see if u can help get a dasher assigned quicker!? I'm in a rush to get to work asap! Thank you",
+    "unassign this driver, we have had issues in the past, restraining order, stole my order last time, ASAP PLEASE, Thank you!",
+    "Adjust dasher tip to $0 for the current order",
+    "customer asked for refund if out of stock"
+  ]);
+
+  // Address Book state
+  const [categories, setCategories] = useState([
+    {
+      id: 1,
+      name: "Dollar General",
+      stores: [
+        {
+          id: 1,
+          address: "840 North Main St., Beaver, UT 84713",
+          openTime: "",
+          closeTime: "",
+          notes: ""
+        }
+      ]
+    },
+    {
+      id: 2,
+      name: "Tractor Supply Co.",
+      stores: [
+        {
+          id: 201,
+          address: "456 Farm Road, Rural Town, TX 75001",
+          openTime: "07:00",
+          closeTime: "21:00",
+          notes: "Farm supplies and equipment"
+        }
+      ]
+    }
+  ]);
+  const [editingCategory, setEditingCategory] = useState(-1);
+  const [editingStore, setEditingStore] = useState({ categoryId: -1, storeId: -1 });
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [draggedCategory, setDraggedCategory] = useState(-1);
+  const [draggedStore, setDraggedStore] = useState({ categoryId: -1, storeId: -1 });
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [saveNotification, setSaveNotification] = useState('');
+
+  // Load from localStorage on component mount
+  useEffect(() => {
+    // Try to load the new unified state first
+    const savedState = localStorage.getItem('dashBashState');
+    if (savedState) {
+      try {
+        const state = JSON.parse(savedState);
+        setTarget(state.target || '120');
+        setPrices(state.prices || []);
+        setMessages(state.messages || messages);
+        setCategories(state.categories || []);
+      } catch (e) {
+        console.error('Error loading saved state:', e);
+      }
+    } else {
+      // Fallback to old addressBookCategories for backward compatibility
+      const savedCategories = localStorage.getItem('addressBookCategories');
+      if (savedCategories) {
+        try {
+          setCategories(JSON.parse(savedCategories));
+        } catch (e) {
+          console.error('Error loading saved categories:', e);
+        }
+      }
+    }
+  }, []);
+
+  // Update current time every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Calculator functions
+  const addPrice = () => {
+    if (currentPrice && !isNaN(parseFloat(currentPrice))) {
+      setPrices([...prices, parseFloat(currentPrice)]);
+      setCurrentPrice('');
+      setTimeout(() => priceInputRef.current?.focus(), 0);
+    }
+  };
+
+  const removePrice = (index) => {
+    setPrices(prices.filter((_, i) => i !== index));
+    setTimeout(() => priceInputRef.current?.focus(), 0);
+  };
+
+  const clearAll = () => {
+    setPrices([]);
+    setTimeout(() => priceInputRef.current?.focus(), 0);
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      addPrice();
+    }
+  };
+
+  const handleTargetKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      priceInputRef.current?.focus();
+    }
+  };
+
+  useEffect(() => {
+    priceInputRef.current?.focus();
+  }, []);
+
+  // Message management functions
+  const copyToClipboard = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      const preview = text.length > 40 ? text.substring(0, 40) + '...' : text;
+      setCopyNotification(`✅ Copied: "${preview}"`);
+      setTimeout(() => setCopyNotification(''), 3000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+      setCopyNotification('❌ Failed to copy');
+      setTimeout(() => setCopyNotification(''), 3000);
+    }
+  };
+
+  const startEdit = (index) => {
+    setEditingIndex(index);
+    setEditText(messages[index]);
+  };
+
+  const saveEdit = () => {
+    if (editText.trim()) {
+      const newMessages = [...messages];
+      newMessages[editingIndex] = editText.trim();
+      setMessages(newMessages);
+    }
+    setEditingIndex(-1);
+    setEditText('');
+  };
+
+  const cancelEdit = () => {
+    setEditingIndex(-1);
+    setEditText('');
+  };
+
+  const deleteMessage = (index) => {
+    setMessages(messages.filter((_, i) => i !== index));
+    if (editingIndex === index) {
+      setEditingIndex(-1);
+      setEditText('');
+    }
+  };
+
+  const handleDragStart = (e, index) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e, dropIndex) => {
+    e.preventDefault();
+    if (draggedIndex === -1 || draggedIndex === dropIndex) return;
+
+    const newMessages = [...messages];
+    const draggedMessage = newMessages[draggedIndex];
+    newMessages.splice(draggedIndex, 1);
+    newMessages.splice(dropIndex, 0, draggedMessage);
+    setMessages(newMessages);
+    setDraggedIndex(-1);
+  };
+
+  const addNewMessage = () => {
+    if (newMessageText.trim()) {
+      setMessages([...messages, newMessageText.trim()]);
+      setNewMessageText('');
+      setIsAddingNew(false);
+    }
+  };
+
+  const cancelAddNew = () => {
+    setNewMessageText('');
+    setIsAddingNew(false);
+  };
+
+  // Address Book functions
+  const extractCityState = (address) => {
+    if (!address) return '';
+    
+    // Split by comma and trim spaces
+    const parts = address.split(',').map(part => part.trim());
+    
+    if (parts.length >= 3) {
+      // Format: "Street, City, State ZIP"
+      const city = parts[1];
+      const stateZip = parts[2];
+      // Extract state (first word before ZIP)
+      const state = stateZip.split(' ')[0];
+      return `${city}, ${state}`;
+    } else if (parts.length === 2) {
+      // Format: "Street, City State"
+      const cityState = parts[1];
+      return cityState;
+    }
+    
+    return '';
+  };
+
+  // State Management Functions
+  const saveAllToLocalStorage = () => {
+    try {
+      const state = {
+        target,
+        prices,
+        messages,
+        categories,
+        timestamp: new Date().toISOString()
+      };
+      localStorage.setItem('dashBashState', JSON.stringify(state));
+      setSaveNotification('✅ All data saved successfully!');
+      setTimeout(() => setSaveNotification(''), 3000);
+    } catch (e) {
+      setSaveNotification('❌ Failed to save data');
+      setTimeout(() => setSaveNotification(''), 3000);
+    }
+  };
+
+  const loadFromLocalStorage = () => {
+    try {
+      const savedState = localStorage.getItem('dashBashState');
+      if (savedState) {
+        const state = JSON.parse(savedState);
+        setTarget(state.target || '120');
+        setPrices(state.prices || []);
+        setMessages(state.messages || []);
+        setCategories(state.categories || []);
+        setSaveNotification('✅ Data loaded successfully!');
+        setTimeout(() => setSaveNotification(''), 3000);
+      } else {
+        setSaveNotification('⚠️ No saved data found');
+        setTimeout(() => setSaveNotification(''), 3000);
+      }
+    } catch (e) {
+      setSaveNotification('❌ Failed to load data');
+      setTimeout(() => setSaveNotification(''), 3000);
+    }
+  };
+
+  const exportToJSON = () => {
+    try {
+      const state = {
+        target,
+        prices,
+        messages,
+        categories,
+        exportDate: new Date().toISOString(),
+        version: '1.0'
+      };
+      
+      const dataStr = JSON.stringify(state, null, 2);
+      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+      
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      const fileName = `dashbash-export-${timestamp}.json`;
+      
+      const linkElement = document.createElement('a');
+      linkElement.setAttribute('href', dataUri);
+      linkElement.setAttribute('download', fileName);
+      linkElement.click();
+      
+      setSaveNotification(`✅ Exported to ${fileName}`);
+      setTimeout(() => setSaveNotification(''), 3000);
+    } catch (e) {
+      setSaveNotification('❌ Failed to export data');
+      setTimeout(() => setSaveNotification(''), 3000);
+    }
+  };
+
+  const importFromJSON = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const state = JSON.parse(e.target.result);
+        setTarget(state.target || '120');
+        setPrices(state.prices || []);
+        setMessages(state.messages || []);
+        setCategories(state.categories || []);
+        setImportNotification(`✅ Imported data from ${file.name}`);
+        setTimeout(() => setImportNotification(''), 3000);
+      } catch (err) {
+        setImportNotification('❌ Failed to import - invalid file format');
+        setTimeout(() => setImportNotification(''), 3000);
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = ''; // Reset input
+  };
+
+  const clearAllData = () => {
+    if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
+      setTarget('120');
+      setPrices([]);
+      setMessages([
+        "Ok someone got it! darn it i just noticed i put the tip so high by accident :( can u help change the tip to $0 pls?",
+        "Thanks, have a great day! <3",
+        "Yes",
+        "AGENT",
+        "hi can u pls see if u can help get a dasher assigned quicker!? I'm in a rush to get to work asap! Thank you",
+        "unassign this driver, we have had issues in the past, restraining order, stole my order last time, ASAP PLEASE, Thank you!",
+        "Adjust dasher tip to $0 for the current order",
+        "customer asked for refund if out of stock"
+      ]);
+      setCategories([]);
+      localStorage.removeItem('dashBashState');
+      localStorage.removeItem('addressBookCategories');
+      setSaveNotification('✅ All data cleared');
+      setTimeout(() => setSaveNotification(''), 3000);
+    }
+  };
+
+  const formatTime = (timeStr) => {
+    if (!timeStr || timeStr.length !== 4) return '';
+    const hours = timeStr.substring(0, 2);
+    const minutes = timeStr.substring(2, 4);
+    return `${hours}:${minutes}`;
+  };
+
+  const calculateTimeStatus = (closeTimeStr) => {
+    if (!closeTimeStr || closeTimeStr.length !== 4) return null;
+    
+    const closeHours = parseInt(closeTimeStr.substring(0, 2));
+    const closeMinutes = parseInt(closeTimeStr.substring(2, 4));
+    
+    const now = new Date();
+    const todayClose = new Date(now);
+    todayClose.setHours(closeHours, closeMinutes, 0, 0);
+    
+    // If closing time has passed today, assume it's tomorrow's closing time
+    if (todayClose < now) {
+      todayClose.setDate(todayClose.getDate() + 1);
+    }
+    
+    const diffMs = todayClose - now;
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMinutes / 60);
+    const remainingMinutes = diffMinutes % 60;
+    
+    // Check if store is closed (assuming 6am opening time)
+    const todayOpen = new Date(now);
+    todayOpen.setHours(6, 0, 0, 0);
+    
+    if (now < todayOpen || (diffMs < 0 && Math.abs(diffMinutes) > 12 * 60)) {
+      return { status: 'closed', text: 'Closed', color: 'text-red-400' };
+    }
+    
+    if (diffMinutes < 0) {
+      return { status: 'closed', text: 'Closed', color: 'text-red-400' };
+    }
+    
+    let color = 'text-green-400'; // More than 2 hours
+    if (diffMinutes < 120) color = 'text-yellow-400'; // Less than 2 hours
+    if (diffMinutes < 60) color = 'text-red-400'; // Less than 1 hour
+    
+    const timeText = diffHours > 0 
+      ? `${diffHours}h ${remainingMinutes}m left`
+      : `${diffMinutes}m left`;
+    
+    return { 
+      status: 'open', 
+      text: timeText, 
+      color,
+      formatted: formatTime(closeTimeStr)
+    };
+  };
+
+  const addCategory = () => {
+    if (newCategoryName.trim()) {
+      const newCategory = {
+        id: Date.now(),
+        name: newCategoryName.trim(),
+        stores: []
+      };
+      setCategories([...categories, newCategory]);
+      setNewCategoryName('');
+      setIsAddingCategory(false);
+    }
+  };
+
+  const updateCategory = (categoryId, newName) => {
+    setCategories(categories.map(cat => 
+      cat.id === categoryId ? { ...cat, name: newName } : cat
+    ));
+  };
+
+  const deleteCategory = (categoryId) => {
+    setCategories(categories.filter(cat => cat.id !== categoryId));
+  };
+
+  const addStore = (categoryId) => {
+    const newStore = {
+      id: Date.now(),
+      address: "",
+      openTime: "",
+      closeTime: "",
+      notes: ""
+    };
+    setCategories(categories.map(cat => 
+      cat.id === categoryId 
+        ? { ...cat, stores: [...cat.stores, newStore] }
+        : cat
+    ));
+  };
+
+  const updateStore = (categoryId, storeId, field, value) => {
+    setCategories(categories.map(cat => 
+      cat.id === categoryId 
+        ? {
+            ...cat,
+            stores: cat.stores.map(store => 
+              store.id === storeId ? { ...store, [field]: value } : store
+            )
+          }
+        : cat
+    ));
+  };
+
+  const deleteStore = (categoryId, storeId) => {
+    setCategories(categories.map(cat => 
+      cat.id === categoryId 
+        ? { ...cat, stores: cat.stores.filter(store => store.id !== storeId) }
+        : cat
+    ));
+  };
+
+  const toggleEditStore = (categoryId, storeId) => {
+    if (editingStore.categoryId === categoryId && editingStore.storeId === storeId) {
+      setEditingStore({ categoryId: -1, storeId: -1 });
+    } else {
+      setEditingStore({ categoryId, storeId });
+    }
+  };
+
+  const isStoreEditing = (categoryId, storeId) => {
+    return editingStore.categoryId === categoryId && editingStore.storeId === storeId;
+  };
+
+  const toggleCategoryCollapse = (categoryId) => {
+    setCollapsedCategories(prev => ({
+      ...prev,
+      [categoryId]: !prev[categoryId]
+    }));
+  };
+
+  const toggleStoreCollapse = (categoryId, storeId) => {
+    const key = `${categoryId}-${storeId}`;
+    setCollapsedStores(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  const isStoreCollapsed = (categoryId, storeId) => {
+    const key = `${categoryId}-${storeId}`;
+    return collapsedStores[key] || false;
+  };
+
+  const getStoresStatusCount = (stores) => {
+    let openCount = 0;
+    let closedCount = 0;
+    
+    stores.forEach(store => {
+      const status = calculateTimeStatus(store.closeTime);
+      if (status && status.status === 'open') {
+        openCount++;
+      } else if (status && status.status === 'closed') {
+        closedCount++;
+      }
+    });
+    
+    return { openCount, closedCount };
+  };
+
+  const handleStoreDragStart = (e, categoryId, storeIndex) => {
+    setDraggedStore({ categoryId, storeIndex });
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleStoreDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleStoreDrop = (e, categoryId, storeIndex) => {
+    e.preventDefault();
+    if (draggedStore.categoryId === categoryId && draggedStore.storeIndex !== storeIndex) {
+      const updatedCategories = [...categories];
+      const categoryIndex = categories.findIndex(cat => cat.id === categoryId);
+      const category = updatedCategories[categoryIndex];
+      const draggedStoreItem = category.stores[draggedStore.storeIndex];
+      
+      const newStores = [...category.stores];
+      newStores.splice(draggedStore.storeIndex, 1);
+      newStores.splice(storeIndex, 0, draggedStoreItem);
+      
+      updatedCategories[categoryIndex] = { ...category, stores: newStores };
+      setCategories(updatedCategories);
+    }
+    setDraggedStore({ categoryId: -1, storeIndex: -1 });
+  };
+
+  const calculateQuantities = (price, targetAmount) => {
+    if (price === 0) return { validOptions: [] };
+    
+    const maxQuantity = Math.floor(targetAmount / price);
+    const validOptions = [];
+    
+    for (let qty = maxQuantity; qty >= 1; qty--) {
+      const total = qty * price;
+      if (total <= targetAmount) {
+        validOptions.push({
+          quantity: qty,
+          total: total,
+          difference: targetAmount - total
+        });
+      }
+    }
+    
+    return { validOptions };
+  };
+
+  const findBestOption = (validOptions) => {
+    if (validOptions.length === 0) return null;
+    
+    return validOptions.sort((a, b) => {
+      if (Math.abs(a.difference - b.difference) < 0.01) {
+        return a.quantity - b.quantity;
+      }
+      return a.difference - b.difference;
+    })[0];
+  };
+
+  const targetAmount = parseFloat(target) || 0;
+
+  return (
+    <div className="min-h-screen bg-gray-900 text-white p-4">
+      {/* Copy Notification */}
+      {copyNotification && (
+        <div className="fixed top-4 right-4 z-50 bg-green-900/90 border border-green-600/50 text-green-100 px-4 py-2 rounded-lg shadow-lg backdrop-blur-sm animate-pulse">
+          {copyNotification}
+        </div>
+      )}
+      
+      {/* Save Notification */}
+      {saveNotification && (
+        <div className="fixed top-16 right-4 z-50 bg-blue-900/90 border border-blue-600/50 text-blue-100 px-4 py-2 rounded-lg shadow-lg backdrop-blur-sm animate-pulse">
+          {saveNotification}
+        </div>
+      )}
+      
+      {/* Import Notification */}
+      {importNotification && (
+        <div className="fixed top-28 right-4 z-50 bg-purple-900/90 border border-purple-600/50 text-purple-100 px-4 py-2 rounded-lg shadow-lg backdrop-blur-sm animate-pulse">
+          {importNotification}
+        </div>
+      )}
+      
+      <div className="max-w-5xl mx-auto">
+        {/* Header with time */}
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-bold">Dash Bash Utility</h1>
+          <div className="flex items-center justify-center gap-2 mt-2 text-gray-400">
+            <Clock size={16} />
+            <span className="text-sm">
+              {currentTime.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })} • {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
+        </div>
+        
+        <div className="space-y-4">
+          {/* Target Calculator Section */}
+          <div className="bg-gray-800 rounded-lg overflow-hidden">
+            <button
+              onClick={() => setIsCalculatorOpen(!isCalculatorOpen)}
+              className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Calculator size={20} className="text-blue-400" />
+                <span className="text-lg font-medium">Target Calculator</span>
+              </div>
+              {isCalculatorOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </button>
+            
+            {isCalculatorOpen && (
+              <div className="border-t border-gray-700 p-4">
+                {/* Target Input */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2">Target Amount ($) <span className="text-gray-400 text-xs">(Enter to move to prices)</span></label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={target}
+                    onChange={(e) => setTarget(e.target.value)}
+                    onKeyPress={handleTargetKeyPress}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-base font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="120"
+                  />
+                </div>
+
+                {/* Price Input */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2">Add Product Price ($) <span className="text-gray-400 text-xs">(Enter to add quickly)</span></label>
+                  <div className="flex gap-2">
+                    <input
+                      ref={priceInputRef}
+                      type="number"
+                      step="0.01"
+                      value={currentPrice}
+                      onChange={(e) => setCurrentPrice(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-base font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="2.75"
+                    />
+                    <button
+                      onClick={addPrice}
+                      className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                    >
+                      <Plus size={16} />
+                      Add
+                    </button>
+                  </div>
+                </div>
+
+            {/* Results */}
+            {prices.length > 0 && (() => {
+              const allOptions = prices.map((price, index) => {
+                const calc = calculateQuantities(price, targetAmount);
+                const bestOption = findBestOption(calc.validOptions);
+                return { index, price, bestOption, validOptions: calc.validOptions };
+              }).filter(item => item.bestOption);
+              
+              const globalBest = allOptions.reduce((best, current) => 
+                current.bestOption.difference < best.bestOption.difference ? current : best
+              , allOptions[0]);
+              
+              return (
+                <div>
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="text-sm font-medium text-gray-400">Results ({prices.length} item{prices.length !== 1 ? 's' : ''})</h3>
+                    <button
+                      onClick={clearAll}
+                      className="text-red-400 hover:text-red-300 text-xs px-3 py-1 rounded border border-red-600/30 hover:border-red-500/50 transition-colors"
+                    >
+                      Clear All
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {allOptions.map(({ index, price, bestOption }) => {
+                      const isGlobalBest = globalBest && bestOption.difference === globalBest.bestOption.difference;
+                      const diffRatio = targetAmount > 0 ? Math.min(bestOption.difference / targetAmount, 0.8) : 0;
+                      
+                      let bgColor = 'bg-gray-800';
+                      let borderColor = 'border-transparent';
+                      let underColor = 'text-gray-400';
+                      
+                      if (isGlobalBest) {
+                        bgColor = 'bg-green-900/40';
+                        borderColor = 'border-green-500/50';
+                        underColor = 'text-green-400';
+                      } else if (diffRatio < 0.05) {
+                        bgColor = 'bg-lime-900/30';
+                        borderColor = 'border-lime-600/40';
+                        underColor = 'text-lime-400';
+                      } else if (diffRatio < 0.15) {
+                        bgColor = 'bg-yellow-900/30';
+                        borderColor = 'border-yellow-600/40';
+                        underColor = 'text-yellow-400';
+                      } else if (diffRatio < 0.3) {
+                        bgColor = 'bg-amber-900/30';
+                        borderColor = 'border-amber-600/40';
+                        underColor = 'text-amber-400';
+                      } else if (diffRatio < 0.5) {
+                        bgColor = 'bg-orange-900/30';
+                        borderColor = 'border-orange-600/40';
+                        underColor = 'text-orange-400';
+                      } else {
+                        bgColor = 'bg-red-900/30';
+                        borderColor = 'border-red-600/40';
+                        underColor = 'text-red-400';
+                      }
+                      
+                      return (
+                        <div key={index} className={`${bgColor} border ${borderColor} rounded-lg p-3 flex justify-between items-center transition-colors`}>
+                          <div className="flex-1">
+                            <span className="font-medium text-base tracking-tight">${price.toFixed(2)} per item</span>
+                          </div>
+                          <div className="flex-1 text-right mr-3">
+                            <div className="font-semibold text-base leading-tight">{bestOption.quantity} items</div>
+                            <div className="text-xs text-gray-300 leading-tight">
+                              ${bestOption.total.toFixed(2)} • <span className={`font-medium ${underColor}`}>-${bestOption.difference.toFixed(2)}</span>
+                              {isGlobalBest && <span className="text-green-400 ml-1">✓</span>}
+                            </div>
+                          </div>
+                          <div>
+                            <button
+                              onClick={() => removePrice(index)}
+                              className="text-gray-500 hover:text-red-400 p-1 transition-colors"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    
+                    {prices.map((price, index) => {
+                      const calc = calculateQuantities(price, targetAmount);
+                      if (calc.validOptions.length > 0) return null;
+                      
+                      return (
+                        <div key={`expensive-${index}`} className="bg-red-900/20 border border-red-600/30 rounded-lg p-3 flex justify-between items-center">
+                          <span className="font-medium text-base">${price.toFixed(2)} per item</span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-red-400 text-xs">Too expensive</span>
+                            <button
+                              onClick={() => removePrice(index)}
+                              className="text-red-400 hover:text-red-300 p-1"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
+                {prices.length === 0 && (
+                  <div className="text-center text-gray-400 py-6">
+                    <div className="text-sm">Add product prices to see calculations</div>
+                    <div className="text-xs mt-1">Focus is on the price input - just start typing!</div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Quick Messages Section */}
+          <div className="bg-gray-800 rounded-lg overflow-hidden">
+            <button
+              onClick={() => setIsMessagesOpen(!isMessagesOpen)}
+              className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <MessageSquare size={20} className="text-green-400" />
+                <span className="text-lg font-medium">Quick Copy Messages ({messages.length})</span>
+              </div>
+              {isMessagesOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </button>
+            
+            {isMessagesOpen && (
+              <div className="border-t border-gray-700 p-4">
+                  {messages.map((message, index) => (
+                    <div
+                      key={index}
+                      className={`bg-gray-700/60 hover:bg-gray-700 rounded-lg p-2 transition-colors border border-gray-600/30 ${
+                        draggedIndex === index ? 'opacity-50 bg-gray-600' : ''
+                      }`}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, index)}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, index)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <button className="text-gray-500 hover:text-gray-400 cursor-move p-1">
+                          <GripVertical size={18} />
+                        </button>
+                        
+                        <div className="flex-1 min-w-0">
+                          {editingIndex === index ? (
+                            <textarea
+                              value={editText}
+                              onChange={(e) => setEditText(e.target.value)}
+                              className="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-base text-white resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              rows={Math.max(1, editText.split('\n').length)}
+                              autoFocus
+                            />
+                          ) : (
+                            <div 
+                              className="text-base text-gray-100 leading-relaxed whitespace-pre-wrap break-words cursor-pointer hover:text-blue-300 transition-colors"
+                              onClick={() => copyToClipboard(message)}
+                              title="Click to copy"
+                            >
+                              {message}
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                          {editingIndex === index ? (
+                            <>
+                              <button onClick={saveEdit} className="text-green-400 hover:text-green-300 p-1" title="Save">
+                                <Save size={12} />
+                              </button>
+                              <button onClick={cancelEdit} className="text-gray-400 hover:text-gray-300 p-1" title="Cancel">
+                                <X size={12} />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button onClick={() => startEdit(index)} className="text-yellow-400 hover:text-yellow-300 p-1" title="Edit">
+                                <Edit2 size={12} />
+                              </button>
+                              <button onClick={() => deleteMessage(index)} className="text-red-400 hover:text-red-300 p-1" title="Delete">
+                                <Trash2 size={12} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {isAddingNew ? (
+                    <div className="bg-gray-700/60 rounded-lg p-2 border border-gray-600/30 border-dashed">
+                      <div className="flex items-start gap-2">
+                        <div className="w-4" />
+                        <textarea
+                          value={newMessageText}
+                          onChange={(e) => setNewMessageText(e.target.value)}
+                          className="flex-1 bg-gray-600 border border-gray-500 rounded px-2 py-1 text-base text-white resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          rows={2}
+                          autoFocus
+                          placeholder="Enter your new message..."
+                        />
+                        <div className="flex gap-0.5">
+                          <button onClick={addNewMessage} className="text-green-400 hover:text-green-300 p-1" title="Add">
+                            <Save size={12} />
+                          </button>
+                          <button onClick={cancelAddNew} className="text-gray-400 hover:text-gray-300 p-1" title="Cancel">
+                            <X size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setIsAddingNew(true)}
+                      className="w-full bg-gray-700/40 hover:bg-gray-700/60 border border-dashed border-gray-600 rounded-lg p-2 text-xs text-gray-300 hover:text-white transition-colors flex items-center justify-center gap-1"
+                    >
+                      <Plus size={12} />
+                      Add New Message
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+          {/* Address Book Section */}
+          <div className="bg-gray-800 rounded-lg overflow-hidden">
+            <button
+              onClick={() => setIsAddressBookOpen(!isAddressBookOpen)}
+              className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Building2 size={20} className="text-orange-400" />
+                <span className="text-lg font-medium">Store Address Book ({categories.reduce((total, cat) => total + cat.stores.length, 0)} locations)</span>
+              </div>
+              {isAddressBookOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </button>
+              
+            {isAddressBookOpen && (
+              <div className="border-t border-gray-700 p-4 space-y-3">
+                {categories.map((category) => {
+                  const { openCount, closedCount } = getStoresStatusCount(category.stores);
+                  const isCategoryCollapsed = collapsedCategories[category.id];
+                  
+                  return (
+                    <div key={category.id} className="bg-gray-700/40 rounded-lg overflow-hidden border border-gray-600/30">
+                      {/* Category Header */}
+                      <div className="flex items-center justify-between p-3 hover:bg-gray-700/60 transition-colors">
+                        <button
+                          onClick={() => toggleCategoryCollapse(category.id)}
+                          className="flex items-center gap-2 flex-1 text-left"
+                        >
+                          {isCategoryCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                          {editingCategory === category.id ? (
+                            <input
+                              type="text"
+                              value={category.name}
+                              onChange={(e) => updateCategory(category.id, e.target.value)}
+                              className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              onBlur={() => setEditingCategory(-1)}
+                              onKeyPress={(e) => e.key === 'Enter' && setEditingCategory(-1)}
+                              onClick={(e) => e.stopPropagation()}
+                              autoFocus
+                            />
+                          ) : (
+                            <h4 className="font-medium text-blue-300 flex items-center gap-2">
+                              <MapPin size={14} />
+                              {category.name} ({category.stores.length})
+                              {category.stores.length > 0 && (
+                                <span className="text-xs text-gray-400 ml-2">
+                                  {openCount > 0 && <span className="text-green-400">{openCount} open</span>}
+                                  {openCount > 0 && closedCount > 0 && <span className="text-gray-500"> • </span>}
+                                  {closedCount > 0 && <span className="text-red-400">{closedCount} closed</span>}
+                                </span>
+                              )}
+                            </h4>
+                          )}
+                        </button>
+                        
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => addStore(category.id)}
+                            className="text-green-400 hover:text-green-300 p-1"
+                            title="Add store"
+                          >
+                            <Plus size={14} />
+                          </button>
+                          <button
+                            onClick={() => setEditingCategory(category.id)}
+                            className="text-yellow-400 hover:text-yellow-300 p-1"
+                            title="Edit category"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button
+                            onClick={() => deleteCategory(category.id)}
+                            className="text-red-400 hover:text-red-300 p-1"
+                            title="Delete category"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Stores */}
+                      {!isCategoryCollapsed && (
+                        <div className="border-t border-gray-600/30 p-3 space-y-2">
+                          {category.stores.map((store, storeIndex) => {
+                            const cityState = extractCityState(store.address);
+                            const timeStatus = calculateTimeStatus(store.closeTime);
+                            const isEditing = isStoreEditing(category.id, store.id);
+                            const isCollapsed = isStoreCollapsed(category.id, store.id);
+                            
+                            return (
+                              <div 
+                                key={store.id} 
+                                className={`bg-gray-600/50 rounded-lg overflow-hidden border border-gray-500/30 transition-opacity ${
+                                  draggedStore.categoryId === category.id && draggedStore.storeIndex === storeIndex ? 'opacity-50' : ''
+                                }`}
+                                draggable={!isEditing}
+                                onDragStart={(e) => { if (!isEditing) handleStoreDragStart(e, category.id, storeIndex); }}
+                                onDragOver={handleStoreDragOver}
+                                onDrop={(e) => handleStoreDrop(e, category.id, storeIndex)}
+                              >
+                                {/* Store Header */}
+                                <div className="flex items-center justify-between p-3 hover:bg-gray-600/70 transition-colors">
+                                  <div className="flex items-center gap-2 flex-1">
+                                    {!isEditing && (
+                                      <button 
+                                        className="text-gray-400 hover:text-gray-300 cursor-move" 
+                                        aria-label="Drag to reorder"
+                                      >
+                                        <GripVertical size={14} />
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => toggleStoreCollapse(category.id, store.id)}
+                                      className="flex items-center gap-2 flex-1 text-left"
+                                    >
+                                      {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                                      <div className="flex-1">
+                                      {cityState ? (
+                                        <h5 className="font-medium text-green-300 text-sm flex items-center gap-2">
+                                          {cityState}
+                                          {timeStatus && (
+                                            <span className={`text-xs ${timeStatus.color}`}>
+                                              ({timeStatus.status === 'open' ? 'Open' : 'Closed'})
+                                            </span>
+                                          )}
+                                        </h5>
+                                      ) : (
+                                        <h5 className="font-medium text-gray-400 text-sm italic">New Store</h5>
+                                      )}
+                                      </div>
+                                    </button>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      onClick={() => toggleEditStore(category.id, store.id)}
+                                      className={`p-1 transition-colors ${
+                                        isEditing 
+                                          ? 'text-green-400 hover:text-green-300' 
+                                          : 'text-yellow-400 hover:text-yellow-300'
+                                      }`}
+                                      title={isEditing ? 'Save changes' : 'Edit store'}
+                                    >
+                                      {isEditing ? <Save size={14} /> : <Edit2 size={14} />}
+                                    </button>
+                                    <button
+                                      onClick={() => deleteStore(category.id, store.id)}
+                                      className="text-red-400 hover:text-red-300 p-1"
+                                      title="Delete store"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Store Details */}
+                                {!isCollapsed && (
+                                  <div className="border-t border-gray-500/30 p-3 space-y-2">
+                                {/* Address */}
+                                <div className="flex items-start gap-2">
+                                  <label className="text-xs text-gray-400 w-16 mt-1 flex-shrink-0">Address:</label>
+                                  {isEditing ? (
+                                    <input
+                                      type="text"
+                                      value={store.address}
+                                      onChange={(e) => updateStore(category.id, store.id, 'address', e.target.value)}
+                                      className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                      placeholder="Enter address..."
+                                    />
+                                  ) : (
+                                    <div className="flex-1 text-xs text-gray-200 mt-1">
+                                      {store.address || <span className="italic text-gray-500">No address entered</span>}
+                                    </div>
+                                  )}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      copyToClipboard(store.address);
+                                    }}
+                                    className="text-blue-400 hover:text-blue-300 p-1"
+                                    title="Copy address"
+                                    disabled={!store.address}
+                                  >
+                                    <Copy size={12} />
+                                  </button>
+                                </div>
+
+                                {/* Times */}
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-xs text-gray-400 w-12">Open:</label>
+                                    {isEditing ? (
+                                      <input
+                                        type="text"
+                                        value={store.openTime}
+                                        onChange={(e) => updateStore(category.id, store.id, 'openTime', e.target.value)}
+                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        placeholder="0800"
+                                        maxLength={4}
+                                      />
+                                    ) : (
+                                      <div className="flex-1 text-xs text-gray-200 font-mono">
+                                        {formatTime(store.openTime) || <span className="italic text-gray-500">Not set</span>}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-xs text-gray-400 w-12">Close:</label>
+                                    {isEditing ? (
+                                      <input
+                                        type="text"
+                                        value={store.closeTime}
+                                        onChange={(e) => updateStore(category.id, store.id, 'closeTime', e.target.value)}
+                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        placeholder="2100"
+                                        maxLength={4}
+                                      />
+                                    ) : (
+                                      <div className="flex-1 text-xs text-gray-200 font-mono">
+                                        {formatTime(store.closeTime) || <span className="italic text-gray-500">Not set</span>}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Notes */}
+                                <div className="flex items-start gap-2">
+                                  <label className="text-xs text-gray-400 w-16 mt-1 flex-shrink-0">Notes:</label>
+                                  {isEditing ? (
+                                    <textarea
+                                      value={store.notes}
+                                      onChange={(e) => updateStore(category.id, store.id, 'notes', e.target.value)}
+                                      className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                      rows={1}
+                                      placeholder="Any notes..."
+                                    />
+                                  ) : (
+                                    <div className="flex-1 text-xs text-gray-200 mt-1">
+                                      {store.notes || <span className="italic text-gray-500">No notes</span>}
+                                    </div>
+                                  )}
+                                </div>
+                                  </div>
+                                )}
+                              </div>
+                          );
+                        })}
+
+                          {category.stores.length === 0 && (
+                            <div className="text-center text-gray-500 py-2 text-xs">
+                              No stores yet. Click + to add one.
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* Add New Category */}
+                  {isAddingCategory ? (
+                    <div className="bg-gray-700/40 rounded-lg p-3 border border-gray-600/30 border-dashed">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={newCategoryName}
+                          onChange={(e) => setNewCategoryName(e.target.value)}
+                          className="flex-1 bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          placeholder="Category name (e.g., Walgreens)"
+                          autoFocus
+                        />
+                        <button onClick={addCategory} className="text-green-400 hover:text-green-300 p-1" title="Add">
+                          <Save size={14} />
+                        </button>
+                        <button onClick={() => { setIsAddingCategory(false); setNewCategoryName(''); }} className="text-gray-400 hover:text-gray-300 p-1" title="Cancel">
+                          <X size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setIsAddingCategory(true)}
+                      className="w-full bg-gray-700/40 hover:bg-gray-700/60 border border-dashed border-gray-600 rounded-lg p-3 text-sm text-gray-300 hover:text-white transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Plus size={14} />
+                      Add New Store Category
+                    </button>
+                  )}
+
+                  {categories.length === 0 && !isAddingCategory && (
+                    <div className="text-center text-gray-500 py-6 text-sm">
+                      No store categories yet
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+          {/* State Management Section */}
+          <div className="bg-gray-800 rounded-lg overflow-hidden">
+            <button
+              onClick={() => setIsStateManagementOpen(!isStateManagementOpen)}
+              className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Settings size={20} className="text-purple-400" />
+                <span className="text-lg font-medium">State Management</span>
+              </div>
+              {isStateManagementOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </button>
+            
+            {isStateManagementOpen && (
+              <div className="border-t border-gray-700 p-4">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                  {/* Save to LocalStorage */}
+                  <button
+                    onClick={saveAllToLocalStorage}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Save size={18} />
+                    <span className="text-sm font-medium">Save All</span>
+                  </button>
+                  
+                  {/* Load from LocalStorage */}
+                  <button
+                    onClick={loadFromLocalStorage}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    <RefreshCw size={18} />
+                    <span className="text-sm font-medium">Load Saved</span>
+                  </button>
+                  
+                  {/* Export to JSON */}
+                  <button
+                    onClick={exportToJSON}
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Download size={18} />
+                    <span className="text-sm font-medium">Export JSON</span>
+                  </button>
+                  
+                  {/* Import from JSON */}
+                  <label className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer">
+                    <Upload size={18} />
+                    <span className="text-sm font-medium">Import JSON</span>
+                    <input
+                      type="file"
+                      accept="application/json"
+                      onChange={importFromJSON}
+                      className="hidden"
+                    />
+                  </label>
+                  
+                  {/* Clear All Data */}
+                  <button
+                    onClick={clearAllData}
+                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 col-span-2 lg:col-span-1"
+                  >
+                    <Trash2 size={18} />
+                    <span className="text-sm font-medium">Clear All</span>
+                  </button>
+                </div>
+                
+                {/* Instructions */}
+                <div className="mt-4 p-3 bg-gray-700/50 rounded-lg">
+                  <h4 className="text-sm font-medium text-gray-300 mb-2">Instructions:</h4>
+                  <ul className="text-xs text-gray-400 space-y-1">
+                    <li>• <strong>Save All:</strong> Saves all current data to browser storage</li>
+                    <li>• <strong>Load Saved:</strong> Restores previously saved data from browser storage</li>
+                    <li>• <strong>Export JSON:</strong> Downloads all data as a JSON file for backup</li>
+                    <li>• <strong>Import JSON:</strong> Loads data from a previously exported JSON file</li>
+                    <li>• <strong>Clear All:</strong> Resets everything to default values</li>
+                  </ul>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default EnhancedCalculator;
