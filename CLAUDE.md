@@ -16,7 +16,7 @@ The application features a fully collapsible interface where each main section a
 
 ### File Structure
 - **enhanced-calculator-addressbook.tsx**: Main React component with all functionality
-- **dash-bash-utility.html**: Standalone HTML version that can be opened directly in a browser or saved as a PWA
+- **index.html**: Standalone HTML version that can be opened directly in a browser or saved as a PWA (formerly dash-bash-utility.html)
 - **manifest.json**: PWA manifest for installable app configuration
 - **service-worker.js**: Offline caching for PWA functionality
 - **serve-pwa.py** / **serve-pwa.bat**: Local HTTPS server for PWA testing
@@ -63,14 +63,14 @@ serve-pwa.bat
 # Or directly with Python
 python serve-pwa.py
 ```
-Then open http://localhost:8443/dash-bash-utility.html
+Then open http://localhost:8443/index.html
 
 The HTML file can also be opened directly in any browser without a server.
 
 #### PWA Installation
 The app supports Progressive Web App installation:
 1. Serve the app using `serve-pwa.py` (provides proper MIME types)
-2. Open http://localhost:8443/dash-bash-utility.html
+2. Open http://localhost:8443/index.html
 3. Look for install icon in address bar (Chrome/Edge)
 4. Or use menu → Apps → Install this site as an app
 
@@ -203,7 +203,7 @@ The app can be installed as a PWA on desktop and mobile:
 ```bash
 # Start local server with proper MIME types
 python serve-pwa.py
-# Open http://localhost:8443/dash-bash-utility.html
+# Open http://localhost:8443/index.html
 # Check DevTools > Application > Service Workers
 ```
 

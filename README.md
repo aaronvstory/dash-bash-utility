@@ -2,7 +2,7 @@
 
 A Progressive Web App (PWA) for delivery service drivers, featuring a target calculator and address book management system.
 
-🔗 **[Use the App](https://aaronvstory.github.io/dash-bash-utility/dash-bash-utility.html)**
+🔗 **[Use the App](https://aaronvstory.github.io/dash-bash-utility/)**
 
 ## Features
 
@@ -34,7 +34,7 @@ A Progressive Web App (PWA) for delivery service drivers, featuring a target cal
 ## Installation
 
 ### As a PWA (Recommended)
-1. Visit [the app](https://aaronvstory.github.io/dash-bash-utility/dash-bash-utility.html)
+1. Visit [the app](https://aaronvstory.github.io/dash-bash-utility/)
 2. Click the install icon in your browser's address bar
 3. Or use menu → Apps → Install this site as an app
 4. The app will work offline once installed
