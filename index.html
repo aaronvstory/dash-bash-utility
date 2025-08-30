@@ -1228,10 +1228,10 @@
                                         ) : (
                                             <button
                                                 onClick={() => setIsAddingNew(true)}
-                                                className="w-full bg-gray-700/40 hover:bg-gray-700/60 border border-dashed border-gray-600 rounded-lg p-2 text-xs text-gray-300 hover:text-white transition-colors flex items-center justify-center gap-1"
+                                                className="w-full bg-gray-800/50 hover:bg-gray-700 border border-gray-600/50 rounded-lg py-2.5 px-4 text-sm text-gray-400 hover:text-gray-200 transition-all duration-200 flex items-center justify-center gap-2 group"
                                             >
-                                                <Icon name="plus" size={12} />
-                                                Add New Message
+                                                <Icon name="plus-circle" size={16} className="text-gray-500 group-hover:text-gray-300 transition-colors" />
+                                                <span className="font-medium">Add New Message</span>
                                             </button>
                                         )}
                                     </div>
@@ -1518,10 +1518,10 @@
                                         ) : (
                                             <button
                                                 onClick={() => setIsAddingCategory(true)}
-                                                className="w-full bg-gray-700/40 hover:bg-gray-700/60 border border-dashed border-gray-600 rounded-lg p-3 text-sm text-gray-300 hover:text-white transition-colors flex items-center justify-center gap-2"
+                                                className="w-full bg-gray-800/50 hover:bg-gray-700 border border-gray-600/50 rounded-lg py-2.5 px-4 text-sm text-gray-400 hover:text-gray-200 transition-all duration-200 flex items-center justify-center gap-2 group"
                                             >
-                                                <Icon name="plus" size={14} />
-                                                Add New Store Category
+                                                <Icon name="plus-circle" size={16} className="text-gray-500 group-hover:text-gray-300 transition-colors" />
+                                                <span className="font-medium">Add New Store Category</span>
                                             </button>
                                         )}
                                         
@@ -1553,10 +1553,10 @@
                                             <span className="text-sm text-gray-400">Organize your notes by category</span>
                                             <button
                                                 onClick={saveNotes}
-                                                className="flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-700 rounded-lg transition-colors text-sm"
+                                                className="flex items-center gap-2 px-3 py-1.5 bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600/30 rounded-lg transition-all text-sm text-gray-300 hover:text-white"
                                             >
-                                                <Icon name="save" size={16} />
-                                                Save Notes
+                                                <Icon name="save" size={14} />
+                                                Save
                                             </button>
                                         </div>
                                         
@@ -1722,7 +1722,7 @@
                                                 />
                                                 <button
                                                     onClick={addNoteCategory}
-                                                    className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors text-sm"
+                                                    className="px-3 py-2 bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600/30 rounded-lg transition-all text-sm text-gray-300 hover:text-white"
                                                 >
                                                     Add
                                                 </button>
@@ -1731,7 +1731,7 @@
                                                         setIsAddingNoteCategory(false);
                                                         setNewNoteCategoryName('');
                                                     }}
-                                                    className="px-3 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors text-sm"
+                                                    className="px-3 py-2 bg-gray-800/50 hover:bg-gray-700/50 border border-gray-600/30 rounded-lg transition-all text-sm text-gray-400 hover:text-gray-200"
                                                 >
                                                     Cancel
                                                 </button>
@@ -1739,10 +1739,10 @@
                                         ) : (
                                             <button
                                                 onClick={() => setIsAddingNoteCategory(true)}
-                                                className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
+                                                className="w-full bg-gray-800/50 hover:bg-gray-700 border border-gray-600/50 rounded-lg py-2.5 px-4 text-sm text-gray-400 hover:text-gray-200 transition-all duration-200 flex items-center justify-center gap-2 group"
                                             >
-                                                <Icon name="plus" size={16} />
-                                                Add New Note Category
+                                                <Icon name="plus-circle" size={16} className="text-gray-500 group-hover:text-gray-300 transition-colors" />
+                                                <span className="font-medium">Add New Note Category</span>
                                             </button>
                                         )}
                                     </div>
@@ -1768,7 +1768,7 @@
                                             {/* Save to LocalStorage */}
                                             <button
                                                 onClick={saveAllToLocalStorage}
-                                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                                className="bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600/30 text-gray-300 hover:text-white px-4 py-3 rounded-lg transition-all flex items-center justify-center gap-2"
                                             >
                                                 <Icon name="save" size={18} />
                                                 <span className="text-sm font-medium">Save All</span>
@@ -1807,7 +1807,7 @@
                                             {/* Clear All Data */}
                                             <button
                                                 onClick={clearAllData}
-                                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 col-span-2 lg:col-span-1"
+                                                className="bg-gray-800/50 hover:bg-gray-700/50 border border-red-900/30 text-red-400 hover:text-red-300 px-4 py-3 rounded-lg transition-all flex items-center justify-center gap-2 col-span-2 lg:col-span-1"
                                             >
                                                 <Icon name="trash-2" size={18} />
                                                 <span className="text-sm font-medium">Clear All</span>
