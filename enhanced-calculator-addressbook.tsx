@@ -2,7 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Trash2, Plus, Copy, ChevronDown, ChevronUp, Edit2, Save, X, GripVertical, Clock, MapPin, Calculator, MessageSquare, Building2, Settings, Download, Upload, RefreshCw, FolderOpen } from 'lucide-react';
 
 const EnhancedCalculator = () => {
-  const [target, setTarget] = useState('120');
+  const [target, setTarget] = useState('99');
+  const [targetPreset, setTargetPreset] = useState('99'); // '99', '120', or 'custom'
+  const [isEditingTarget, setIsEditingTarget] = useState(false);
+  const [customTarget, setCustomTarget] = useState('');
   const [prices, setPrices] = useState([]);
   const [currentPrice, setCurrentPrice] = useState('');
   const priceInputRef = useRef(null);
@@ -83,7 +86,18 @@ const EnhancedCalculator = () => {
     if (savedState) {
       try {
         const state = JSON.parse(savedState);
-        setTarget(state.target || '120');
+        
+        // Load target configuration
+        const savedTarget = state.target || '99';
+        const savedPreset = state.targetPreset || (savedTarget === '99' || savedTarget === '120' ? savedTarget : 'custom');
+        
+        setTarget(savedTarget);
+        setTargetPreset(savedPreset);
+        if (savedPreset === 'custom') {
+          setCustomTarget(savedTarget);
+        }
+        
+        // Load other state
         setPrices(state.prices || []);
         setMessages(state.messages || messages);
         setCategories(state.categories || []);
@@ -138,7 +152,41 @@ const EnhancedCalculator = () => {
 
   const handleTargetKeyPress = (e) => {
     if (e.key === 'Enter') {
-      priceInputRef.current?.focus();
+      if (isEditingTarget) {
+        handleCustomTargetSave();
+      } else {
+        priceInputRef.current?.focus();
+      }
+    }
+  };
+
+  const handleTargetPresetChange = (preset) => {
+    setTargetPreset(preset);
+    setIsEditingTarget(false);
+    
+    if (preset === '99' || preset === '120') {
+      setTarget(preset);
+      setCustomTarget('');
+    } else if (preset === 'custom') {
+      setIsEditingTarget(true);
+      setCustomTarget(target !== '99' && target !== '120' ? target : '');
+    }
+    
+    // Auto-save the change
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
+  };
+
+  const handleCustomTargetSave = () => {
+    if (customTarget && !isNaN(parseFloat(customTarget))) {
+      setTarget(customTarget);
+      setIsEditingTarget(false);
+      
+      // Auto-save the change
+      setTimeout(() => {
+        saveAllToLocalStorage();
+      }, 100);
     }
   };
 
@@ -170,6 +218,11 @@ const EnhancedCalculator = () => {
       const newMessages = [...messages];
       newMessages[editingIndex] = editText.trim();
       setMessages(newMessages);
+      
+      // Auto-save messages
+      setTimeout(() => {
+        saveAllToLocalStorage();
+      }, 100);
     }
     setEditingIndex(-1);
     setEditText('');
@@ -181,11 +234,17 @@ const EnhancedCalculator = () => {
   };
 
   const deleteMessage = (index) => {
-    setMessages(messages.filter((_, i) => i !== index));
+    const newMessages = messages.filter((_, i) => i !== index);
+    setMessages(newMessages);
     if (editingIndex === index) {
       setEditingIndex(-1);
       setEditText('');
     }
+    
+    // Auto-save after deletion
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
   };
 
   const handleDragStart = (e, index) => {
@@ -208,13 +267,24 @@ const EnhancedCalculator = () => {
     newMessages.splice(dropIndex, 0, draggedMessage);
     setMessages(newMessages);
     setDraggedIndex(-1);
+    
+    // Auto-save after reordering
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
   };
 
   const addNewMessage = () => {
     if (newMessageText.trim()) {
-      setMessages([...messages, newMessageText.trim()]);
+      const newMessages = [...messages, newMessageText.trim()];
+      setMessages(newMessages);
       setNewMessageText('');
       setIsAddingNew(false);
+      
+      // Auto-save after adding
+      setTimeout(() => {
+        saveAllToLocalStorage();
+      }, 100);
     }
   };
 
@@ -251,6 +321,7 @@ const EnhancedCalculator = () => {
     try {
       const state = {
         target,
+        targetPreset,
         prices,
         messages,
         categories,
@@ -270,7 +341,17 @@ const EnhancedCalculator = () => {
       const savedState = localStorage.getItem('dashBashState');
       if (savedState) {
         const state = JSON.parse(savedState);
-        setTarget(state.target || '120');
+        
+        // Load target configuration
+        const savedTarget = state.target || '99';
+        const savedPreset = state.targetPreset || (savedTarget === '99' || savedTarget === '120' ? savedTarget : 'custom');
+        
+        setTarget(savedTarget);
+        setTargetPreset(savedPreset);
+        if (savedPreset === 'custom') {
+          setCustomTarget(savedTarget);
+        }
+        
         setPrices(state.prices || []);
         setMessages(state.messages || []);
         setCategories(state.categories || []);
@@ -290,6 +371,7 @@ const EnhancedCalculator = () => {
     try {
       const state = {
         target,
+        targetPreset,
         prices,
         messages,
         categories,
@@ -324,7 +406,17 @@ const EnhancedCalculator = () => {
     reader.onload = (e) => {
       try {
         const state = JSON.parse(e.target.result);
-        setTarget(state.target || '120');
+        
+        // Load target configuration
+        const savedTarget = state.target || '99';
+        const savedPreset = state.targetPreset || (savedTarget === '99' || savedTarget === '120' ? savedTarget : 'custom');
+        
+        setTarget(savedTarget);
+        setTargetPreset(savedPreset);
+        if (savedPreset === 'custom') {
+          setCustomTarget(savedTarget);
+        }
+        
         setPrices(state.prices || []);
         setMessages(state.messages || []);
         setCategories(state.categories || []);
@@ -341,7 +433,10 @@ const EnhancedCalculator = () => {
 
   const clearAllData = () => {
     if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
-      setTarget('120');
+      setTarget('99');
+      setTargetPreset('99');
+      setCustomTarget('');
+      setIsEditingTarget(false);
       setPrices([]);
       setMessages([
         "Ok someone got it! darn it i just noticed i put the tip so high by accident :( can u help change the tip to $0 pls?",
@@ -635,18 +730,72 @@ const EnhancedCalculator = () => {
             
             {isCalculatorOpen && (
               <div className="border-t border-gray-700 p-4">
-                {/* Target Input */}
+                {/* Target Amount Selector */}
                 <div className="mb-4">
-                  <label className="block text-sm font-medium mb-2">Target Amount ($) <span className="text-gray-400 text-xs">(Enter to move to prices)</span></label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={target}
-                    onChange={(e) => setTarget(e.target.value)}
-                    onKeyPress={handleTargetKeyPress}
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-base font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="120"
-                  />
+                  <label className="block text-sm font-medium mb-2">Target Amount ($)</label>
+                  <div className="flex gap-2 mb-2">
+                    <button
+                      onClick={() => handleTargetPresetChange('99')}
+                      className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        targetPreset === '99' 
+                          ? 'bg-blue-600 text-white' 
+                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      }`}
+                    >
+                      $99
+                    </button>
+                    <button
+                      onClick={() => handleTargetPresetChange('120')}
+                      className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        targetPreset === '120' 
+                          ? 'bg-blue-600 text-white' 
+                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      }`}
+                    >
+                      $120
+                    </button>
+                    <button
+                      onClick={() => handleTargetPresetChange('custom')}
+                      className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1 ${
+                        targetPreset === 'custom' 
+                          ? 'bg-blue-600 text-white' 
+                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      }`}
+                    >
+                      <Edit2 size={14} />
+                      Custom
+                    </button>
+                  </div>
+                  
+                  {/* Custom Target Input */}
+                  {isEditingTarget && (
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={customTarget}
+                        onChange={(e) => setCustomTarget(e.target.value)}
+                        onKeyPress={handleTargetKeyPress}
+                        className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-base font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter custom amount"
+                        autoFocus
+                      />
+                      <button
+                        onClick={handleCustomTargetSave}
+                        className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors flex items-center gap-1"
+                      >
+                        <Save size={16} />
+                        Set
+                      </button>
+                    </div>
+                  )}
+                  
+                  {/* Current Target Display */}
+                  {!isEditingTarget && targetPreset === 'custom' && (
+                    <div className="text-sm text-gray-400 mt-1">
+                      Current: ${target}
+                    </div>
+                  )}
                 </div>
 
                 {/* Price Input */}

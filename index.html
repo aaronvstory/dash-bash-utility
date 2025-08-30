@@ -48,14 +48,14 @@
         /* Animation */
         @keyframes pulse {
             0%, 100% { opacity: 1; }
-            50% { opacity: .5; }
+            50% { opacity: 0.8; }
         }
         .animate-pulse {
             animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
     </style>
 </head>
-<body>
+<body class="bg-gray-900">
     <div id="root"></div>
     
     <script type="text/babel">
@@ -70,7 +70,10 @@
         };
         
         const EnhancedCalculator = () => {
-            const [target, setTarget] = useState('120');
+            const [target, setTarget] = useState('99');
+            const [targetPreset, setTargetPreset] = useState('99'); // '99', '120', or 'custom'
+            const [isEditingTarget, setIsEditingTarget] = useState(false);
+            const [customTarget, setCustomTarget] = useState('');
             const [prices, setPrices] = useState([]);
             const [currentPrice, setCurrentPrice] = useState('');
             const priceInputRef = useRef(null);
@@ -145,49 +148,35 @@
             
             // Load from localStorage on component mount
             useEffect(() => {
-                let dataLoaded = false;
-                
-                // Try to load the primary state
+                // Try to load the new unified state first
                 const savedState = localStorage.getItem('dashBashState');
                 if (savedState) {
                     try {
                         const state = JSON.parse(savedState);
-                        setTarget(state.target || '120');
+                        
+                        // Load target configuration
+                        const savedTarget = state.target || '99';
+                        const savedPreset = state.targetPreset || (savedTarget === '99' || savedTarget === '120' ? savedTarget : 'custom');
+                        
+                        setTarget(savedTarget);
+                        setTargetPreset(savedPreset);
+                        if (savedPreset === 'custom') {
+                            setCustomTarget(savedTarget);
+                        }
+                        
+                        // Load other state
                         setPrices(state.prices || []);
                         setMessages(state.messages || messages);
                         setCategories(state.categories || []);
-                        dataLoaded = true;
-                        console.log('Data loaded from primary storage');
                     } catch (e) {
                         console.error('Error loading saved state:', e);
                     }
-                }
-                
-                // Try backup if primary failed
-                if (!dataLoaded) {
-                    const backupState = localStorage.getItem('dashBashStateBackup');
-                    if (backupState) {
-                        try {
-                            const state = JSON.parse(backupState);
-                            setTarget(state.target || '120');
-                            setPrices(state.prices || []);
-                            setMessages(state.messages || messages);
-                            setCategories(state.categories || []);
-                            dataLoaded = true;
-                            console.log('Data loaded from backup storage');
-                        } catch (e) {
-                            console.error('Error loading backup state:', e);
-                        }
-                    }
-                }
-                
-                // Fallback to old addressBookCategories for backward compatibility
-                if (!dataLoaded) {
+                } else {
+                    // Fallback to old addressBookCategories for backward compatibility
                     const savedCategories = localStorage.getItem('addressBookCategories');
                     if (savedCategories) {
                         try {
                             setCategories(JSON.parse(savedCategories));
-                            console.log('Data loaded from legacy storage');
                         } catch (e) {
                             console.error('Error loading saved categories:', e);
                         }
@@ -197,32 +186,6 @@
                 lucide.createIcons();
             }, []);
             
-            // Auto-save functionality - saves whenever data changes
-            useEffect(() => {
-                // Skip the very first render to avoid saving empty state
-                const hasData = categories.length > 0 || prices.length > 0 || 
-                               (messages.length > 0 && messages.some(m => m !== messages[0]));
-                
-                if (hasData || target !== '120') {
-                    try {
-                        const state = {
-                            target,
-                            prices,
-                            messages,
-                            categories,
-                            timestamp: new Date().toISOString(),
-                            version: '2.0'
-                        };
-                        localStorage.setItem('dashBashState', JSON.stringify(state));
-                        // Also save to backup key for redundancy
-                        localStorage.setItem('dashBashStateBackup', JSON.stringify(state));
-                        console.log('Auto-saved at', new Date().toLocaleTimeString());
-                    } catch (e) {
-                        console.error('Auto-save failed:', e);
-                    }
-                }
-            }, [target, prices, messages, categories]);
-
             // Update current time every minute
             useEffect(() => {
                 const interval = setInterval(() => {
@@ -230,11 +193,6 @@
                 }, 60000);
                 return () => clearInterval(interval);
             }, []);
-            
-            // Update icons when content changes
-            useEffect(() => {
-                lucide.createIcons();
-            });
             
             // Calculator functions
             const addPrice = () => {
@@ -263,7 +221,41 @@
             
             const handleTargetKeyPress = (e) => {
                 if (e.key === 'Enter') {
-                    priceInputRef.current?.focus();
+                    if (isEditingTarget) {
+                        handleCustomTargetSave();
+                    } else {
+                        priceInputRef.current?.focus();
+                    }
+                }
+            };
+
+            const handleTargetPresetChange = (preset) => {
+                setTargetPreset(preset);
+                setIsEditingTarget(false);
+                
+                if (preset === '99' || preset === '120') {
+                    setTarget(preset);
+                    setCustomTarget('');
+                } else if (preset === 'custom') {
+                    setIsEditingTarget(true);
+                    setCustomTarget(target !== '99' && target !== '120' ? target : '');
+                }
+                
+                // Auto-save the change
+                setTimeout(() => {
+                    saveAllToLocalStorage();
+                }, 100);
+            };
+
+            const handleCustomTargetSave = () => {
+                if (customTarget && !isNaN(parseFloat(customTarget))) {
+                    setTarget(customTarget);
+                    setIsEditingTarget(false);
+                    
+                    // Auto-save the change
+                    setTimeout(() => {
+                        saveAllToLocalStorage();
+                    }, 100);
                 }
             };
             
@@ -295,6 +287,11 @@
                     const newMessages = [...messages];
                     newMessages[editingIndex] = editText.trim();
                     setMessages(newMessages);
+                    
+                    // Auto-save messages
+                    setTimeout(() => {
+                        saveAllToLocalStorage();
+                    }, 100);
                 }
                 setEditingIndex(-1);
                 setEditText('');
@@ -306,11 +303,17 @@
             };
             
             const deleteMessage = (index) => {
-                setMessages(messages.filter((_, i) => i !== index));
+                const newMessages = messages.filter((_, i) => i !== index);
+                setMessages(newMessages);
                 if (editingIndex === index) {
                     setEditingIndex(-1);
                     setEditText('');
                 }
+                
+                // Auto-save after deletion
+                setTimeout(() => {
+                    saveAllToLocalStorage();
+                }, 100);
             };
             
             const handleDragStart = (e, index) => {
@@ -333,13 +336,24 @@
                 newMessages.splice(dropIndex, 0, draggedMessage);
                 setMessages(newMessages);
                 setDraggedIndex(-1);
+                
+                // Auto-save after reordering
+                setTimeout(() => {
+                    saveAllToLocalStorage();
+                }, 100);
             };
             
             const addNewMessage = () => {
                 if (newMessageText.trim()) {
-                    setMessages([...messages, newMessageText.trim()]);
+                    const newMessages = [...messages, newMessageText.trim()];
+                    setMessages(newMessages);
                     setNewMessageText('');
                     setIsAddingNew(false);
+                    
+                    // Auto-save after adding
+                    setTimeout(() => {
+                        saveAllToLocalStorage();
+                    }, 100);
                 }
             };
             
@@ -352,14 +366,18 @@
             const extractCityState = (address) => {
                 if (!address) return '';
                 
+                // Split by comma and trim spaces
                 const parts = address.split(',').map(part => part.trim());
                 
                 if (parts.length >= 3) {
+                    // Format: "Street, City, State ZIP"
                     const city = parts[1];
                     const stateZip = parts[2];
+                    // Extract state (first word before ZIP)
                     const state = stateZip.split(' ')[0];
                     return `${city}, ${state}`;
                 } else if (parts.length === 2) {
+                    // Format: "Street, City State"
                     const cityState = parts[1];
                     return cityState;
                 }
@@ -372,6 +390,7 @@
                 try {
                     const state = {
                         target,
+                        targetPreset,
                         prices,
                         messages,
                         categories,
@@ -385,13 +404,23 @@
                     setTimeout(() => setSaveNotification(''), 3000);
                 }
             };
-
+            
             const loadFromLocalStorage = () => {
                 try {
                     const savedState = localStorage.getItem('dashBashState');
                     if (savedState) {
                         const state = JSON.parse(savedState);
-                        setTarget(state.target || '120');
+                        
+                        // Load target configuration
+                        const savedTarget = state.target || '99';
+                        const savedPreset = state.targetPreset || (savedTarget === '99' || savedTarget === '120' ? savedTarget : 'custom');
+                        
+                        setTarget(savedTarget);
+                        setTargetPreset(savedPreset);
+                        if (savedPreset === 'custom') {
+                            setCustomTarget(savedTarget);
+                        }
+                        
                         setPrices(state.prices || []);
                         setMessages(state.messages || []);
                         setCategories(state.categories || []);
@@ -406,11 +435,12 @@
                     setTimeout(() => setSaveNotification(''), 3000);
                 }
             };
-
+            
             const exportToJSON = () => {
                 try {
                     const state = {
                         target,
+                        targetPreset,
                         prices,
                         messages,
                         categories,
@@ -436,16 +466,26 @@
                     setTimeout(() => setSaveNotification(''), 3000);
                 }
             };
-
+            
             const importFromJSON = (event) => {
                 const file = event.target.files[0];
                 if (!file) return;
-
+                
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     try {
                         const state = JSON.parse(e.target.result);
-                        setTarget(state.target || '120');
+                        
+                        // Load target configuration
+                        const savedTarget = state.target || '99';
+                        const savedPreset = state.targetPreset || (savedTarget === '99' || savedTarget === '120' ? savedTarget : 'custom');
+                        
+                        setTarget(savedTarget);
+                        setTargetPreset(savedPreset);
+                        if (savedPreset === 'custom') {
+                            setCustomTarget(savedTarget);
+                        }
+                        
                         setPrices(state.prices || []);
                         setMessages(state.messages || []);
                         setCategories(state.categories || []);
@@ -459,10 +499,13 @@
                 reader.readAsText(file);
                 event.target.value = ''; // Reset input
             };
-
+            
             const clearAllData = () => {
                 if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
-                    setTarget('120');
+                    setTarget('99');
+                    setTargetPreset('99');
+                    setCustomTarget('');
+                    setIsEditingTarget(false);
                     setPrices([]);
                     setMessages([
                         "Ok someone got it! darn it i just noticed i put the tip so high by accident :( can u help change the tip to $0 pls?",
@@ -499,6 +542,7 @@
                 const todayClose = new Date(now);
                 todayClose.setHours(closeHours, closeMinutes, 0, 0);
                 
+                // If closing time has passed today, assume it's tomorrow's closing time
                 if (todayClose < now) {
                     todayClose.setDate(todayClose.getDate() + 1);
                 }
@@ -508,6 +552,7 @@
                 const diffHours = Math.floor(diffMinutes / 60);
                 const remainingMinutes = diffMinutes % 60;
                 
+                // Check if store is closed (assuming 6am opening time)
                 const todayOpen = new Date(now);
                 todayOpen.setHours(6, 0, 0, 0);
                 
@@ -519,9 +564,9 @@
                     return { status: 'closed', text: 'Closed', color: 'text-red-400' };
                 }
                 
-                let color = 'text-green-400';
-                if (diffMinutes < 120) color = 'text-yellow-400';
-                if (diffMinutes < 60) color = 'text-red-400';
+                let color = 'text-green-400'; // More than 2 hours
+                if (diffMinutes < 120) color = 'text-yellow-400'; // Less than 2 hours
+                if (diffMinutes < 60) color = 'text-red-400'; // Less than 1 hour
                 
                 const timeText = diffHours > 0 
                     ? `${diffHours}h ${remainingMinutes}m left`
@@ -754,18 +799,72 @@
                                 
                                 {isCalculatorOpen && (
                                     <div className="border-t border-gray-700 p-4">
-                                        {/* Target Input */}
+                                        {/* Target Amount Selector */}
                                         <div className="mb-4">
-                                            <label className="block text-sm font-medium mb-2">Target Amount ($) <span className="text-gray-400 text-xs">(Enter to move to prices)</span></label>
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                value={target}
-                                                onChange={(e) => setTarget(e.target.value)}
-                                                onKeyPress={handleTargetKeyPress}
-                                                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-base font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                placeholder="120"
-                                            />
+                                            <label className="block text-sm font-medium mb-2">Target Amount ($)</label>
+                                            <div className="flex gap-2 mb-2">
+                                                <button
+                                                    onClick={() => handleTargetPresetChange('99')}
+                                                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                                        targetPreset === '99' 
+                                                            ? 'bg-blue-600 text-white' 
+                                                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                                    }`}
+                                                >
+                                                    $99
+                                                </button>
+                                                <button
+                                                    onClick={() => handleTargetPresetChange('120')}
+                                                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                                        targetPreset === '120' 
+                                                            ? 'bg-blue-600 text-white' 
+                                                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                                    }`}
+                                                >
+                                                    $120
+                                                </button>
+                                                <button
+                                                    onClick={() => handleTargetPresetChange('custom')}
+                                                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1 ${
+                                                        targetPreset === 'custom' 
+                                                            ? 'bg-blue-600 text-white' 
+                                                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                                    }`}
+                                                >
+                                                    <Icon name="edit-2" size={14} />
+                                                    Custom
+                                                </button>
+                                            </div>
+                                            
+                                            {/* Custom Target Input */}
+                                            {isEditingTarget && (
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        type="number"
+                                                        step="0.01"
+                                                        value={customTarget}
+                                                        onChange={(e) => setCustomTarget(e.target.value)}
+                                                        onKeyPress={handleTargetKeyPress}
+                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-base font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        placeholder="Enter custom amount"
+                                                        autoFocus
+                                                    />
+                                                    <button
+                                                        onClick={handleCustomTargetSave}
+                                                        className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors flex items-center gap-1"
+                                                    >
+                                                        <Icon name="save" size={16} />
+                                                        Set
+                                                    </button>
+                                                </div>
+                                            )}
+                                            
+                                            {/* Current Target Display */}
+                                            {!isEditingTarget && targetPreset === 'custom' && (
+                                                <div className="text-sm text-gray-400 mt-1">
+                                                    Current: ${target}
+                                                </div>
+                                            )}
                                         </div>
                                         
                                         {/* Price Input */}
@@ -800,9 +899,9 @@
                                                 return { index, price, bestOption, validOptions: calc.validOptions };
                                             }).filter(item => item.bestOption);
                                             
-                                            const globalBest = allOptions.length > 0 ? allOptions.reduce((best, current) => 
+                                            const globalBest = allOptions.reduce((best, current) => 
                                                 current.bestOption.difference < best.bestOption.difference ? current : best
-                                            , allOptions[0]) : null;
+                                            , allOptions[0]);
                                             
                                             return (
                                                 <div>
@@ -1136,18 +1235,18 @@
                                                                                 >
                                                                                     <Icon name={isCollapsed ? "chevron-down" : "chevron-up"} size={14} />
                                                                                     <div className="flex-1">
-                                                                                    {cityState ? (
-                                                                                        <h5 className="font-medium text-green-300 text-sm flex items-center gap-2">
-                                                                                            {cityState}
-                                                                                            {timeStatus && (
-                                                                                                <span className={`text-xs ${timeStatus.color}`}>
-                                                                                                    ({timeStatus.status === 'open' ? 'Open' : 'Closed'})
-                                                                                                </span>
-                                                                                            )}
-                                                                                        </h5>
-                                                                                    ) : (
-                                                                                        <h5 className="font-medium text-gray-400 text-sm italic">New Store</h5>
-                                                                                    )}
+                                                                                        {cityState ? (
+                                                                                            <h5 className="font-medium text-green-300 text-sm flex items-center gap-2">
+                                                                                                {cityState}
+                                                                                                {timeStatus && (
+                                                                                                    <span className={`text-xs ${timeStatus.color}`}>
+                                                                                                        ({timeStatus.status === 'open' ? 'Open' : 'Closed'})
+                                                                                                    </span>
+                                                                                                )}
+                                                                                            </h5>
+                                                                                        ) : (
+                                                                                            <h5 className="font-medium text-gray-400 text-sm italic">New Store</h5>
+                                                                                        )}
                                                                                     </div>
                                                                                 </button>
                                                                             </div>
@@ -1323,101 +1422,74 @@
                                     className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <Icon name="settings-2" size={20} className="text-purple-400" />
+                                        <Icon name="settings" size={20} className="text-purple-400" />
                                         <span className="text-lg font-medium">State Management</span>
                                     </div>
                                     <Icon name={isStateManagementOpen ? "chevron-up" : "chevron-down"} size={20} />
                                 </button>
                                 
                                 {isStateManagementOpen && (
-                                    <div className="border-t border-gray-700 p-4 space-y-4">
-                                        {/* Save/Load Section */}
-                                        <div className="space-y-2">
-                                            <h3 className="text-sm font-medium text-gray-300 mb-2">Local Storage</h3>
-                                            <div className="bg-green-900/30 border border-green-800 rounded-lg px-3 py-2 mb-2">
-                                                <div className="flex items-center gap-2 text-green-400 text-xs">
-                                                    <Icon name="check-circle" size={14} />
-                                                    <span className="font-medium">Auto-Save Enabled</span>
-                                                </div>
-                                                <p className="text-gray-400 text-xs mt-1">Your data is automatically saved as you make changes</p>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={saveAllToLocalStorage}
-                                                    className="flex-1 bg-gray-600 hover:bg-gray-500 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                                                >
-                                                    <Icon name="save" size={14} />
-                                                    Save All
-                                                </button>
-                                                <button
-                                                    onClick={loadFromLocalStorage}
-                                                    className="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                                                >
-                                                    <Icon name="refresh-cw" size={14} />
-                                                    Load Saved
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* Export/Import Section */}
-                                        <div className="space-y-2">
-                                            <h3 className="text-sm font-medium text-gray-300 mb-2">Export & Import</h3>
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={exportToJSON}
-                                                    className="flex-1 bg-indigo-600/70 hover:bg-indigo-600/90 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                                                >
-                                                    <Icon name="download" size={14} />
-                                                    Export JSON
-                                                </button>
-                                                <label className="flex-1">
-                                                    <input
-                                                        type="file"
-                                                        accept=".json"
-                                                        onChange={importFromJSON}
-                                                        className="hidden"
-                                                    />
-                                                    <div className="bg-amber-600/70 hover:bg-amber-600/90 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 cursor-pointer h-full">
-                                                        <Icon name="upload" size={14} />
-                                                        Import JSON
-                                                    </div>
-                                                </label>
-                                            </div>
-                                        </div>
-
-                                        {/* Available Exports */}
-                                        {availableExports.length > 0 && (
-                                            <div className="space-y-2">
-                                                <h3 className="text-sm font-medium text-gray-300 mb-2">Available Exports</h3>
-                                                <div className="space-y-1 max-h-32 overflow-y-auto">
-                                                    {availableExports.map(exp => (
-                                                        <div key={exp} className="text-xs text-gray-400 font-mono bg-gray-700/40 rounded px-2 py-1">
-                                                            {exp}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Clear All */}
-                                        <div className="pt-2 border-t border-gray-700">
+                                    <div className="border-t border-gray-700 p-4">
+                                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                                            {/* Save to LocalStorage */}
                                             <button
-                                                onClick={() => {
-                                                    if (confirm('Are you sure you want to clear all data?')) {
-                                                        setTarget('');
-                                                        setPrices([]);
-                                                        setMessages([]);
-                                                        setCategories([]);
-                                                        localStorage.removeItem('dashBashState');
-                                                        setSaveNotification('All data cleared!');
-                                                        setTimeout(() => setSaveNotification(''), 3000);
-                                                    }
-                                                }}
-                                                className="w-full bg-red-600/70 hover:bg-red-600/90 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                                                onClick={saveAllToLocalStorage}
+                                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
                                             >
-                                                <Icon name="trash-2" size={14} />
-                                                Clear All Data
+                                                <Icon name="save" size={18} />
+                                                <span className="text-sm font-medium">Save All</span>
                                             </button>
+                                            
+                                            {/* Load from LocalStorage */}
+                                            <button
+                                                onClick={loadFromLocalStorage}
+                                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                            >
+                                                <Icon name="refresh-cw" size={18} />
+                                                <span className="text-sm font-medium">Load Saved</span>
+                                            </button>
+                                            
+                                            {/* Export to JSON */}
+                                            <button
+                                                onClick={exportToJSON}
+                                                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                            >
+                                                <Icon name="download" size={18} />
+                                                <span className="text-sm font-medium">Export JSON</span>
+                                            </button>
+                                            
+                                            {/* Import from JSON */}
+                                            <label className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer">
+                                                <Icon name="upload" size={18} />
+                                                <span className="text-sm font-medium">Import JSON</span>
+                                                <input
+                                                    type="file"
+                                                    accept="application/json"
+                                                    onChange={importFromJSON}
+                                                    className="hidden"
+                                                />
+                                            </label>
+                                            
+                                            {/* Clear All Data */}
+                                            <button
+                                                onClick={clearAllData}
+                                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 col-span-2 lg:col-span-1"
+                                            >
+                                                <Icon name="trash-2" size={18} />
+                                                <span className="text-sm font-medium">Clear All</span>
+                                            </button>
+                                        </div>
+                                        
+                                        {/* Instructions */}
+                                        <div className="mt-4 p-3 bg-gray-700/50 rounded-lg">
+                                            <h4 className="text-sm font-medium text-gray-300 mb-2">Instructions:</h4>
+                                            <ul className="text-xs text-gray-400 space-y-1">
+                                                <li>• <strong>Save All:</strong> Saves all current data to browser storage</li>
+                                                <li>• <strong>Load Saved:</strong> Restores previously saved data from browser storage</li>
+                                                <li>• <strong>Export JSON:</strong> Downloads all data as a JSON file for backup</li>
+                                                <li>• <strong>Import JSON:</strong> Loads data from a previously exported JSON file</li>
+                                                <li>• <strong>Clear All:</strong> Resets everything to default values</li>
+                                            </ul>
                                         </div>
                                     </div>
                                 )}
@@ -1428,19 +1500,17 @@
             );
         };
         
-        // Render the app
-        ReactDOM.createRoot(document.getElementById('root')).render(<EnhancedCalculator />);
-        
-        // Register Service Worker for PWA support
+        // Render the application
+        ReactDOM.render(<EnhancedCalculator />, document.getElementById('root'));
+    </script>
+    
+    <!-- Service Worker Registration -->
+    <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./service-worker.js')
-                    .then(registration => {
-                        console.log('Service Worker registered:', registration);
-                    })
-                    .catch(error => {
-                        console.log('Service Worker registration failed:', error);
-                    });
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(reg => console.log('Service Worker registered'))
+                    .catch(err => console.log('Service Worker registration failed'));
             });
         }
     </script>
