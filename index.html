@@ -1548,8 +1548,8 @@
                                 </button>
                                 
                                 {isNotesOpen && (
-                                    <div className="p-4 border-t border-gray-700">
-                                        <div className="flex justify-between items-center mb-4">
+                                    <div className="border-t border-gray-700 p-4 space-y-3">
+                                        <div className="flex justify-between items-center mb-1">
                                             <span className="text-sm text-gray-400">Organize your notes by category</span>
                                             <button
                                                 onClick={saveNotes}
@@ -1561,158 +1561,149 @@
                                         </div>
                                         
                                         {noteSaveNotification && (
-                                            <div className="mb-4 p-2 bg-green-500/20 border border-green-500/50 rounded-lg text-sm text-green-300 flex items-center gap-2">
+                                            <div className="mb-3 p-2 bg-green-500/20 border border-green-500/50 rounded-lg text-sm text-green-300 flex items-center gap-2">
                                                 <Icon name="check-circle" size={16} />
                                                 Notes saved successfully!
                                             </div>
                                         )}
                                         
                                         {noteCategories.map((category) => (
-                                            <div key={category.id} className="mb-4 bg-gray-900 rounded-lg overflow-hidden">
-                                                <div 
-                                                    className="p-3 flex items-center justify-between hover:bg-gray-800 transition-colors cursor-pointer"
-                                                    onClick={() => setCollapsedNoteCategories({...collapsedNoteCategories, [category.id]: !collapsedNoteCategories[category.id]})}
-                                                    onDrop={(e) => handleNoteCategoryDrop(e, category.id)}
-                                                    onDragOver={(e) => e.preventDefault()}
-                                                >
-                                                    <div className="flex items-center gap-2">
-                                                        <Icon name={collapsedNoteCategories[category.id] ? "chevron-right" : "chevron-down"} size={16} />
+                                            <div key={category.id} className="bg-gray-700/40 rounded-lg overflow-hidden border border-gray-600/30">
+                                                <div className="flex items-center justify-between p-3 hover:bg-gray-700/60 transition-colors">
+                                                    <button
+                                                        onClick={() => setCollapsedNoteCategories({...collapsedNoteCategories, [category.id]: !collapsedNoteCategories[category.id]})}
+                                                        className="flex items-center gap-2 flex-1 text-left"
+                                                        onDrop={(e) => handleNoteCategoryDrop(e, category.id)}
+                                                        onDragOver={(e) => e.preventDefault()}
+                                                    >
+                                                        <Icon name={collapsedNoteCategories[category.id] ? "chevron-down" : "chevron-up"} size={16} />
                                                         {editingNoteCategory === category.id ? (
-                                                            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                                                                <input
-                                                                    type="text"
-                                                                    value={editNoteCategoryText}
-                                                                    onChange={(e) => setEditNoteCategoryText(e.target.value)}
-                                                                    className="px-2 py-1 bg-gray-700 rounded border border-gray-600 text-sm"
-                                                                    autoFocus
-                                                                />
-                                                                <button
-                                                                    onClick={() => {
+                                                            <input
+                                                                type="text"
+                                                                value={editNoteCategoryText}
+                                                                onChange={(e) => setEditNoteCategoryText(e.target.value)}
+                                                                className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                onBlur={() => {
+                                                                    updateNoteCategoryName(category.id, editNoteCategoryText);
+                                                                    setEditingNoteCategory(-1);
+                                                                }}
+                                                                onKeyPress={(e) => {
+                                                                    if (e.key === 'Enter') {
                                                                         updateNoteCategoryName(category.id, editNoteCategoryText);
                                                                         setEditingNoteCategory(-1);
-                                                                    }}
-                                                                    className="text-green-400 hover:text-green-300"
-                                                                >
-                                                                    <Icon name="check" size={16} />
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => setEditingNoteCategory(-1)}
-                                                                    className="text-red-400 hover:text-red-300"
-                                                                >
-                                                                    <Icon name="x" size={16} />
-                                                                </button>
-                                                            </div>
+                                                                    }
+                                                                }}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                autoFocus
+                                                            />
                                                         ) : (
-                                                            <span className="font-medium text-purple-300">{category.name} ({category.notes.length})</span>
+                                                            <h4 className="font-medium text-blue-300 flex items-center gap-2">
+                                                                <Icon name="sticky-note" size={14} />
+                                                                {category.name} ({category.notes.length})
+                                                            </h4>
                                                         )}
-                                                    </div>
-                                                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                                    </button>
+                                                    
+                                                    <div className="flex items-center gap-1">
                                                         <button
                                                             onClick={() => addNote(category.id)}
-                                                            className="text-green-400 hover:text-green-300"
-                                                            title="Add Note"
+                                                            className="text-green-400 hover:text-green-300 p-1"
+                                                            title="Add note"
                                                         >
-                                                            <Icon name="plus" size={18} />
+                                                            <Icon name="plus" size={14} />
                                                         </button>
                                                         <button
                                                             onClick={() => {
                                                                 setEditingNoteCategory(category.id);
                                                                 setEditNoteCategoryText(category.name);
                                                             }}
-                                                            className="text-yellow-400 hover:text-yellow-300"
-                                                            title="Edit Category"
+                                                            className="text-yellow-400 hover:text-yellow-300 p-1"
+                                                            title="Edit category"
                                                         >
-                                                            <Icon name="edit-2" size={16} />
+                                                            <Icon name="edit-2" size={14} />
                                                         </button>
                                                         {noteCategories.length > 1 && (
                                                             <button
                                                                 onClick={() => deleteNoteCategory(category.id)}
-                                                                className="text-red-400 hover:text-red-300"
-                                                                title="Delete Category"
+                                                                className="text-red-400 hover:text-red-300 p-1"
+                                                                title="Delete category"
                                                             >
-                                                                <Icon name="trash-2" size={16} />
+                                                                <Icon name="trash-2" size={14} />
                                                             </button>
                                                         )}
                                                     </div>
                                                 </div>
                                                 
                                                 {!collapsedNoteCategories[category.id] && (
-                                                    <div className="px-3 pb-3">
+                                                    <div className="border-t border-gray-600/30 p-3 space-y-2">
                                                         {category.notes.length === 0 ? (
                                                             <div className="text-center py-4 text-gray-500 text-sm">
                                                                 No notes in this category
                                                             </div>
                                                         ) : (
-                                                            <div className="space-y-2">
-                                                                {category.notes.map((note, index) => (
-                                                                    <div
-                                                                        key={index}
-                                                                        draggable
-                                                                        onDragStart={() => handleNoteDragStart(category.id, index)}
-                                                                        onDrop={(e) => handleNoteDrop(e, category.id, index)}
-                                                                        onDragOver={(e) => e.preventDefault()}
-                                                                        className={`p-3 bg-gray-800 rounded-lg cursor-move transition-all ${
-                                                                            draggedNote.categoryId === category.id && draggedNote.noteIndex === index 
-                                                                                ? 'opacity-50' 
-                                                                                : 'hover:bg-gray-700'
-                                                                        }`}
-                                                                    >
-                                                                        <div className="flex items-start justify-between gap-2">
-                                                                            {editingNote.categoryId === category.id && editingNote.noteIndex === index ? (
-                                                                                <div className="flex-1 flex gap-2">
-                                                                                    <textarea
-                                                                                        value={editNoteText}
-                                                                                        onChange={(e) => setEditNoteText(e.target.value)}
-                                                                                        className="flex-1 px-2 py-1 bg-gray-700 rounded border border-gray-600 text-sm min-h-[60px] resize-y"
-                                                                                        autoFocus
-                                                                                    />
-                                                                                    <div className="flex flex-col gap-1">
-                                                                                        <button
-                                                                                            onClick={() => {
-                                                                                                updateNote(category.id, index, editNoteText);
-                                                                                                setEditingNote({ categoryId: -1, noteIndex: -1 });
-                                                                                            }}
-                                                                                            className="text-green-400 hover:text-green-300"
-                                                                                        >
-                                                                                            <Icon name="check" size={16} />
-                                                                                        </button>
-                                                                                        <button
-                                                                                            onClick={() => setEditingNote({ categoryId: -1, noteIndex: -1 })}
-                                                                                            className="text-red-400 hover:text-red-300"
-                                                                                        >
-                                                                                            <Icon name="x" size={16} />
-                                                                                        </button>
-                                                                                    </div>
+                                                            category.notes.map((note, index) => (
+                                                                <div
+                                                                    key={index}
+                                                                    className={`bg-gray-600/50 rounded-lg overflow-hidden border border-gray-500/30 transition-opacity ${
+                                                                        draggedNote.categoryId === category.id && draggedNote.noteIndex === index ? 'opacity-50' : ''
+                                                                    }`}
+                                                                    draggable
+                                                                    onDragStart={() => handleNoteDragStart(category.id, index)}
+                                                                    onDrop={(e) => handleNoteDrop(e, category.id, index)}
+                                                                    onDragOver={(e) => e.preventDefault()}
+                                                                >
+                                                                    <div className="flex items-center justify-between p-3 hover:bg-gray-600/70 transition-colors">
+                                                                        {editingNote.categoryId === category.id && editingNote.noteIndex === index ? (
+                                                                            <div className="flex-1 flex gap-2">
+                                                                                <textarea
+                                                                                    value={editNoteText}
+                                                                                    onChange={(e) => setEditNoteText(e.target.value)}
+                                                                                    className="flex-1 px-2 py-1 bg-gray-700 rounded border border-gray-600 text-sm min-h-[60px] resize-y"
+                                                                                    onBlur={() => {
+                                                                                        updateNote(category.id, index, editNoteText);
+                                                                                        setEditingNote({ categoryId: -1, noteIndex: -1 });
+                                                                                    }}
+                                                                                    onKeyDown={(e) => {
+                                                                                        if (e.key === 'Escape') {
+                                                                                            setEditingNote({ categoryId: -1, noteIndex: -1 });
+                                                                                        }
+                                                                                    }}
+                                                                                    autoFocus
+                                                                                />
+                                                                            </div>
+                                                                        ) : (
+                                                                            <>
+                                                                                <div className="flex items-center gap-2 flex-1">
+                                                                                    <button 
+                                                                                        className="text-gray-400 hover:text-gray-300 cursor-move" 
+                                                                                        aria-label="Drag to reorder"
+                                                                                    >
+                                                                                        <Icon name="grip-vertical" size={14} />
+                                                                                    </button>
+                                                                                    <span className="text-sm whitespace-pre-wrap">{note}</span>
                                                                                 </div>
-                                                                            ) : (
-                                                                                <>
-                                                                                    <div className="flex items-start gap-2 flex-1">
-                                                                                        <Icon name="grip-vertical" size={16} className="text-gray-500 mt-0.5" />
-                                                                                        <span className="text-sm whitespace-pre-wrap">{note}</span>
-                                                                                    </div>
-                                                                                    <div className="flex items-center gap-1">
-                                                                                        <button
-                                                                                            onClick={() => {
-                                                                                                setEditingNote({ categoryId: category.id, noteIndex: index });
-                                                                                                setEditNoteText(note);
-                                                                                            }}
-                                                                                            className="text-yellow-400 hover:text-yellow-300"
-                                                                                        >
-                                                                                            <Icon name="edit-2" size={14} />
-                                                                                        </button>
-                                                                                        <button
-                                                                                            onClick={() => deleteNote(category.id, index)}
-                                                                                            className="text-red-400 hover:text-red-300"
-                                                                                        >
-                                                                                            <Icon name="trash-2" size={14} />
-                                                                                        </button>
-                                                                                    </div>
-                                                                                </>
-                                                                            )}
-                                                                        </div>
+                                                                                <div className="flex items-center gap-1">
+                                                                                    <button
+                                                                                        onClick={() => {
+                                                                                            setEditingNote({ categoryId: category.id, noteIndex: index });
+                                                                                            setEditNoteText(note);
+                                                                                        }}
+                                                                                        className="text-yellow-400 hover:text-yellow-300 p-1"
+                                                                                    >
+                                                                                        <Icon name="edit-2" size={14} />
+                                                                                    </button>
+                                                                                    <button
+                                                                                        onClick={() => deleteNote(category.id, index)}
+                                                                                        className="text-red-400 hover:text-red-300 p-1"
+                                                                                    >
+                                                                                        <Icon name="trash-2" size={14} />
+                                                                                    </button>
+                                                                                </div>
+                                                                            </>
+                                                                        )}
                                                                     </div>
-                                                                ))}
-                                                            </div>
+                                                                </div>
+                                                            ))
                                                         )}
                                                     </div>
                                                 )}
