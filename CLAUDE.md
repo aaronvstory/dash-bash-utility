@@ -2,15 +2,18 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> **📐 Style Guide**: All UI development must follow the patterns in `STYLE_GUIDE.md` for consistent design.
+
 ## Project Overview
 
-Dash Bash Utility is a React-based utility application that provides three main collapsible tools for delivery service management (likely DoorDash operations):
+Dash Bash Utility is a React-based Progressive Web App (PWA) designed for delivery service drivers (primarily DoorDash). It provides four main collapsible tools:
 
-- **Target Calculator**: Calculates optimal quantities of items to reach a target dollar amount
-- **Quick Copy Messages**: Pre-configured messages for common customer service scenarios  
-- **Store Address Book**: Store locations with hours and notes, organized by category with localStorage persistence
+- **Target Calculator**: Calculates optimal quantities of items to reach a target dollar amount with quick-select between $99/$120/custom
+- **Quick Messages**: Pre-configured customer service message templates with drag-and-drop reordering  
+- **Address Book**: Store locations with hours tracking, real-time open/closed status, organized by category
+- **Notes**: Multi-category note-taking system with drag-and-drop organization and persistent storage
 
-The application features a fully collapsible interface where each main section and subsection can be collapsed for better organization.
+The application is a single-file solution that runs directly in the browser without any build process required.
 
 ## Architecture
 
@@ -21,6 +24,7 @@ The application features a fully collapsible interface where each main section a
 - **service-worker.js**: Offline caching for PWA functionality
 - **serve-pwa.py** / **serve-pwa.bat**: Local HTTPS server for PWA testing
 - **favicon.svg**: Application favicon featuring a dollar sign with dash marks on a dark background
+- **STYLE_GUIDE.md**: Comprehensive styling conventions and component patterns
 - **exports/**: Directory for exported/imported state backups
 
 ### Single Component Application
@@ -29,26 +33,35 @@ The entire application is contained in a single React functional component using
 ### Key Features
 
 #### Target Calculator (Left Column)
-- Calculates how many items at given prices can fit within a target dollar amount
-- Color-coded results based on how close they are to the target
-- Automatic best option highlighting (green for optimal choice)
-- Real-time calculation as prices are added/removed
+- Quick-select target amounts: $99, $120, or custom value
+- Calculates all valid quantity combinations for each price
+- Color-coded results: Green (optimal), Yellow (close), Orange (moderate), Red (far)
+- Automatic best option highlighting based on proximity to target
+- Real-time calculation with Enter key navigation
 
 #### Quick Messages System (Right Column Top)
-- Drag-and-drop reordering of messages
-- In-line editing with save/cancel
-- Copy to clipboard with visual confirmation
-- Pre-populated with customer service response templates
+- Pre-configured customer service templates (refunds, tips, agent requests)
+- Drag-and-drop reordering with visual feedback
+- In-line editing with explicit save/cancel
+- One-click copy to clipboard with toast notification
+- Persistent message order and content
 
-#### Address Book (Right Column Bottom)
-- Categorized store locations (e.g., Dollar General, Tractor Supply Co.)
-- Store hours tracking with enhanced time status display (open/closed indicators)
-- Real-time clock display updating every minute
-- Notes field for each location
-- Copy address to clipboard functionality
-- Automatic city/state extraction from addresses for better display
-- localStorage persistence with save button
-- Edit mode toggle for each store with inline editing
+#### Address Book (Right Column Middle)
+- Categorized store locations (Dollar General, Tractor Supply Co., etc.)
+- Store hours tracking with real-time open/closed status
+- Time-until-close calculations with color warnings
+- Automatic city/state extraction from addresses
+- Drag-and-drop stores between/within categories
+- Edit mode toggle per store with inline field editing
+- Manual save to localStorage
+
+#### Notes Section (Right Column Bottom)
+- Multi-category note organization
+- Drag-and-drop notes between categories
+- In-line note editing with save/cancel
+- Category management (add/delete)
+- Automatic localStorage persistence
+- Collapsible categories for space management
 
 ## Development
 
@@ -112,7 +125,8 @@ npm run dev
 The component uses React hooks for all state management:
 
 ### Calculator State
-- `target`: Target dollar amount (default: '120')
+- `target`: Target dollar amount (default: '99')
+- `targetPreset`: Selected preset ('99', '120', or 'custom')
 - `prices`: Array of product prices
 - `currentPrice`: Current price being entered
 
@@ -129,12 +143,19 @@ The component uses React hooks for all state management:
 - `saveNotification`: Toast notification for save operations
 - Store properties: address, openTime, closeTime, notes
 
+### Notes State
+- `noteCategories`: Array of note categories with nested notes
+- `editingNote`: Tracks which note is being edited {categoryId, noteIndex}
+- `draggedNote`: Tracks note being dragged for reordering
+- `collapsedNoteCategories`: Tracks collapsed state of each category
+- Automatic persistence to localStorage
+
 ### State Management Features
 - `isStateManagementOpen`: Toggle for state management panel
 - `availableExports`: List of saved state backups in exports directory
 - `importNotification`: Toast notification for import operations
 - Export/Import functionality for complete application state
-- Drag-and-drop support for store reordering within and between categories
+- Unified state persistence to `dashBashState` in localStorage
 
 ## Key Algorithms
 
@@ -178,9 +199,15 @@ The `extractCityState` function:
 ## Data Persistence
 
 ### localStorage Keys
-- `addressBookCategories`: Stores the complete categories array with all store data
-- Loaded on component mount, saved manually via Save button
-- Handles JSON parse errors gracefully
+- `dashBashState`: Unified state storage containing all application data
+  - `target`: Current target amount
+  - `targetPreset`: Selected preset ('99', '120', or 'custom')
+  - `messages`: Quick messages array
+  - `categories`: Address book categories with stores
+  - `noteCategories`: Notes categories with notes
+- `addressBookCategories`: Legacy key for backward compatibility
+- Loaded on component mount, saved automatically or manually
+- Handles JSON parse errors gracefully with fallback to defaults
 
 ## PWA Features
 
@@ -197,44 +224,89 @@ The app can be installed as a PWA on desktop and mobile:
 - Standalone display mode for app-like experience
 - Launch handler for single-instance behavior
 
-## Common Tasks
+## Common Development Tasks
 
-### Testing PWA Features
+### Running Locally
 ```bash
-# Start local server with proper MIME types
+# Windows - Quick start
+serve-pwa.bat
+
+# Python direct (all platforms)
 python serve-pwa.py
-# Open http://localhost:8443/index.html
-# Check DevTools > Application > Service Workers
+
+# Access at http://localhost:8443/index.html
 ```
 
-### Deploying the App
-The HTML file is self-contained and can be:
-- Hosted on any static web server
-- Opened directly from file system
-- Installed as a PWA from HTTPS origin
-- Served locally with the included Python server
+### Testing PWA Installation
+```bash
+# Start server with MIME types
+python serve-pwa.py
 
-### Adding New Quick Messages
-Messages are stored in the `messages` state array. The UI provides add/edit/delete functionality.
+# Open http://localhost:8443
+# Check DevTools > Application > Manifest
+# Install via browser prompt or DevTools
+```
 
-### Adding Store Categories
-Categories are managed through the UI with the "Add New Store Category" button.
+### Deploying to GitHub Pages
+The app is deployed at: https://aaronvstory.github.io/dash-bash-utility/
+- Push changes to main branch
+- GitHub Pages serves index.html automatically
+- Service worker enables offline functionality
 
-### Managing Store Data
-- Toggle edit mode per store using the edit button (changes to save icon when editing)
-- In edit mode: All fields become editable inputs
-- In read mode: Shows formatted, read-only display with proper empty state handling
-- Save address book data using the green Save button in the header
-- Drag stores between categories or reorder within categories
+### Key Code Modifications
 
-### State Backup and Recovery
-- Export current state to JSON file in exports directory
-- Import previous state from saved backups
-- State management panel shows available backups
-- Automatic filename generation with timestamps
+#### Adding New Features
+New sections follow the collapsible pattern:
+```javascript
+const [isSectionOpen, setIsSectionOpen] = useState(false);
+// Add section UI with ChevronDown/ChevronUp toggle
+```
 
-### Modifying Calculator Logic
-The calculation logic is in `calculateQuantities` and `findBestOption` functions. Modify these to change how optimal quantities are determined.
+#### Modifying Target Presets
+Update the target selector logic in the calculator section:
+- Modify `targetPreset` state values ('99', '120', 'custom')
+- Update button click handlers for preset selection
 
-### Styling Changes
-All styling uses Tailwind CSS classes. The app uses a dark theme with gray-900 background and various gray shades for components.
+#### Changing Color Schemes
+- Calculator results: Modify `getColorForDifference()` function
+- Time warnings: Update `calculateTimeStatus()` color logic
+- UI elements: Adjust Tailwind classes (gray-XXX, blue-XXX, etc.)
+
+#### Adding New Store Categories
+Categories are created via UI, but default categories can be added in the initial `categories` state array.
+
+#### Customizing Quick Messages
+Default messages are in the initial `messages` state array. Modify to change startup templates.
+
+### State Management
+
+#### Export/Import Format
+State exports create JSON files with timestamp:
+```json
+{
+  "target": "99",
+  "targetPreset": "99",
+  "messages": [...],
+  "categories": [...],
+  "noteCategories": [...]
+}
+```
+
+#### localStorage Structure
+All data stored under `dashBashState` key as stringified JSON. Legacy `addressBookCategories` supported for backward compatibility.
+
+### Performance Considerations
+- React 18 with hooks for efficient re-renders
+- Virtual scrolling not needed (typical data size <100 items)
+- Service worker caches all resources for instant load
+- Minimal external dependencies (React, Tailwind, Lucide icons)
+
+## Style Guide
+
+**IMPORTANT**: See `STYLE_GUIDE.md` for comprehensive styling conventions. All new features and modifications must follow the established design patterns documented there, including:
+- Color palette (dark theme with gray-900 base)
+- Component patterns (collapsible sections, buttons, inputs)
+- Layout structure and spacing conventions
+- Interactive states and animations
+- Icon usage and sizing guidelines
+- Template for adding new sections
