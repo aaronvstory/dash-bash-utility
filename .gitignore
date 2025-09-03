@@ -42,3 +42,6 @@ __pycache__/
 # User data exports (keep directory but not contents)
 exports/*
 !exports/.gitkeep
+
+# YoYo AI version control directory
+.yoyo/

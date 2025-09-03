@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Plus, Copy, ChevronDown, ChevronUp, Edit2, Save, X, GripVertical, Clock, MapPin, Calculator, MessageSquare, Building2, Settings, Download, Upload, RefreshCw, FolderOpen } from 'lucide-react';
+import { Trash2, Plus, Copy, ChevronDown, ChevronUp, Edit2, Save, X, GripVertical, Clock, MapPin, Calculator, MessageSquare, Building2, Settings, Download, Upload, RefreshCw, FolderOpen, Timer, Users } from 'lucide-react';
 
 const EnhancedCalculator = () => {
   const [target, setTarget] = useState('99');
@@ -79,6 +79,21 @@ const EnhancedCalculator = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [saveNotification, setSaveNotification] = useState('');
 
+  // Dashers state
+  const [isDashersOpen, setIsDashersOpen] = useState(false);
+  const [dasherCategories, setDasherCategories] = useState([
+    { id: 'main', name: 'Main', dashers: [] },
+    { id: 'currently-using', name: 'Currently using', dashers: [] },
+    { id: 'deactivated', name: 'Deactivated', dashers: [] },
+    { id: 'locked', name: 'Locked', dashers: [] },
+    { id: 'reverif', name: 'Reverif', dashers: [] },
+    { id: 'ready', name: 'Ready', dashers: [] }
+  ]);
+  const [editingDasher, setEditingDasher] = useState({ categoryId: '', dasherId: '' });
+  const [draggedDasher, setDraggedDasher] = useState({ categoryId: '', dasherId: '' });
+  const [collapsedDasherCategories, setCollapsedDasherCategories] = useState({});
+  const [dasherUpdateInterval, setDasherUpdateInterval] = useState(null);
+
   // Load from localStorage on component mount
   useEffect(() => {
     // Try to load the new unified state first
@@ -101,6 +116,7 @@ const EnhancedCalculator = () => {
         setPrices(state.prices || []);
         setMessages(state.messages || messages);
         setCategories(state.categories || []);
+        setDasherCategories(state.dasherCategories || dasherCategories);
       } catch (e) {
         console.error('Error loading saved state:', e);
       }
@@ -325,6 +341,7 @@ const EnhancedCalculator = () => {
         prices,
         messages,
         categories,
+        dasherCategories,
         timestamp: new Date().toISOString()
       };
       localStorage.setItem('dashBashState', JSON.stringify(state));
@@ -355,6 +372,7 @@ const EnhancedCalculator = () => {
         setPrices(state.prices || []);
         setMessages(state.messages || []);
         setCategories(state.categories || []);
+        setDasherCategories(state.dasherCategories || dasherCategories);
         setSaveNotification('✅ Data loaded successfully!');
         setTimeout(() => setSaveNotification(''), 3000);
       } else {
@@ -375,6 +393,7 @@ const EnhancedCalculator = () => {
         prices,
         messages,
         categories,
+        dasherCategories,
         exportDate: new Date().toISOString(),
         version: '1.0'
       };
@@ -420,6 +439,7 @@ const EnhancedCalculator = () => {
         setPrices(state.prices || []);
         setMessages(state.messages || []);
         setCategories(state.categories || []);
+        setDasherCategories(state.dasherCategories || dasherCategories);
         setImportNotification(`✅ Imported data from ${file.name}`);
         setTimeout(() => setImportNotification(''), 3000);
       } catch (err) {
@@ -676,6 +696,173 @@ const EnhancedCalculator = () => {
       return a.difference - b.difference;
     })[0];
   };
+
+  // Dasher Management Functions
+  const addDasher = (categoryId) => {
+    const newDasher = {
+      id: Date.now().toString(),
+      name: '',
+      email: '',
+      lastUsed: null,
+      notes: ''
+    };
+    setDasherCategories(dasherCategories.map(cat => 
+      cat.id === categoryId 
+        ? { ...cat, dashers: [...cat.dashers, newDasher] }
+        : cat
+    ));
+  };
+
+  const updateDasher = (categoryId, dasherId, field, value) => {
+    setDasherCategories(dasherCategories.map(cat => 
+      cat.id === categoryId 
+        ? {
+            ...cat,
+            dashers: cat.dashers.map(dasher => 
+              dasher.id === dasherId ? { ...dasher, [field]: value } : dasher
+            )
+          }
+        : cat
+    ));
+  };
+
+  const deleteDasher = (categoryId, dasherId) => {
+    setDasherCategories(dasherCategories.map(cat => 
+      cat.id === categoryId 
+        ? { ...cat, dashers: cat.dashers.filter(dasher => dasher.id !== dasherId) }
+        : cat
+    ));
+  };
+
+  const toggleEditDasher = (categoryId, dasherId) => {
+    if (editingDasher.categoryId === categoryId && editingDasher.dasherId === dasherId) {
+      setEditingDasher({ categoryId: '', dasherId: '' });
+    } else {
+      setEditingDasher({ categoryId, dasherId });
+    }
+  };
+
+  const isDasherEditing = (categoryId, dasherId) => {
+    return editingDasher.categoryId === categoryId && editingDasher.dasherId === dasherId;
+  };
+
+  const toggleDasherCategoryCollapse = (categoryId) => {
+    setCollapsedDasherCategories(prev => ({
+      ...prev,
+      [categoryId]: !prev[categoryId]
+    }));
+  };
+
+  const startDasherTimer = (categoryId, dasherId) => {
+    const now = new Date().toISOString();
+    updateDasher(categoryId, dasherId, 'lastUsed', now);
+    // Auto-save after timer start
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
+  };
+
+  const calculateDasherTimeStatus = (lastUsedTime) => {
+    if (!lastUsedTime) return null;
+    
+    const lastUsed = new Date(lastUsedTime);
+    const now = new Date();
+    const diffMs = now - lastUsed;
+    const diffHours = diffMs / (1000 * 60 * 60);
+    const diffMinutes = Math.floor((diffMs / (1000 * 60)) % 60);
+    const remainingHours = 24 - diffHours;
+    
+    if (diffHours < 24) {
+      // Still within 24 hours
+      const hoursLeft = Math.floor(remainingHours);
+      const minutesLeft = Math.floor((remainingHours - hoursLeft) * 60);
+      
+      let color = 'text-red-400'; // Default red for < 24 hours
+      if (remainingHours <= 1) {
+        color = 'text-orange-400'; // Orange for last hour
+      }
+      
+      return {
+        status: 'countdown',
+        text: hoursLeft > 0 
+          ? `${hoursLeft}h ${minutesLeft}m left`
+          : `${minutesLeft}m left`,
+        color,
+        hoursRemaining: remainingHours
+      };
+    } else {
+      // More than 24 hours
+      const daysElapsed = Math.floor(diffHours / 24);
+      const hoursElapsed = Math.floor(diffHours % 24);
+      
+      return {
+        status: 'elapsed',
+        text: daysElapsed > 0
+          ? `${daysElapsed}d ${hoursElapsed}h ago`
+          : `${Math.floor(diffHours)}h ${diffMinutes}m ago`,
+        color: 'text-green-400',
+        hoursElapsed: diffHours
+      };
+    }
+  };
+
+  const getDasherTitle = (dasher) => {
+    if (dasher.name && dasher.email) {
+      return `${dasher.name} - ${dasher.email}`;
+    } else if (dasher.name) {
+      return dasher.name;
+    } else if (dasher.email) {
+      return dasher.email;
+    } else {
+      return 'New Dasher';
+    }
+  };
+
+  const handleDasherDragStart = (e, categoryId, dasherId) => {
+    setDraggedDasher({ categoryId, dasherId });
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDasherDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDasherDrop = (e, targetCategoryId) => {
+    e.preventDefault();
+    if (!draggedDasher.categoryId || !draggedDasher.dasherId) return;
+    
+    if (draggedDasher.categoryId !== targetCategoryId) {
+      // Move dasher between categories
+      const sourceCategory = dasherCategories.find(cat => cat.id === draggedDasher.categoryId);
+      const dasherToMove = sourceCategory.dashers.find(d => d.id === draggedDasher.dasherId);
+      
+      if (dasherToMove) {
+        setDasherCategories(dasherCategories.map(cat => {
+          if (cat.id === draggedDasher.categoryId) {
+            // Remove from source
+            return { ...cat, dashers: cat.dashers.filter(d => d.id !== draggedDasher.dasherId) };
+          } else if (cat.id === targetCategoryId) {
+            // Add to target
+            return { ...cat, dashers: [...cat.dashers, dasherToMove] };
+          }
+          return cat;
+        }));
+      }
+    }
+    
+    setDraggedDasher({ categoryId: '', dasherId: '' });
+  };
+
+  // Update dashers timer display every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Force re-render to update time displays
+      setDasherCategories(prev => [...prev]);
+    }, 60000); // Update every minute
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const targetAmount = parseFloat(target) || 0;
 
@@ -1344,6 +1531,208 @@ const EnhancedCalculator = () => {
                 </div>
               )}
             </div>
+
+          {/* Dashers Section */}
+          <div className="bg-gray-800 rounded-lg overflow-hidden">
+            <button
+              onClick={() => setIsDashersOpen(!isDashersOpen)}
+              className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Users size={20} className="text-indigo-400" />
+                <span className="text-lg font-medium">
+                  Dashers ({dasherCategories.reduce((total, cat) => total + cat.dashers.length, 0)} total)
+                </span>
+              </div>
+              {isDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </button>
+            
+            {isDashersOpen && (
+              <div className="border-t border-gray-700 p-4 space-y-3">
+                {dasherCategories.map((category) => {
+                  const isCategoryCollapsed = collapsedDasherCategories[category.id];
+                  
+                  return (
+                    <div 
+                      key={category.id} 
+                      className="bg-gray-700/40 rounded-lg overflow-hidden border border-gray-600/30"
+                      onDragOver={handleDasherDragOver}
+                      onDrop={(e) => handleDasherDrop(e, category.id)}
+                    >
+                      {/* Category Header */}
+                      <div className="flex items-center justify-between p-3 hover:bg-gray-700/60 transition-colors">
+                        <button
+                          onClick={() => toggleDasherCategoryCollapse(category.id)}
+                          className="flex items-center gap-2 flex-1 text-left"
+                        >
+                          {isCategoryCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                          <h4 className="font-medium text-indigo-300 flex items-center gap-2">
+                            <Users size={14} />
+                            {category.name} ({category.dashers.length})
+                          </h4>
+                        </button>
+                        
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => addDasher(category.id)}
+                            className="text-green-400 hover:text-green-300 p-1"
+                            title="Add dasher"
+                          >
+                            <Plus size={14} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Dashers */}
+                      {!isCategoryCollapsed && (
+                        <div className="border-t border-gray-600/30 p-3 space-y-2">
+                          {category.dashers.map((dasher) => {
+                            const isEditing = isDasherEditing(category.id, dasher.id);
+                            const timeStatus = calculateDasherTimeStatus(dasher.lastUsed);
+                            const dasherTitle = getDasherTitle(dasher);
+                            
+                            return (
+                              <div 
+                                key={dasher.id} 
+                                className={`bg-gray-600/50 rounded-lg p-3 border border-gray-500/30 transition-opacity ${
+                                  draggedDasher.categoryId === category.id && draggedDasher.dasherId === dasher.id ? 'opacity-50' : ''
+                                }`}
+                                draggable={!isEditing}
+                                onDragStart={(e) => { if (!isEditing) handleDasherDragStart(e, category.id, dasher.id); }}
+                              >
+                                {/* Dasher Header */}
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2 flex-1">
+                                    {!isEditing && (
+                                      <button 
+                                        className="text-gray-400 hover:text-gray-300 cursor-move" 
+                                        aria-label="Drag to reorder"
+                                      >
+                                        <GripVertical size={14} />
+                                      </button>
+                                    )}
+                                    <div className="flex-1">
+                                      <h5 className="font-medium text-purple-300 text-sm">
+                                        {dasherTitle}
+                                      </h5>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      onClick={() => startDasherTimer(category.id, dasher.id)}
+                                      className="text-blue-400 hover:text-blue-300 p-1"
+                                      title="Start 24hr timer"
+                                    >
+                                      <Timer size={14} />
+                                    </button>
+                                    <button
+                                      onClick={() => toggleEditDasher(category.id, dasher.id)}
+                                      className={`p-1 transition-colors ${
+                                        isEditing 
+                                          ? 'text-green-400 hover:text-green-300' 
+                                          : 'text-yellow-400 hover:text-yellow-300'
+                                      }`}
+                                      title={isEditing ? 'Save changes' : 'Edit dasher'}
+                                    >
+                                      {isEditing ? <Save size={14} /> : <Edit2 size={14} />}
+                                    </button>
+                                    <button
+                                      onClick={() => deleteDasher(category.id, dasher.id)}
+                                      className="text-red-400 hover:text-red-300 p-1"
+                                      title="Delete dasher"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Dasher Details */}
+                                <div className="space-y-2">
+                                  {/* Name */}
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-xs text-gray-400 w-16">Name:</label>
+                                    {isEditing ? (
+                                      <input
+                                        type="text"
+                                        value={dasher.name}
+                                        onChange={(e) => updateDasher(category.id, dasher.id, 'name', e.target.value)}
+                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        placeholder="Enter name..."
+                                      />
+                                    ) : (
+                                      <div className="flex-1 text-xs text-gray-200">
+                                        {dasher.name || <span className="italic text-gray-500">No name</span>}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Email */}
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-xs text-gray-400 w-16">Email:</label>
+                                    {isEditing ? (
+                                      <input
+                                        type="email"
+                                        value={dasher.email}
+                                        onChange={(e) => updateDasher(category.id, dasher.id, 'email', e.target.value)}
+                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        placeholder="Enter email..."
+                                      />
+                                    ) : (
+                                      <div className="flex-1 text-xs text-gray-200">
+                                        {dasher.email || <span className="italic text-gray-500">No email</span>}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Last Used Timer */}
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-xs text-gray-400 w-16">Last used:</label>
+                                    <div className="flex-1 text-xs">
+                                      {timeStatus ? (
+                                        <span className={`font-mono ${timeStatus.color}`}>
+                                          {timeStatus.text}
+                                        </span>
+                                      ) : (
+                                        <span className="italic text-gray-500">Timer not started</span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Notes */}
+                                  <div className="flex items-start gap-2">
+                                    <label className="text-xs text-gray-400 w-16 mt-1">Notes:</label>
+                                    {isEditing ? (
+                                      <textarea
+                                        value={dasher.notes}
+                                        onChange={(e) => updateDasher(category.id, dasher.id, 'notes', e.target.value)}
+                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        rows={1}
+                                        placeholder="Any notes..."
+                                      />
+                                    ) : (
+                                      <div className="flex-1 text-xs text-gray-200">
+                                        {dasher.notes || <span className="italic text-gray-500">No notes</span>}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          {category.dashers.length === 0 && (
+                            <div className="text-center text-gray-500 py-2 text-xs">
+                              No dashers in this category. Click + to add one.
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           {/* State Management Section */}
           <div className="bg-gray-800 rounded-lg overflow-hidden">
