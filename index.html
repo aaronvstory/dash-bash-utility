@@ -295,18 +295,18 @@
                 if (currentPrice && !isNaN(parseFloat(currentPrice))) {
                     setPrices([...prices, parseFloat(currentPrice)]);
                     setCurrentPrice('');
-                    setTimeout(() => priceInputRef.current?.focus(), 0);
+                    setTimeout(() => priceInputRef.current && priceInputRef.current.focus(), 0);
                 }
             };
 
             const removePrice = (index) => {
                 setPrices(prices.filter((_, i) => i !== index));
-                setTimeout(() => priceInputRef.current?.focus(), 0);
+                setTimeout(() => priceInputRef.current && priceInputRef.current.focus(), 0);
             };
 
             const clearAll = () => {
                 setPrices([]);
-                setTimeout(() => priceInputRef.current?.focus(), 0);
+                setTimeout(() => priceInputRef.current && priceInputRef.current.focus(), 0);
             };
 
             const handleKeyPress = (e) => {
@@ -320,7 +320,7 @@
                     if (isEditingTarget) {
                         handleCustomTargetSave();
                     } else {
-                        priceInputRef.current?.focus();
+                        priceInputRef.current && priceInputRef.current.focus();
                     }
                 }
             };
@@ -356,7 +356,7 @@
             };
 
             useEffect(() => {
-                priceInputRef.current?.focus();
+                priceInputRef.current && priceInputRef.current.focus();
             }, []);
 
             // Message management functions
