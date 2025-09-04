@@ -43,5 +43,8 @@ __pycache__/
 exports/*
 !exports/.gitkeep
 
+# Archives folder for old versions and test files
+archives/
+
 # YoYo AI version control directory
 .yoyo/
