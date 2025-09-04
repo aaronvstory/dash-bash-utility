@@ -116,6 +116,7 @@ const EnhancedCalculator = () => {
         setPrices(state.prices || []);
         setMessages(state.messages || messages);
         setCategories(state.categories || []);
+        setNoteCategories(state.noteCategories || noteCategories);
         setDasherCategories(state.dasherCategories || dasherCategories);
       } catch (e) {
         console.error('Error loading saved state:', e);
@@ -341,6 +342,7 @@ const EnhancedCalculator = () => {
         prices,
         messages,
         categories,
+        noteCategories,
         dasherCategories,
         timestamp: new Date().toISOString()
       };
@@ -372,6 +374,7 @@ const EnhancedCalculator = () => {
         setPrices(state.prices || []);
         setMessages(state.messages || []);
         setCategories(state.categories || []);
+        setNoteCategories(state.noteCategories || noteCategories);
         setDasherCategories(state.dasherCategories || dasherCategories);
         setSaveNotification('✅ Data loaded successfully!');
         setTimeout(() => setSaveNotification(''), 3000);
@@ -393,9 +396,10 @@ const EnhancedCalculator = () => {
         prices,
         messages,
         categories,
+        noteCategories,
         dasherCategories,
         exportDate: new Date().toISOString(),
-        version: '1.0'
+        version: '2.0'
       };
       
       const dataStr = JSON.stringify(state, null, 2);
@@ -439,6 +443,7 @@ const EnhancedCalculator = () => {
         setPrices(state.prices || []);
         setMessages(state.messages || []);
         setCategories(state.categories || []);
+        setNoteCategories(state.noteCategories || noteCategories);
         setDasherCategories(state.dasherCategories || dasherCategories);
         setImportNotification(`✅ Imported data from ${file.name}`);
         setTimeout(() => setImportNotification(''), 3000);
@@ -469,6 +474,17 @@ const EnhancedCalculator = () => {
         "customer asked for refund if out of stock"
       ]);
       setCategories([]);
+      setNoteCategories([
+        { id: Date.now().toString(), name: 'General', notes: [] }
+      ]);
+      setDasherCategories([
+        { id: 'main', name: 'Main', dashers: [] },
+        { id: 'currently-using', name: 'Currently using', dashers: [] },
+        { id: 'deactivated', name: 'Deactivated', dashers: [] },
+        { id: 'locked', name: 'Locked', dashers: [] },
+        { id: 'reverif', name: 'Reverif', dashers: [] },
+        { id: 'ready', name: 'Ready', dashers: [] }
+      ]);
       localStorage.removeItem('dashBashState');
       localStorage.removeItem('addressBookCategories');
       setSaveNotification('✅ All data cleared');
@@ -714,6 +730,29 @@ const EnhancedCalculator = () => {
   };
 
   const updateDasher = (categoryId, dasherId, field, value) => {
+    // Validate email if updating email field
+    if (field === 'email' && value) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(value) && value.includes('@')) {
+        // Only validate if it looks like they're trying to enter an email
+        return; // Don't update if invalid email format
+      }
+      
+      // Check for duplicate email across all categories
+      const isDuplicate = dasherCategories.some(cat => 
+        cat.dashers.some(dasher => 
+          dasher.id !== dasherId && dasher.email && dasher.email.toLowerCase() === value.toLowerCase()
+        )
+      );
+      
+      if (isDuplicate) {
+        // Show a toast or alert for duplicate email
+        setSaveNotification('A dasher with this email already exists');
+        setTimeout(() => setSaveNotification(''), 3000);
+        return; // Don't update if duplicate email
+      }
+    }
+    
     setDasherCategories(dasherCategories.map(cat => 
       cat.id === categoryId 
         ? {
@@ -854,11 +893,13 @@ const EnhancedCalculator = () => {
     setDraggedDasher({ categoryId: '', dasherId: '' });
   };
 
-  // Update dashers timer display every minute
+  // Update timer display with a tick counter instead of forcing re-renders
+  const [timerTick, setTimerTick] = useState(0);
+  
   useEffect(() => {
     const interval = setInterval(() => {
-      // Force re-render to update time displays
-      setDasherCategories(prev => [...prev]);
+      // Increment tick to trigger re-render only for timer displays
+      setTimerTick(prev => prev + 1);
     }, 60000); // Update every minute
     
     return () => clearInterval(interval);
@@ -1588,6 +1629,7 @@ const EnhancedCalculator = () => {
                         <div className="border-t border-gray-600/30 p-3 space-y-2">
                           {category.dashers.map((dasher) => {
                             const isEditing = isDasherEditing(category.id, dasher.id);
+                            // Re-calculate on timerTick changes
                             const timeStatus = calculateDasherTimeStatus(dasher.lastUsed);
                             const dasherTitle = getDasherTitle(dasher);
                             

@@ -22,14 +22,35 @@ A Progressive Web App (PWA) for delivery service drivers, featuring a target cal
 - Store locations with hours and notes
 - Categorized organization (Dollar General, Tractor Supply Co., etc.)
 - Real-time open/closed status with time remaining
-- Drag-and-drop store reordering
+- Drag-and-drop store reordering within categories
+- Inline category renaming for seamless editing
 - Automatic city/state extraction from addresses
+- One-click copy for addresses to clipboard
 - Persistent storage using browser localStorage
+
+### 📝 Notes
+- Multi-category note organization
+- Drag-and-drop notes between categories
+- Inline category renaming (no popups!)
+- One-click copy for all note fields
+- Add/delete categories on the fly
+- Color-coded visual hierarchy
+
+### 👥 Dashers
+- Track active delivery dashers with contact info
+- 24-hour countdown timers with seconds display
+- Shows full date/time with day of week for "last used"
+- Drag-and-drop category reordering
+- Inline category renaming for consistency
+- Copy buttons for all fields (name, email, notes)
+- Custom categories (Main, Currently Using, Deactivated, etc.)
+- Visual timer indicators (red < 24hrs, green > 24hrs)
 
 ### 💾 State Management
 - Export/import complete application state
 - Automatic backups to exports directory
 - JSON format for easy data portability
+- All sections fully integrated with persistence
 
 ## Installation
 
@@ -50,7 +71,7 @@ python serve-pwa.py
 # Or on Windows
 serve-pwa.bat
 
-# Open http://localhost:8443/dash-bash-utility.html
+# Open http://localhost:8443/index.html
 ```
 
 ## Tech Stack
@@ -63,12 +84,13 @@ serve-pwa.bat
 ## File Structure
 ```
 dash-bash-utility/
-├── dash-bash-utility.html    # Main application (standalone HTML)
+├── index.html                # Main application (standalone HTML/React)
 ├── enhanced-calculator-addressbook.tsx  # React component source
 ├── manifest.json             # PWA manifest
 ├── service-worker.js         # Offline functionality
 ├── favicon.svg               # App icon
 ├── serve-pwa.py             # Local development server
+├── serve-pwa.bat            # Windows batch launcher
 └── exports/                  # State backup directory
 ```
 

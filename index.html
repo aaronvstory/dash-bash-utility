@@ -6,7 +6,7 @@
     <title>Dash Bash Utility</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="alternate icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%231f2937'/%3E%3Ctext x='16' y='22' font-family='Arial, sans-serif' font-size='18' font-weight='bold' text-anchor='middle' fill='%23fbbf24'%3E$%3C/text%3E%3Crect x='6' y='8' width='6' height='2' fill='%2360a5fa' opacity='0.8'/%3E%3Crect x='20' y='8' width='6' height='2' fill='%2360a5fa' opacity='0.8'/%3E%3Crect x='6' y='22' width='6' height='2' fill='%23a78bfa' opacity='0.8'/%3E%3Crect x='20' y='22' width='6' height='2' fill='%23a78bfa' opacity='0.8'/%3E%3C/svg%3E" />
-    <meta name="description" content="Target Calculator & Address Book Utility">
+    <meta name="description" content="Target Calculator & Address Book Utility with Dashers Management">
     <meta name="theme-color" content="#111827">
     
     <!-- PWA Support -->
@@ -48,7 +48,7 @@
         /* Animation */
         @keyframes pulse {
             0%, 100% { opacity: 1; }
-            50% { opacity: 0.8; }
+            50% { opacity: 0.5; }
         }
         .animate-pulse {
             animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
@@ -58,16 +58,68 @@
 <body class="bg-gray-900">
     <div id="root"></div>
     
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(registration => console.log('ServiceWorker registered'))
+                    .catch(err => console.log('ServiceWorker registration failed'));
+            });
+        }
+    </script>
+    
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
         
-        // Icon components wrapper for Lucide
-        const Icon = ({ name, size = 16, className = "" }) => {
+        // Simple icon component wrapper for Lucide
+        const Icon = ({ name, size = 20, className = '' }) => {
+            const iconRef = useRef(null);
+            
             useEffect(() => {
-                lucide.createIcons();
-            }, []);
-            return <i data-lucide={name} className={className} style={{width: size, height: size}}></i>;
+                if (iconRef.current && window.lucide) {
+                    // Clear previous content
+                    iconRef.current.innerHTML = '';
+                    // Add the icon
+                    const iconElement = document.createElement('i');
+                    iconElement.setAttribute('data-lucide', name);
+                    iconElement.className = className;
+                    if (size) {
+                        iconElement.setAttribute('width', size);
+                        iconElement.setAttribute('height', size);
+                    }
+                    iconRef.current.appendChild(iconElement);
+                    // Replace with actual SVG
+                    window.lucide.createIcons();
+                }
+            }, [name, size, className]);
+            
+            return React.createElement('span', { ref: iconRef });
         };
+        
+        // Helper functions for commonly used icons
+        const Trash2 = (props) => React.createElement(Icon, { ...props, name: 'trash-2' });
+        const Plus = (props) => React.createElement(Icon, { ...props, name: 'plus' });
+        const Copy = (props) => React.createElement(Icon, { ...props, name: 'copy' });
+        const ChevronDown = (props) => React.createElement(Icon, { ...props, name: 'chevron-down' });
+        const ChevronUp = (props) => React.createElement(Icon, { ...props, name: 'chevron-up' });
+        const Edit2 = (props) => React.createElement(Icon, { ...props, name: 'edit-2' });
+        const Save = (props) => React.createElement(Icon, { ...props, name: 'save' });
+        const X = (props) => React.createElement(Icon, { ...props, name: 'x' });
+        const GripVertical = (props) => React.createElement(Icon, { ...props, name: 'grip-vertical' });
+        const Clock = (props) => React.createElement(Icon, { ...props, name: 'clock' });
+        const MapPin = (props) => React.createElement(Icon, { ...props, name: 'map-pin' });
+        const Calculator = (props) => React.createElement(Icon, { ...props, name: 'calculator' });
+        const MessageSquare = (props) => React.createElement(Icon, { ...props, name: 'message-square' });
+        const Building2 = (props) => React.createElement(Icon, { ...props, name: 'building-2' });
+        const Settings = (props) => React.createElement(Icon, { ...props, name: 'settings' });
+        const Download = (props) => React.createElement(Icon, { ...props, name: 'download' });
+        const Upload = (props) => React.createElement(Icon, { ...props, name: 'upload' });
+        const RefreshCw = (props) => React.createElement(Icon, { ...props, name: 'refresh-cw' });
+        const FolderOpen = (props) => React.createElement(Icon, { ...props, name: 'folder-open' });
+        const FileText = (props) => React.createElement(Icon, { ...props, name: 'file-text' });
+        const Timer = (props) => React.createElement(Icon, { ...props, name: 'timer' });
+        const Users = (props) => React.createElement(Icon, { ...props, name: 'users' });
         
         const EnhancedCalculator = () => {
             const [target, setTarget] = useState('99');
@@ -79,32 +131,13 @@
             const priceInputRef = useRef(null);
             
             // Collapsible sections state
-            const [isCalculatorOpen, setIsCalculatorOpen] = useState(true);
+            const [isCalculatorOpen, setIsCalculatorOpen] = useState(false); // Collapsed by default
             const [isMessagesOpen, setIsMessagesOpen] = useState(false);
             const [isAddressBookOpen, setIsAddressBookOpen] = useState(false);
             const [isNotesOpen, setIsNotesOpen] = useState(false);
             const [isStateManagementOpen, setIsStateManagementOpen] = useState(false);
             const [collapsedCategories, setCollapsedCategories] = useState({});
             const [collapsedStores, setCollapsedStores] = useState({});
-            const [draggedStore, setDraggedStore] = useState({ categoryId: -1, storeIndex: -1 });
-            
-            // Notes state
-            const [noteCategories, setNoteCategories] = useState([
-                {
-                    id: 0,
-                    name: 'General',
-                    notes: []
-                }
-            ]);
-            const [collapsedNoteCategories, setCollapsedNoteCategories] = useState({});
-            const [editingNote, setEditingNote] = useState({ categoryId: -1, noteIndex: -1 });
-            const [editNoteText, setEditNoteText] = useState('');
-            const [editingNoteCategory, setEditingNoteCategory] = useState(-1);
-            const [editNoteCategoryText, setEditNoteCategoryText] = useState('');
-            const [isAddingNoteCategory, setIsAddingNoteCategory] = useState(false);
-            const [newNoteCategoryName, setNewNoteCategoryName] = useState('');
-            const [draggedNote, setDraggedNote] = useState({ categoryId: -1, noteIndex: -1 });
-            const [noteSaveNotification, setNoteSaveNotification] = useState(false);
             
             // State management
             const [availableExports, setAvailableExports] = useState([]);
@@ -127,8 +160,8 @@
                 "Adjust dasher tip to $0 for the current order",
                 "customer asked for refund if out of stock"
             ]);
-            
-            // Address Book state  
+
+            // Address Book state
             const [categories, setCategories] = useState([
                 {
                     id: 1,
@@ -158,13 +191,40 @@
                 }
             ]);
             const [editingCategory, setEditingCategory] = useState(-1);
+            const [editingDasherCategory, setEditingDasherCategory] = useState(-1);
+            const [editingNoteCategory, setEditingNoteCategory] = useState(-1);
             const [editingStore, setEditingStore] = useState({ categoryId: -1, storeId: -1 });
             const [newCategoryName, setNewCategoryName] = useState('');
             const [isAddingCategory, setIsAddingCategory] = useState(false);
             const [draggedCategory, setDraggedCategory] = useState(-1);
+            const [draggedStore, setDraggedStore] = useState({ categoryId: -1, storeId: -1 });
             const [currentTime, setCurrentTime] = useState(new Date());
             const [saveNotification, setSaveNotification] = useState('');
             
+            // Notes state
+            const [noteCategories, setNoteCategories] = useState([
+                { id: Date.now().toString(), name: 'General', notes: [] }
+            ]);
+            const [editingNote, setEditingNote] = useState({ categoryId: '', noteIndex: -1 });
+            const [draggedNote, setDraggedNote] = useState({ categoryId: '', noteIndex: -1 });
+            const [collapsedNoteCategories, setCollapsedNoteCategories] = useState({});
+
+            // Dashers state  
+            const [isDashersOpen, setIsDashersOpen] = useState(false);
+            const [dasherCategories, setDasherCategories] = useState([
+                { id: 'main', name: 'Main', dashers: [] },
+                { id: 'currently-using', name: 'Currently using', dashers: [] },
+                { id: 'deactivated', name: 'Deactivated', dashers: [] },
+                { id: 'locked', name: 'Locked', dashers: [] },
+                { id: 'reverif', name: 'Reverif', dashers: [] },
+                { id: 'ready', name: 'Ready', dashers: [] }
+            ]);
+            const [editingDasher, setEditingDasher] = useState({ categoryId: '', dasherId: '' });
+            const [draggedDasher, setDraggedDasher] = useState({ categoryId: '', dasherId: '' });
+            const [draggedDasherCategory, setDraggedDasherCategory] = useState(null);
+            const [collapsedDasherCategories, setCollapsedDasherCategories] = useState({});
+            const [timerTick, setTimerTick] = useState(0);
+
             // Load from localStorage on component mount
             useEffect(() => {
                 // Try to load the new unified state first
@@ -188,6 +248,7 @@
                         setMessages(state.messages || messages);
                         setCategories(state.categories || []);
                         setNoteCategories(state.noteCategories || noteCategories);
+                        setDasherCategories(state.dasherCategories || dasherCategories);
                     } catch (e) {
                         console.error('Error loading saved state:', e);
                     }
@@ -202,10 +263,8 @@
                         }
                     }
                 }
-                
-                lucide.createIcons();
             }, []);
-            
+
             // Update current time every minute
             useEffect(() => {
                 const interval = setInterval(() => {
@@ -213,7 +272,15 @@
                 }, 60000);
                 return () => clearInterval(interval);
             }, []);
-            
+
+            // Update timer tick every second for dashers
+            useEffect(() => {
+                const interval = setInterval(() => {
+                    setTimerTick(prev => prev + 1);
+                }, 1000);
+                return () => clearInterval(interval);
+            }, []);
+
             // Calculator functions
             const addPrice = () => {
                 if (currentPrice && !isNaN(parseFloat(currentPrice))) {
@@ -222,23 +289,23 @@
                     setTimeout(() => priceInputRef.current?.focus(), 0);
                 }
             };
-            
+
             const removePrice = (index) => {
                 setPrices(prices.filter((_, i) => i !== index));
                 setTimeout(() => priceInputRef.current?.focus(), 0);
             };
-            
+
             const clearAll = () => {
                 setPrices([]);
                 setTimeout(() => priceInputRef.current?.focus(), 0);
             };
-            
+
             const handleKeyPress = (e) => {
                 if (e.key === 'Enter') {
                     addPrice();
                 }
             };
-            
+
             const handleTargetKeyPress = (e) => {
                 if (e.key === 'Enter') {
                     if (isEditingTarget) {
@@ -278,11 +345,11 @@
                     }, 100);
                 }
             };
-            
+
             useEffect(() => {
                 priceInputRef.current?.focus();
             }, []);
-            
+
             // Message management functions
             const copyToClipboard = async (text) => {
                 try {
@@ -296,12 +363,12 @@
                     setTimeout(() => setCopyNotification(''), 3000);
                 }
             };
-            
+
             const startEdit = (index) => {
                 setEditingIndex(index);
                 setEditText(messages[index]);
             };
-            
+
             const saveEdit = () => {
                 if (editText.trim()) {
                     const newMessages = [...messages];
@@ -316,12 +383,12 @@
                 setEditingIndex(-1);
                 setEditText('');
             };
-            
+
             const cancelEdit = () => {
                 setEditingIndex(-1);
                 setEditText('');
             };
-            
+
             const deleteMessage = (index) => {
                 const newMessages = messages.filter((_, i) => i !== index);
                 setMessages(newMessages);
@@ -335,21 +402,21 @@
                     saveAllToLocalStorage();
                 }, 100);
             };
-            
+
             const handleDragStart = (e, index) => {
                 setDraggedIndex(index);
                 e.dataTransfer.effectAllowed = 'move';
             };
-            
+
             const handleDragOver = (e) => {
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'move';
             };
-            
+
             const handleDrop = (e, dropIndex) => {
                 e.preventDefault();
                 if (draggedIndex === -1 || draggedIndex === dropIndex) return;
-                
+
                 const newMessages = [...messages];
                 const draggedMessage = newMessages[draggedIndex];
                 newMessages.splice(draggedIndex, 1);
@@ -362,7 +429,7 @@
                     saveAllToLocalStorage();
                 }, 100);
             };
-            
+
             const addNewMessage = () => {
                 if (newMessageText.trim()) {
                     const newMessages = [...messages, newMessageText.trim()];
@@ -376,12 +443,12 @@
                     }, 100);
                 }
             };
-            
+
             const cancelAddNew = () => {
                 setNewMessageText('');
                 setIsAddingNew(false);
             };
-            
+
             // Address Book functions
             const extractCityState = (address) => {
                 if (!address) return '';
@@ -404,7 +471,7 @@
                 
                 return '';
             };
-            
+
             // State Management Functions
             const saveAllToLocalStorage = () => {
                 try {
@@ -415,6 +482,7 @@
                         messages,
                         categories,
                         noteCategories,
+                        dasherCategories,
                         timestamp: new Date().toISOString()
                     };
                     localStorage.setItem('dashBashState', JSON.stringify(state));
@@ -425,7 +493,7 @@
                     setTimeout(() => setSaveNotification(''), 3000);
                 }
             };
-            
+
             const loadFromLocalStorage = () => {
                 try {
                     const savedState = localStorage.getItem('dashBashState');
@@ -445,6 +513,8 @@
                         setPrices(state.prices || []);
                         setMessages(state.messages || []);
                         setCategories(state.categories || []);
+                        setNoteCategories(state.noteCategories || noteCategories);
+                        setDasherCategories(state.dasherCategories || dasherCategories);
                         setSaveNotification('✅ Data loaded successfully!');
                         setTimeout(() => setSaveNotification(''), 3000);
                     } else {
@@ -456,7 +526,7 @@
                     setTimeout(() => setSaveNotification(''), 3000);
                 }
             };
-            
+
             const exportToJSON = () => {
                 try {
                     const state = {
@@ -465,8 +535,10 @@
                         prices,
                         messages,
                         categories,
+                        noteCategories,
+                        dasherCategories,
                         exportDate: new Date().toISOString(),
-                        version: '1.0'
+                        version: '2.0'
                     };
                     
                     const dataStr = JSON.stringify(state, null, 2);
@@ -487,11 +559,11 @@
                     setTimeout(() => setSaveNotification(''), 3000);
                 }
             };
-            
+
             const importFromJSON = (event) => {
                 const file = event.target.files[0];
                 if (!file) return;
-                
+
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     try {
@@ -510,6 +582,8 @@
                         setPrices(state.prices || []);
                         setMessages(state.messages || []);
                         setCategories(state.categories || []);
+                        setNoteCategories(state.noteCategories || noteCategories);
+                        setDasherCategories(state.dasherCategories || dasherCategories);
                         setImportNotification(`✅ Imported data from ${file.name}`);
                         setTimeout(() => setImportNotification(''), 3000);
                     } catch (err) {
@@ -520,7 +594,7 @@
                 reader.readAsText(file);
                 event.target.value = ''; // Reset input
             };
-            
+
             const clearAllData = () => {
                 if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
                     setTarget('99');
@@ -539,20 +613,31 @@
                         "customer asked for refund if out of stock"
                     ]);
                     setCategories([]);
+                    setNoteCategories([
+                        { id: Date.now().toString(), name: 'General', notes: [] }
+                    ]);
+                    setDasherCategories([
+                        { id: 'main', name: 'Main', dashers: [] },
+                        { id: 'currently-using', name: 'Currently using', dashers: [] },
+                        { id: 'deactivated', name: 'Deactivated', dashers: [] },
+                        { id: 'locked', name: 'Locked', dashers: [] },
+                        { id: 'reverif', name: 'Reverif', dashers: [] },
+                        { id: 'ready', name: 'Ready', dashers: [] }
+                    ]);
                     localStorage.removeItem('dashBashState');
                     localStorage.removeItem('addressBookCategories');
                     setSaveNotification('✅ All data cleared');
                     setTimeout(() => setSaveNotification(''), 3000);
                 }
             };
-            
+
             const formatTime = (timeStr) => {
                 if (!timeStr || timeStr.length !== 4) return '';
                 const hours = timeStr.substring(0, 2);
                 const minutes = timeStr.substring(2, 4);
                 return `${hours}:${minutes}`;
             };
-            
+
             const calculateTimeStatus = (closeTimeStr) => {
                 if (!closeTimeStr || closeTimeStr.length !== 4) return null;
                 
@@ -600,7 +685,7 @@
                     formatted: formatTime(closeTimeStr)
                 };
             };
-            
+
             const addCategory = () => {
                 if (newCategoryName.trim()) {
                     const newCategory = {
@@ -613,17 +698,17 @@
                     setIsAddingCategory(false);
                 }
             };
-            
+
             const updateCategory = (categoryId, newName) => {
                 setCategories(categories.map(cat => 
                     cat.id === categoryId ? { ...cat, name: newName } : cat
                 ));
             };
-            
+
             const deleteCategory = (categoryId) => {
                 setCategories(categories.filter(cat => cat.id !== categoryId));
             };
-            
+
             const addStore = (categoryId) => {
                 const newStore = {
                     id: Date.now(),
@@ -638,7 +723,7 @@
                         : cat
                 ));
             };
-            
+
             const updateStore = (categoryId, storeId, field, value) => {
                 setCategories(categories.map(cat => 
                     cat.id === categoryId 
@@ -651,7 +736,7 @@
                         : cat
                 ));
             };
-            
+
             const deleteStore = (categoryId, storeId) => {
                 setCategories(categories.map(cat => 
                     cat.id === categoryId 
@@ -659,7 +744,7 @@
                         : cat
                 ));
             };
-            
+
             const toggleEditStore = (categoryId, storeId) => {
                 if (editingStore.categoryId === categoryId && editingStore.storeId === storeId) {
                     setEditingStore({ categoryId: -1, storeId: -1 });
@@ -667,18 +752,18 @@
                     setEditingStore({ categoryId, storeId });
                 }
             };
-            
+
             const isStoreEditing = (categoryId, storeId) => {
                 return editingStore.categoryId === categoryId && editingStore.storeId === storeId;
             };
-            
+
             const toggleCategoryCollapse = (categoryId) => {
                 setCollapsedCategories(prev => ({
                     ...prev,
                     [categoryId]: !prev[categoryId]
                 }));
             };
-            
+
             const toggleStoreCollapse = (categoryId, storeId) => {
                 const key = `${categoryId}-${storeId}`;
                 setCollapsedStores(prev => ({
@@ -686,12 +771,12 @@
                     [key]: !prev[key]
                 }));
             };
-            
+
             const isStoreCollapsed = (categoryId, storeId) => {
                 const key = `${categoryId}-${storeId}`;
                 return collapsedStores[key] || false;
             };
-            
+
             const getStoresStatusCount = (stores) => {
                 let openCount = 0;
                 let closedCount = 0;
@@ -707,17 +792,17 @@
                 
                 return { openCount, closedCount };
             };
-            
+
             const handleStoreDragStart = (e, categoryId, storeIndex) => {
                 setDraggedStore({ categoryId, storeIndex });
                 e.dataTransfer.effectAllowed = 'move';
             };
-            
+
             const handleStoreDragOver = (e) => {
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'move';
             };
-            
+
             const handleStoreDrop = (e, categoryId, storeIndex) => {
                 e.preventDefault();
                 if (draggedStore.categoryId === categoryId && draggedStore.storeIndex !== storeIndex) {
@@ -735,105 +820,7 @@
                 }
                 setDraggedStore({ categoryId: -1, storeIndex: -1 });
             };
-            
-            // Notes Functions
-            const addNoteCategory = () => {
-                if (newNoteCategoryName.trim()) {
-                    const newCategory = {
-                        id: noteCategories.length,
-                        name: newNoteCategoryName.trim(),
-                        notes: []
-                    };
-                    setNoteCategories([...noteCategories, newCategory]);
-                    setNewNoteCategoryName('');
-                    setIsAddingNoteCategory(false);
-                }
-            };
-            
-            const addNote = (categoryId) => {
-                const updatedCategories = [...noteCategories];
-                const categoryIndex = noteCategories.findIndex(cat => cat.id === categoryId);
-                updatedCategories[categoryIndex].notes.push('New note');
-                setNoteCategories(updatedCategories);
-                setEditingNote({ categoryId, noteIndex: updatedCategories[categoryIndex].notes.length - 1 });
-                setEditNoteText('New note');
-            };
-            
-            const updateNote = (categoryId, noteIndex, newText) => {
-                const updatedCategories = [...noteCategories];
-                const categoryIndex = noteCategories.findIndex(cat => cat.id === categoryId);
-                updatedCategories[categoryIndex].notes[noteIndex] = newText;
-                setNoteCategories(updatedCategories);
-            };
-            
-            const deleteNote = (categoryId, noteIndex) => {
-                const updatedCategories = [...noteCategories];
-                const categoryIndex = noteCategories.findIndex(cat => cat.id === categoryId);
-                updatedCategories[categoryIndex].notes.splice(noteIndex, 1);
-                setNoteCategories(updatedCategories);
-            };
-            
-            const deleteNoteCategory = (categoryId) => {
-                if (noteCategories.length > 1) {
-                    setNoteCategories(noteCategories.filter(cat => cat.id !== categoryId));
-                }
-            };
-            
-            const updateNoteCategoryName = (categoryId, newName) => {
-                const updatedCategories = [...noteCategories];
-                const categoryIndex = noteCategories.findIndex(cat => cat.id === categoryId);
-                updatedCategories[categoryIndex].name = newName;
-                setNoteCategories(updatedCategories);
-            };
-            
-            const handleNoteDragStart = (categoryId, noteIndex) => {
-                setDraggedNote({ categoryId, noteIndex });
-            };
-            
-            const handleNoteDrop = (e, categoryId, noteIndex) => {
-                e.preventDefault();
-                if (draggedNote.categoryId === categoryId && draggedNote.noteIndex !== noteIndex) {
-                    const updatedCategories = [...noteCategories];
-                    const categoryIndex = noteCategories.findIndex(cat => cat.id === categoryId);
-                    const category = updatedCategories[categoryIndex];
-                    const draggedNoteItem = category.notes[draggedNote.noteIndex];
-                    
-                    const newNotes = [...category.notes];
-                    newNotes.splice(draggedNote.noteIndex, 1);
-                    newNotes.splice(noteIndex, 0, draggedNoteItem);
-                    
-                    updatedCategories[categoryIndex] = { ...category, notes: newNotes };
-                    setNoteCategories(updatedCategories);
-                }
-                setDraggedNote({ categoryId: -1, noteIndex: -1 });
-            };
-            
-            const handleNoteCategoryDrop = (e, targetCategoryId) => {
-                e.preventDefault();
-                if (draggedNote.categoryId !== -1 && draggedNote.categoryId !== targetCategoryId) {
-                    const updatedCategories = [...noteCategories];
-                    const sourceCategoryIndex = noteCategories.findIndex(cat => cat.id === draggedNote.categoryId);
-                    const targetCategoryIndex = noteCategories.findIndex(cat => cat.id === targetCategoryId);
-                    
-                    const draggedNoteItem = updatedCategories[sourceCategoryIndex].notes[draggedNote.noteIndex];
-                    
-                    // Remove from source
-                    updatedCategories[sourceCategoryIndex].notes.splice(draggedNote.noteIndex, 1);
-                    
-                    // Add to target
-                    updatedCategories[targetCategoryIndex].notes.push(draggedNoteItem);
-                    
-                    setNoteCategories(updatedCategories);
-                }
-                setDraggedNote({ categoryId: -1, noteIndex: -1 });
-            };
-            
-            const saveNotes = () => {
-                saveAllToLocalStorage();
-                setNoteSaveNotification(true);
-                setTimeout(() => setNoteSaveNotification(false), 3000);
-            };
-            
+
             const calculateQuantities = (price, targetAmount) => {
                 if (price === 0) return { validOptions: [] };
                 
@@ -853,7 +840,7 @@
                 
                 return { validOptions };
             };
-            
+
             const findBestOption = (validOptions) => {
                 if (validOptions.length === 0) return null;
                 
@@ -864,9 +851,422 @@
                     return a.difference - b.difference;
                 })[0];
             };
-            
+
+            // Notes Management Functions
+            const addNoteCategory = () => {
+                const newCategory = {
+                    id: Date.now().toString(),
+                    name: 'New Category',
+                    notes: []
+                };
+                setNoteCategories([...noteCategories, newCategory]);
+                
+                // Auto-save
+                setTimeout(() => {
+                    saveAllToLocalStorage();
+                }, 100);
+            };
+
+            const updateNoteCategory = (categoryId, newName) => {
+                setNoteCategories(noteCategories.map(cat => 
+                    cat.id === categoryId ? { ...cat, name: newName } : cat
+                ));
+                
+                // Auto-save
+                setTimeout(() => {
+                    saveAllToLocalStorage();
+                }, 100);
+            };
+
+            const deleteNoteCategory = (categoryId) => {
+                if (noteCategories.length === 1) {
+                    setSaveNotification('❌ Cannot delete the last category');
+                    setTimeout(() => setSaveNotification(''), 3000);
+                    return;
+                }
+                
+                setNoteCategories(noteCategories.filter(cat => cat.id !== categoryId));
+                
+                // Auto-save
+                setTimeout(() => {
+                    saveAllToLocalStorage();
+                }, 100);
+            };
+
+            const addNote = (categoryId) => {
+                const newNote = '';
+                setNoteCategories(noteCategories.map(cat => 
+                    cat.id === categoryId 
+                        ? { ...cat, notes: [...cat.notes, newNote] }
+                        : cat
+                ));
+                
+                // Start editing the new note immediately
+                const categoryIndex = noteCategories.findIndex(cat => cat.id === categoryId);
+                if (categoryIndex !== -1) {
+                    const newNoteIndex = noteCategories[categoryIndex].notes.length;
+                    setEditingNote({ categoryId, noteIndex: newNoteIndex });
+                }
+                
+                // Auto-save
+                setTimeout(() => {
+                    saveAllToLocalStorage();
+                }, 100);
+            };
+
+            const updateNote = (categoryId, noteIndex, newText) => {
+                setNoteCategories(noteCategories.map(cat => 
+                    cat.id === categoryId 
+                        ? {
+                            ...cat,
+                            notes: cat.notes.map((note, idx) => 
+                                idx === noteIndex ? newText : note
+                            )
+                        }
+                        : cat
+                ));
+                
+                // Auto-save
+                setTimeout(() => {
+                    saveAllToLocalStorage();
+                }, 100);
+            };
+
+            const deleteNote = (categoryId, noteIndex) => {
+                setNoteCategories(noteCategories.map(cat => 
+                    cat.id === categoryId 
+                        ? { ...cat, notes: cat.notes.filter((_, idx) => idx !== noteIndex) }
+                        : cat
+                ));
+                
+                // Auto-save
+                setTimeout(() => {
+                    saveAllToLocalStorage();
+                }, 100);
+            };
+
+            const toggleNoteEdit = (categoryId, noteIndex) => {
+                if (editingNote.categoryId === categoryId && editingNote.noteIndex === noteIndex) {
+                    setEditingNote({ categoryId: '', noteIndex: -1 });
+                } else {
+                    setEditingNote({ categoryId, noteIndex });
+                }
+            };
+
+            const isNoteEditing = (categoryId, noteIndex) => {
+                return editingNote.categoryId === categoryId && editingNote.noteIndex === noteIndex;
+            };
+
+            const toggleNoteCategoryCollapse = (categoryId) => {
+                setCollapsedNoteCategories(prev => ({
+                    ...prev,
+                    [categoryId]: !prev[categoryId]
+                }));
+            };
+
+            const handleNoteDragStart = (e, categoryId, noteIndex) => {
+                setDraggedNote({ categoryId, noteIndex });
+                e.dataTransfer.effectAllowed = 'move';
+            };
+
+            const handleNoteDragOver = (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            };
+
+            const handleNoteDrop = (e, targetCategoryId) => {
+                e.preventDefault();
+                if (!draggedNote.categoryId || draggedNote.noteIndex === -1) return;
+                
+                if (draggedNote.categoryId !== targetCategoryId) {
+                    // Move note between categories
+                    const sourceCategory = noteCategories.find(cat => cat.id === draggedNote.categoryId);
+                    const noteToMove = sourceCategory.notes[draggedNote.noteIndex];
+                    
+                    setNoteCategories(noteCategories.map(cat => {
+                        if (cat.id === draggedNote.categoryId) {
+                            // Remove from source
+                            return { ...cat, notes: cat.notes.filter((_, idx) => idx !== draggedNote.noteIndex) };
+                        } else if (cat.id === targetCategoryId) {
+                            // Add to target
+                            return { ...cat, notes: [...cat.notes, noteToMove] };
+                        }
+                        return cat;
+                    }));
+                    
+                    // Auto-save
+                    setTimeout(() => {
+                        saveAllToLocalStorage();
+                    }, 100);
+                }
+                
+                setDraggedNote({ categoryId: '', noteIndex: -1 });
+            };
+
+            // Dasher Category Management Functions
+            const addDasherCategory = () => {
+                const categoryName = prompt('Enter category name:');
+                if (categoryName && categoryName.trim()) {
+                    const newCategory = {
+                        id: Date.now().toString(),
+                        name: categoryName.trim(),
+                        dashers: []
+                    };
+                    setDasherCategories([...dasherCategories, newCategory]);
+                }
+            };
+
+            const updateDasherCategory = (categoryId, newName) => {
+                setDasherCategories(dasherCategories.map(cat => 
+                    cat.id === categoryId ? { ...cat, name: newName } : cat
+                ));
+            };
+
+            const deleteDasherCategory = (categoryId) => {
+                // Don't delete if it's the last category
+                if (dasherCategories.length === 1) {
+                    alert("You must have at least one dasher category.");
+                    return;
+                }
+                
+                if (confirm(`Delete this category and all its dashers?`)) {
+                    setDasherCategories(dasherCategories.filter(cat => cat.id !== categoryId));
+                }
+            };
+
+            // Dasher Category Drag and Drop
+            const handleDasherCategoryDragStart = (e, categoryId) => {
+                setDraggedDasherCategory(categoryId);
+                e.dataTransfer.effectAllowed = 'move';
+            };
+
+            const handleDasherCategoryDragOver = (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            };
+
+            const handleDasherCategoryDrop = (e, targetCategoryId) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (!draggedDasherCategory || draggedDasherCategory === targetCategoryId) {
+                    return;
+                }
+                
+                const sourceIndex = dasherCategories.findIndex(cat => cat.id === draggedDasherCategory);
+                const targetIndex = dasherCategories.findIndex(cat => cat.id === targetCategoryId);
+                
+                if (sourceIndex === -1 || targetIndex === -1) return;
+                
+                const newCategories = [...dasherCategories];
+                const [removed] = newCategories.splice(sourceIndex, 1);
+                newCategories.splice(targetIndex, 0, removed);
+                
+                setDasherCategories(newCategories);
+                setDraggedDasherCategory(null);
+            };
+
+            // Dasher Management Functions
+            const addDasher = (categoryId) => {
+                const newDasher = {
+                    id: Date.now().toString(),
+                    name: '',
+                    email: '',
+                    lastUsed: null,
+                    notes: ''
+                };
+                setDasherCategories(dasherCategories.map(cat => 
+                    cat.id === categoryId 
+                        ? { ...cat, dashers: [...cat.dashers, newDasher] }
+                        : cat
+                ));
+            };
+
+            const updateDasher = (categoryId, dasherId, field, value) => {
+                // Validate email if updating email field
+                if (field === 'email' && value) {
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailRegex.test(value) && value.includes('@')) {
+                        // Only validate if it looks like they're trying to enter an email
+                        return; // Don't update if invalid email format
+                    }
+                    
+                    // Check for duplicate email across all categories
+                    const isDuplicate = dasherCategories.some(cat => 
+                        cat.dashers.some(dasher => 
+                            dasher.id !== dasherId && dasher.email && dasher.email.toLowerCase() === value.toLowerCase()
+                        )
+                    );
+                    
+                    if (isDuplicate) {
+                        // Show a toast or alert for duplicate email
+                        setSaveNotification('⚠️ A dasher with this email already exists');
+                        setTimeout(() => setSaveNotification(''), 3000);
+                        return; // Don't update if duplicate email
+                    }
+                }
+                
+                setDasherCategories(dasherCategories.map(cat => 
+                    cat.id === categoryId 
+                        ? {
+                            ...cat,
+                            dashers: cat.dashers.map(dasher => 
+                                dasher.id === dasherId ? { ...dasher, [field]: value } : dasher
+                            )
+                        }
+                        : cat
+                ));
+            };
+
+            const deleteDasher = (categoryId, dasherId) => {
+                setDasherCategories(dasherCategories.map(cat => 
+                    cat.id === categoryId 
+                        ? { ...cat, dashers: cat.dashers.filter(dasher => dasher.id !== dasherId) }
+                        : cat
+                ));
+            };
+
+            const toggleEditDasher = (categoryId, dasherId) => {
+                if (editingDasher.categoryId === categoryId && editingDasher.dasherId === dasherId) {
+                    setEditingDasher({ categoryId: '', dasherId: '' });
+                } else {
+                    setEditingDasher({ categoryId, dasherId });
+                }
+            };
+
+            const isDasherEditing = (categoryId, dasherId) => {
+                return editingDasher.categoryId === categoryId && editingDasher.dasherId === dasherId;
+            };
+
+            const toggleDasherCategoryCollapse = (categoryId) => {
+                setCollapsedDasherCategories(prev => ({
+                    ...prev,
+                    [categoryId]: !prev[categoryId]
+                }));
+            };
+
+            const startDasherTimer = (categoryId, dasherId) => {
+                const now = new Date().toISOString();
+                updateDasher(categoryId, dasherId, 'lastUsed', now);
+                // Auto-save after timer start
+                setTimeout(() => {
+                    saveAllToLocalStorage();
+                }, 100);
+            };
+
+            const calculateDasherTimeStatus = (lastUsedTime) => {
+                if (!lastUsedTime) return null;
+                
+                const lastUsed = new Date(lastUsedTime);
+                const now = new Date();
+                const diffMs = now - lastUsed;
+                const diffHours = diffMs / (1000 * 60 * 60);
+                const diffMinutes = Math.floor((diffMs / (1000 * 60)) % 60);
+                const diffSeconds = Math.floor((diffMs / 1000) % 60);
+                const remainingHours = 24 - diffHours;
+                
+                // Format the date/time details
+                const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                const dayOfWeek = days[lastUsed.getDay()];
+                const date = lastUsed.toLocaleDateString();
+                const time = lastUsed.toLocaleTimeString();
+                const fullDateTime = `${dayOfWeek}, ${date} at ${time}`;
+                
+                if (diffHours < 24) {
+                    // Still within 24 hours
+                    const hoursLeft = Math.floor(remainingHours);
+                    const minutesLeft = Math.floor((remainingHours - hoursLeft) * 60);
+                    const secondsLeft = Math.floor(((remainingHours - hoursLeft) * 60 - minutesLeft) * 60);
+                    
+                    let color = 'text-red-400'; // Default red for < 24 hours
+                    if (remainingHours <= 1) {
+                        color = 'text-orange-400'; // Orange for last hour
+                    }
+                    
+                    let timeText = '';
+                    if (hoursLeft > 0) {
+                        timeText = `${hoursLeft}h ${minutesLeft}m ${secondsLeft}s left`;
+                    } else if (minutesLeft > 0) {
+                        timeText = `${minutesLeft}m ${secondsLeft}s left`;
+                    } else {
+                        timeText = `${secondsLeft}s left`;
+                    }
+                    
+                    return {
+                        status: 'countdown',
+                        text: timeText,
+                        color,
+                        hoursRemaining: remainingHours,
+                        fullDateTime: fullDateTime
+                    };
+                } else {
+                    // More than 24 hours
+                    const daysElapsed = Math.floor(diffHours / 24);
+                    const hoursElapsed = Math.floor(diffHours % 24);
+                    const minutesElapsed = Math.floor((diffMs / (1000 * 60)) % 60);
+                    
+                    return {
+                        status: 'elapsed',
+                        text: daysElapsed > 0
+                            ? `${daysElapsed}d ${hoursElapsed}h ${minutesElapsed}m ago`
+                            : `${Math.floor(diffHours)}h ${diffMinutes}m ago`,
+                        color: 'text-green-400',
+                        hoursElapsed: diffHours,
+                        fullDateTime: fullDateTime
+                    };
+                }
+            };
+
+            const getDasherTitle = (dasher) => {
+                if (dasher.name && dasher.email) {
+                    return `${dasher.name} - ${dasher.email}`;
+                } else if (dasher.name) {
+                    return dasher.name;
+                } else if (dasher.email) {
+                    return dasher.email;
+                } else {
+                    return 'New Dasher';
+                }
+            };
+
+            const handleDasherDragStart = (e, categoryId, dasherId) => {
+                setDraggedDasher({ categoryId, dasherId });
+                e.dataTransfer.effectAllowed = 'move';
+            };
+
+            const handleDasherDragOver = (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            };
+
+            const handleDasherDrop = (e, targetCategoryId) => {
+                e.preventDefault();
+                if (!draggedDasher.categoryId || !draggedDasher.dasherId) return;
+                
+                if (draggedDasher.categoryId !== targetCategoryId) {
+                    // Move dasher between categories
+                    const sourceCategory = dasherCategories.find(cat => cat.id === draggedDasher.categoryId);
+                    const dasherToMove = sourceCategory.dashers.find(d => d.id === draggedDasher.dasherId);
+                    
+                    if (dasherToMove) {
+                        setDasherCategories(dasherCategories.map(cat => {
+                            if (cat.id === draggedDasher.categoryId) {
+                                // Remove from source
+                                return { ...cat, dashers: cat.dashers.filter(d => d.id !== draggedDasher.dasherId) };
+                            } else if (cat.id === targetCategoryId) {
+                                // Add to target
+                                return { ...cat, dashers: [...cat.dashers, dasherToMove] };
+                            }
+                            return cat;
+                        }));
+                    }
+                }
+                
+                setDraggedDasher({ categoryId: '', dasherId: '' });
+            };
+
             const targetAmount = parseFloat(target) || 0;
-            
+
             return (
                 <div className="min-h-screen bg-gray-900 text-white p-4">
                     {/* Copy Notification */}
@@ -895,7 +1295,7 @@
                         <div className="text-center mb-6">
                             <h1 className="text-3xl font-bold">Dash Bash Utility</h1>
                             <div className="flex items-center justify-center gap-2 mt-2 text-gray-400">
-                                <Icon name="clock" size={16} />
+                                <Clock size={16} />
                                 <span className="text-sm">
                                     {currentTime.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })} • {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </span>
@@ -910,10 +1310,10 @@
                                     className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <Icon name="calculator" size={20} className="text-blue-400" />
+                                        <Calculator size={20} className="text-blue-400" />
                                         <span className="text-lg font-medium">Target Calculator</span>
                                     </div>
-                                    <Icon name={isCalculatorOpen ? "chevron-up" : "chevron-down"} size={20} />
+                                    {isCalculatorOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </button>
                                 
                                 {isCalculatorOpen && (
@@ -950,7 +1350,7 @@
                                                             : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                                     }`}
                                                 >
-                                                    <Icon name="edit-2" size={14} />
+                                                    <Edit2 size={14} />
                                                     Custom
                                                 </button>
                                             </div>
@@ -972,7 +1372,7 @@
                                                         onClick={handleCustomTargetSave}
                                                         className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors flex items-center gap-1"
                                                     >
-                                                        <Icon name="save" size={16} />
+                                                        <Save size={16} />
                                                         Set
                                                     </button>
                                                 </div>
@@ -985,7 +1385,7 @@
                                                 </div>
                                             )}
                                         </div>
-                                        
+
                                         {/* Price Input */}
                                         <div className="mb-4">
                                             <label className="block text-sm font-medium mb-2">Add Product Price ($) <span className="text-gray-400 text-xs">(Enter to add quickly)</span></label>
@@ -1004,12 +1404,12 @@
                                                     onClick={addPrice}
                                                     className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
                                                 >
-                                                    <Icon name="plus" size={16} />
+                                                    <Plus size={16} />
                                                     Add
                                                 </button>
                                             </div>
                                         </div>
-                                        
+
                                         {/* Results */}
                                         {prices.length > 0 && (() => {
                                             const allOptions = prices.map((price, index) => {
@@ -1086,7 +1486,7 @@
                                                                             onClick={() => removePrice(index)}
                                                                             className="text-gray-500 hover:text-red-400 p-1 transition-colors"
                                                                         >
-                                                                            <Icon name="trash-2" size={14} />
+                                                                            <Trash2 size={14} />
                                                                         </button>
                                                                     </div>
                                                                 </div>
@@ -1106,7 +1506,7 @@
                                                                             onClick={() => removePrice(index)}
                                                                             className="text-red-400 hover:text-red-300 p-1"
                                                                         >
-                                                                            <Icon name="trash-2" size={14} />
+                                                                            <Trash2 size={14} />
                                                                         </button>
                                                                     </div>
                                                                 </div>
@@ -1116,7 +1516,7 @@
                                                 </div>
                                             );
                                         })()}
-                                        
+
                                         {prices.length === 0 && (
                                             <div className="text-center text-gray-400 py-6">
                                                 <div className="text-sm">Add product prices to see calculations</div>
@@ -1126,7 +1526,7 @@
                                     </div>
                                 )}
                             </div>
-                            
+
                             {/* Quick Messages Section */}
                             <div className="bg-gray-800 rounded-lg overflow-hidden">
                                 <button
@@ -1134,10 +1534,10 @@
                                     className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <Icon name="message-square" size={20} className="text-green-400" />
+                                        <MessageSquare size={20} className="text-green-400" />
                                         <span className="text-lg font-medium">Quick Copy Messages ({messages.length})</span>
                                     </div>
-                                    <Icon name={isMessagesOpen ? "chevron-up" : "chevron-down"} size={20} />
+                                    {isMessagesOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </button>
                                 
                                 {isMessagesOpen && (
@@ -1155,7 +1555,7 @@
                                             >
                                                 <div className="flex items-center gap-2">
                                                     <button className="text-gray-500 hover:text-gray-400 cursor-move p-1">
-                                                        <Icon name="grip-vertical" size={18} />
+                                                        <GripVertical size={18} />
                                                     </button>
                                                     
                                                     <div className="flex-1 min-w-0">
@@ -1182,19 +1582,19 @@
                                                         {editingIndex === index ? (
                                                             <>
                                                                 <button onClick={saveEdit} className="text-green-400 hover:text-green-300 p-1" title="Save">
-                                                                    <Icon name="save" size={12} />
+                                                                    <Save size={12} />
                                                                 </button>
                                                                 <button onClick={cancelEdit} className="text-gray-400 hover:text-gray-300 p-1" title="Cancel">
-                                                                    <Icon name="x" size={12} />
+                                                                    <X size={12} />
                                                                 </button>
                                                             </>
                                                         ) : (
                                                             <>
                                                                 <button onClick={() => startEdit(index)} className="text-yellow-400 hover:text-yellow-300 p-1" title="Edit">
-                                                                    <Icon name="edit-2" size={12} />
+                                                                    <Edit2 size={12} />
                                                                 </button>
                                                                 <button onClick={() => deleteMessage(index)} className="text-red-400 hover:text-red-300 p-1" title="Delete">
-                                                                    <Icon name="trash-2" size={12} />
+                                                                    <Trash2 size={12} />
                                                                 </button>
                                                             </>
                                                         )}
@@ -1217,10 +1617,10 @@
                                                     />
                                                     <div className="flex gap-0.5">
                                                         <button onClick={addNewMessage} className="text-green-400 hover:text-green-300 p-1" title="Add">
-                                                            <Icon name="save" size={12} />
+                                                            <Save size={12} />
                                                         </button>
                                                         <button onClick={cancelAddNew} className="text-gray-400 hover:text-gray-300 p-1" title="Cancel">
-                                                            <Icon name="x" size={12} />
+                                                            <X size={12} />
                                                         </button>
                                                     </div>
                                                 </div>
@@ -1228,16 +1628,16 @@
                                         ) : (
                                             <button
                                                 onClick={() => setIsAddingNew(true)}
-                                                className="w-full bg-gray-800/50 hover:bg-gray-700 border border-gray-600/50 rounded-lg py-2.5 px-4 text-sm text-gray-400 hover:text-gray-200 transition-all duration-200 flex items-center justify-center gap-2 group"
+                                                className="w-full bg-gray-700/40 hover:bg-gray-700/60 border border-dashed border-gray-600 rounded-lg p-2 text-xs text-gray-300 hover:text-white transition-colors flex items-center justify-center gap-1"
                                             >
-                                                <Icon name="plus-circle" size={16} className="text-gray-500 group-hover:text-gray-300 transition-colors" />
-                                                <span className="font-medium">Add New Message</span>
+                                                <Plus size={12} />
+                                                Add New Message
                                             </button>
                                         )}
                                     </div>
                                 )}
                             </div>
-                            
+
                             {/* Address Book Section */}
                             <div className="bg-gray-800 rounded-lg overflow-hidden">
                                 <button
@@ -1245,10 +1645,10 @@
                                     className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <Icon name="building-2" size={20} className="text-orange-400" />
+                                        <Building2 size={20} className="text-orange-400" />
                                         <span className="text-lg font-medium">Store Address Book ({categories.reduce((total, cat) => total + cat.stores.length, 0)} locations)</span>
                                     </div>
-                                    <Icon name={isAddressBookOpen ? "chevron-up" : "chevron-down"} size={20} />
+                                    {isAddressBookOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </button>
                                 
                                 {isAddressBookOpen && (
@@ -1265,7 +1665,7 @@
                                                             onClick={() => toggleCategoryCollapse(category.id)}
                                                             className="flex items-center gap-2 flex-1 text-left"
                                                         >
-                                                            <Icon name={isCategoryCollapsed ? "chevron-down" : "chevron-up"} size={16} />
+                                                            {isCategoryCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
                                                             {editingCategory === category.id ? (
                                                                 <input
                                                                     type="text"
@@ -1279,7 +1679,7 @@
                                                                 />
                                                             ) : (
                                                                 <h4 className="font-medium text-blue-300 flex items-center gap-2">
-                                                                    <Icon name="map-pin" size={14} />
+                                                                    <MapPin size={14} />
                                                                     {category.name} ({category.stores.length})
                                                                     {category.stores.length > 0 && (
                                                                         <span className="text-xs text-gray-400 ml-2">
@@ -1298,25 +1698,25 @@
                                                                 className="text-green-400 hover:text-green-300 p-1"
                                                                 title="Add store"
                                                             >
-                                                                <Icon name="plus" size={14} />
+                                                                <Plus size={14} />
                                                             </button>
                                                             <button
                                                                 onClick={() => setEditingCategory(category.id)}
                                                                 className="text-yellow-400 hover:text-yellow-300 p-1"
                                                                 title="Edit category"
                                                             >
-                                                                <Icon name="edit-2" size={14} />
+                                                                <Edit2 size={14} />
                                                             </button>
                                                             <button
                                                                 onClick={() => deleteCategory(category.id)}
                                                                 className="text-red-400 hover:text-red-300 p-1"
                                                                 title="Delete category"
                                                             >
-                                                                <Icon name="trash-2" size={14} />
+                                                                <Trash2 size={14} />
                                                             </button>
                                                         </div>
                                                     </div>
-                                                    
+
                                                     {/* Stores */}
                                                     {!isCategoryCollapsed && (
                                                         <div className="border-t border-gray-600/30 p-3 space-y-2">
@@ -1345,14 +1745,14 @@
                                                                                         className="text-gray-400 hover:text-gray-300 cursor-move" 
                                                                                         aria-label="Drag to reorder"
                                                                                     >
-                                                                                        <Icon name="grip-vertical" size={14} />
+                                                                                        <GripVertical size={14} />
                                                                                     </button>
                                                                                 )}
                                                                                 <button
                                                                                     onClick={() => toggleStoreCollapse(category.id, store.id)}
                                                                                     className="flex items-center gap-2 flex-1 text-left"
                                                                                 >
-                                                                                    <Icon name={isCollapsed ? "chevron-down" : "chevron-up"} size={14} />
+                                                                                    {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
                                                                                     <div className="flex-1">
                                                                                         {cityState ? (
                                                                                             <h5 className="font-medium text-green-300 text-sm flex items-center gap-2">
@@ -1379,18 +1779,18 @@
                                                                                     }`}
                                                                                     title={isEditing ? 'Save changes' : 'Edit store'}
                                                                                 >
-                                                                                    <Icon name={isEditing ? "save" : "edit-2"} size={14} />
+                                                                                    {isEditing ? <Save size={14} /> : <Edit2 size={14} />}
                                                                                 </button>
                                                                                 <button
                                                                                     onClick={() => deleteStore(category.id, store.id)}
                                                                                     className="text-red-400 hover:text-red-300 p-1"
                                                                                     title="Delete store"
                                                                                 >
-                                                                                    <Icon name="trash-2" size={14} />
+                                                                                    <Trash2 size={14} />
                                                                                 </button>
                                                                             </div>
                                                                         </div>
-                                                                        
+
                                                                         {/* Store Details */}
                                                                         {!isCollapsed && (
                                                                             <div className="border-t border-gray-500/30 p-3 space-y-2">
@@ -1419,10 +1819,10 @@
                                                                                         title="Copy address"
                                                                                         disabled={!store.address}
                                                                                     >
-                                                                                        <Icon name="copy" size={12} />
+                                                                                        <Copy size={12} />
                                                                                     </button>
                                                                                 </div>
-                                                                                
+
                                                                                 {/* Times */}
                                                                                 <div className="grid grid-cols-2 gap-2">
                                                                                     <div className="flex items-center gap-2">
@@ -1460,7 +1860,7 @@
                                                                                         )}
                                                                                     </div>
                                                                                 </div>
-                                                                                
+
                                                                                 {/* Notes */}
                                                                                 <div className="flex items-start gap-2">
                                                                                     <label className="text-xs text-gray-400 w-16 mt-1 flex-shrink-0">Notes:</label>
@@ -1483,7 +1883,7 @@
                                                                     </div>
                                                                 );
                                                             })}
-                                                            
+
                                                             {category.stores.length === 0 && (
                                                                 <div className="text-center text-gray-500 py-2 text-xs">
                                                                     No stores yet. Click + to add one.
@@ -1494,7 +1894,7 @@
                                                 </div>
                                             );
                                         })}
-                                        
+
                                         {/* Add New Category */}
                                         {isAddingCategory ? (
                                             <div className="bg-gray-700/40 rounded-lg p-3 border border-gray-600/30 border-dashed">
@@ -1508,247 +1908,545 @@
                                                         autoFocus
                                                     />
                                                     <button onClick={addCategory} className="text-green-400 hover:text-green-300 p-1" title="Add">
-                                                        <Icon name="save" size={14} />
+                                                        <Save size={14} />
                                                     </button>
                                                     <button onClick={() => { setIsAddingCategory(false); setNewCategoryName(''); }} className="text-gray-400 hover:text-gray-300 p-1" title="Cancel">
-                                                        <Icon name="x" size={14} />
+                                                        <X size={14} />
                                                     </button>
                                                 </div>
                                             </div>
                                         ) : (
                                             <button
                                                 onClick={() => setIsAddingCategory(true)}
-                                                className="w-full bg-gray-800/50 hover:bg-gray-700 border border-gray-600/50 rounded-lg py-2.5 px-4 text-sm text-gray-400 hover:text-gray-200 transition-all duration-200 flex items-center justify-center gap-2 group"
+                                                className="w-full bg-gray-700/40 hover:bg-gray-700/60 border border-dashed border-gray-600 rounded-lg p-3 text-sm text-gray-300 hover:text-white transition-colors flex items-center justify-center gap-2"
                                             >
-                                                <Icon name="plus-circle" size={16} className="text-gray-500 group-hover:text-gray-300 transition-colors" />
-                                                <span className="font-medium">Add New Store Category</span>
+                                                <Plus size={14} />
+                                                Add New Store Category
                                             </button>
                                         )}
-                                        
+
                                         {categories.length === 0 && !isAddingCategory && (
                                             <div className="text-center text-gray-500 py-6 text-sm">
                                                 No store categories yet
                                             </div>
                                         )}
+                                        
+                                        {/* Save Button */}
+                                        <div className="mt-3 pt-3 border-t border-gray-700">
+                                            <button
+                                                onClick={saveAllToLocalStorage}
+                                                className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                            >
+                                                <Save size={16} />
+                                                Save
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
                             </div>
-                            
+
                             {/* Notes Section */}
                             <div className="bg-gray-800 rounded-lg overflow-hidden">
                                 <button
                                     onClick={() => setIsNotesOpen(!isNotesOpen)}
-                                    className="w-full p-4 flex items-center justify-between hover:bg-gray-700 transition-colors"
+                                    className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <Icon name="sticky-note" size={20} className="text-purple-400" />
-                                        <span className="text-lg font-medium">Notes ({noteCategories.reduce((total, cat) => total + cat.notes.length, 0)} items)</span>
+                                        <FileText size={20} className="text-purple-400" />
+                                        <span className="text-lg font-medium">
+                                            Notes ({noteCategories.reduce((total, cat) => total + cat.notes.length, 0)} items)
+                                        </span>
                                     </div>
-                                    <Icon name={isNotesOpen ? "chevron-up" : "chevron-down"} size={20} />
+                                    {isNotesOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </button>
                                 
                                 {isNotesOpen && (
-                                    <div className="border-t border-gray-700 p-4 space-y-3">
-                                        <div className="flex justify-between items-center mb-1">
-                                            <span className="text-sm text-gray-400">Organize your notes by category</span>
+                                    <div className="border-t border-gray-700 p-4">
+                                        <div className="mb-3 text-center">
+                                            <p className="text-xs text-gray-400">Organize your notes by category</p>
+                                        </div>
+                                        
+                                        <div className="space-y-3">
+                                            {noteCategories.map((category) => {
+                                                const isCategoryCollapsed = collapsedNoteCategories[category.id];
+                                                
+                                                return (
+                                                    <div 
+                                                        key={category.id} 
+                                                        className="bg-gray-700/40 rounded-lg overflow-hidden border border-gray-600/30"
+                                                        onDragOver={handleNoteDragOver}
+                                                        onDrop={(e) => handleNoteDrop(e, category.id)}
+                                                    >
+                                                        {/* Category Header */}
+                                                        <div className="flex items-center justify-between p-3 hover:bg-gray-700/60 transition-colors">
+                                                            <button
+                                                                onClick={() => toggleNoteCategoryCollapse(category.id)}
+                                                                className="flex items-center gap-2 flex-1 text-left"
+                                                            >
+                                                                {isCategoryCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                                                                {editingNoteCategory === category.id ? (
+                                                                    <input
+                                                                        type="text"
+                                                                        value={category.name}
+                                                                        onChange={(e) => updateNoteCategory(category.id, e.target.value)}
+                                                                        className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                                                        onBlur={() => setEditingNoteCategory(-1)}
+                                                                        onKeyPress={(e) => e.key === 'Enter' && setEditingNoteCategory(-1)}
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                        autoFocus
+                                                                    />
+                                                                ) : (
+                                                                    <h4 className="font-medium text-purple-300 flex items-center gap-2">
+                                                                        <FileText size={14} />
+                                                                        {category.name} ({category.notes.length})
+                                                                    </h4>
+                                                                )}
+                                                            </button>
+                                                            
+                                                            <div className="flex items-center gap-1">
+                                                                <button
+                                                                    onClick={() => addNote(category.id)}
+                                                                    className="text-green-400 hover:text-green-300 p-1"
+                                                                    title="Add note"
+                                                                >
+                                                                    <Plus size={14} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setEditingNoteCategory(category.id);
+                                                                    }}
+                                                                    className="text-yellow-400 hover:text-yellow-300 p-1"
+                                                                    title="Rename category"
+                                                                >
+                                                                    <Edit2 size={14} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => deleteNoteCategory(category.id)}
+                                                                    className="text-red-400 hover:text-red-300 p-1"
+                                                                    title="Delete category"
+                                                                >
+                                                                    <Trash2 size={14} />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Notes */}
+                                                        {!isCategoryCollapsed && (
+                                                            <div className="border-t border-gray-600/30 p-3 space-y-2">
+                                                                {category.notes.map((note, noteIndex) => {
+                                                                    const isEditing = isNoteEditing(category.id, noteIndex);
+                                                                    
+                                                                    return (
+                                                                        <div 
+                                                                            key={noteIndex} 
+                                                                            className={`bg-gray-600/50 rounded-lg p-2 transition-opacity ${
+                                                                                draggedNote.categoryId === category.id && draggedNote.noteIndex === noteIndex ? 'opacity-50' : ''
+                                                                            }`}
+                                                                            draggable={!isEditing}
+                                                                            onDragStart={(e) => { if (!isEditing) handleNoteDragStart(e, category.id, noteIndex); }}
+                                                                        >
+                                                                            <div className="flex items-start gap-2">
+                                                                                {!isEditing && (
+                                                                                    <button 
+                                                                                        className="text-gray-400 hover:text-gray-300 cursor-move mt-1" 
+                                                                                        aria-label="Drag to reorder"
+                                                                                    >
+                                                                                        <GripVertical size={14} />
+                                                                                    </button>
+                                                                                )}
+                                                                                
+                                                                                <div className="flex-1">
+                                                                                    {isEditing ? (
+                                                                                        <textarea
+                                                                                            value={note}
+                                                                                            onChange={(e) => updateNote(category.id, noteIndex, e.target.value)}
+                                                                                            className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                                            rows={3}
+                                                                                            autoFocus
+                                                                                            placeholder="Enter your note..."
+                                                                                        />
+                                                                                    ) : (
+                                                                                        <div className="text-sm text-gray-100 whitespace-pre-wrap">
+                                                                                            {note || <span className="italic text-gray-500">Empty note - click edit to add content</span>}
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                                
+                                                                                <div className="flex items-start gap-1 mt-1">
+                                                                                    {!isEditing && (
+                                                                                        <button
+                                                                                            onClick={(e) => {
+                                                                                                e.stopPropagation();
+                                                                                                copyToClipboard(note);
+                                                                                            }}
+                                                                                            className="text-blue-400 hover:text-blue-300 p-1"
+                                                                                            title="Copy note"
+                                                                                            disabled={!note}
+                                                                                        >
+                                                                                            <Copy size={14} />
+                                                                                        </button>
+                                                                                    )}
+                                                                                    <button
+                                                                                        onClick={() => toggleNoteEdit(category.id, noteIndex)}
+                                                                                        className={`p-1 transition-colors ${
+                                                                                            isEditing 
+                                                                                                ? 'text-green-400 hover:text-green-300' 
+                                                                                                : 'text-yellow-400 hover:text-yellow-300'
+                                                                                        }`}
+                                                                                        title={isEditing ? 'Save' : 'Edit'}
+                                                                                    >
+                                                                                        {isEditing ? <Save size={14} /> : <Edit2 size={14} />}
+                                                                                    </button>
+                                                                                    <button
+                                                                                        onClick={() => deleteNote(category.id, noteIndex)}
+                                                                                        className="text-red-400 hover:text-red-300 p-1"
+                                                                                        title="Delete"
+                                                                                    >
+                                                                                        <Trash2 size={14} />
+                                                                                    </button>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
+
+                                                                {category.notes.length === 0 && (
+                                                                    <div className="text-center text-gray-500 py-2 text-xs">
+                                                                        No notes yet. Click + to add one.
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Add Category Button */}
+                                        <button
+                                            onClick={addNoteCategory}
+                                            className="w-full mt-3 bg-gray-700/40 hover:bg-gray-700/60 border border-dashed border-gray-600 rounded-lg p-3 text-sm text-gray-300 hover:text-white transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            <Plus size={14} />
+                                            Add New Category
+                                        </button>
+                                        
+                                        {/* Save Button */}
+                                        <div className="mt-3 pt-3 border-t border-gray-700">
                                             <button
-                                                onClick={saveNotes}
-                                                className="flex items-center gap-2 px-3 py-1.5 bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600/30 rounded-lg transition-all text-sm text-gray-300 hover:text-white"
+                                                onClick={saveAllToLocalStorage}
+                                                className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
                                             >
-                                                <Icon name="save" size={14} />
+                                                <Save size={16} />
                                                 Save
                                             </button>
                                         </div>
-                                        
-                                        {noteSaveNotification && (
-                                            <div className="mb-3 p-2 bg-green-500/20 border border-green-500/50 rounded-lg text-sm text-green-300 flex items-center gap-2">
-                                                <Icon name="check-circle" size={16} />
-                                                Notes saved successfully!
-                                            </div>
-                                        )}
-                                        
-                                        {noteCategories.map((category) => (
-                                            <div key={category.id} className="bg-gray-700/40 rounded-lg overflow-hidden border border-gray-600/30">
-                                                <div className="flex items-center justify-between p-3 hover:bg-gray-700/60 transition-colors">
-                                                    <button
-                                                        onClick={() => setCollapsedNoteCategories({...collapsedNoteCategories, [category.id]: !collapsedNoteCategories[category.id]})}
-                                                        className="flex items-center gap-2 flex-1 text-left"
-                                                        onDrop={(e) => handleNoteCategoryDrop(e, category.id)}
-                                                        onDragOver={(e) => e.preventDefault()}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Dashers Section */}
+                            <div className="bg-gray-800 rounded-lg overflow-hidden">
+                                <button
+                                    onClick={() => setIsDashersOpen(!isDashersOpen)}
+                                    className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Users size={20} className="text-indigo-400" />
+                                        <span className="text-lg font-medium">
+                                            Dashers ({dasherCategories.reduce((total, cat) => total + cat.dashers.length, 0)} total)
+                                        </span>
+                                    </div>
+                                    {isDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                </button>
+                                
+                                {isDashersOpen && (
+                                    <div className="border-t border-gray-700 p-4 space-y-3">
+                                        {dasherCategories.map((category) => {
+                                            const isCategoryCollapsed = collapsedDasherCategories[category.id];
+                                            
+                                            return (
+                                                <div 
+                                                    key={category.id} 
+                                                    className={`bg-gray-700/40 rounded-lg overflow-hidden border border-gray-600/30 transition-opacity ${
+                                                        draggedDasherCategory === category.id ? 'opacity-50' : ''
+                                                    }`}
+                                                    draggable
+                                                    onDragStart={(e) => handleDasherCategoryDragStart(e, category.id)}
+                                                    onDragOver={handleDasherCategoryDragOver}
+                                                    onDrop={(e) => handleDasherCategoryDrop(e, category.id)}
+                                                >
+                                                    {/* Category Header */}
+                                                    <div className="flex items-center justify-between p-3 hover:bg-gray-700/60 transition-colors"
+                                                        onDragOver={handleDasherDragOver}
+                                                        onDrop={(e) => handleDasherDrop(e, category.id)}
                                                     >
-                                                        <Icon name={collapsedNoteCategories[category.id] ? "chevron-down" : "chevron-up"} size={16} />
-                                                        {editingNoteCategory === category.id ? (
-                                                            <input
-                                                                type="text"
-                                                                value={editNoteCategoryText}
-                                                                onChange={(e) => setEditNoteCategoryText(e.target.value)}
-                                                                className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                                onBlur={() => {
-                                                                    updateNoteCategoryName(category.id, editNoteCategoryText);
-                                                                    setEditingNoteCategory(-1);
-                                                                }}
-                                                                onKeyPress={(e) => {
-                                                                    if (e.key === 'Enter') {
-                                                                        updateNoteCategoryName(category.id, editNoteCategoryText);
-                                                                        setEditingNoteCategory(-1);
-                                                                    }
-                                                                }}
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                autoFocus
-                                                            />
-                                                        ) : (
-                                                            <h4 className="font-medium text-blue-300 flex items-center gap-2">
-                                                                <Icon name="sticky-note" size={14} />
-                                                                {category.name} ({category.notes.length})
-                                                            </h4>
-                                                        )}
-                                                    </button>
-                                                    
-                                                    <div className="flex items-center gap-1">
-                                                        <button
-                                                            onClick={() => addNote(category.id)}
-                                                            className="text-green-400 hover:text-green-300 p-1"
-                                                            title="Add note"
-                                                        >
-                                                            <Icon name="plus" size={14} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                setEditingNoteCategory(category.id);
-                                                                setEditNoteCategoryText(category.name);
-                                                            }}
-                                                            className="text-yellow-400 hover:text-yellow-300 p-1"
-                                                            title="Edit category"
-                                                        >
-                                                            <Icon name="edit-2" size={14} />
-                                                        </button>
-                                                        {noteCategories.length > 1 && (
+                                                        <div className="flex items-center gap-2">
+                                                            <button 
+                                                                className="text-gray-400 hover:text-gray-300 cursor-move" 
+                                                                aria-label="Drag to reorder category"
+                                                            >
+                                                                <GripVertical size={14} />
+                                                            </button>
                                                             <button
-                                                                onClick={() => deleteNoteCategory(category.id)}
+                                                                onClick={() => toggleDasherCategoryCollapse(category.id)}
+                                                                className="flex items-center gap-2 text-left flex-1"
+                                                            >
+                                                                {isCategoryCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                                                                {editingDasherCategory === category.id ? (
+                                                                    <input
+                                                                        type="text"
+                                                                        value={category.name}
+                                                                        onChange={(e) => updateDasherCategory(category.id, e.target.value)}
+                                                                        className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                                                        onBlur={() => setEditingDasherCategory(-1)}
+                                                                        onKeyPress={(e) => e.key === 'Enter' && setEditingDasherCategory(-1)}
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                        autoFocus
+                                                                    />
+                                                                ) : (
+                                                                    <h4 className="font-medium text-indigo-300 flex items-center gap-2">
+                                                                        <Users size={14} />
+                                                                        {category.name} ({category.dashers.length})
+                                                                    </h4>
+                                                                )}
+                                                            </button>
+                                                        </div>
+                                                        
+                                                        <div className="flex items-center gap-1">
+                                                            <button
+                                                                onClick={() => addDasher(category.id)}
+                                                                className="text-green-400 hover:text-green-300 p-1"
+                                                                title="Add dasher"
+                                                            >
+                                                                <Plus size={14} />
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setEditingDasherCategory(category.id);
+                                                                }}
+                                                                className="text-yellow-400 hover:text-yellow-300 p-1"
+                                                                title="Rename category"
+                                                            >
+                                                                <Edit2 size={14} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => deleteDasherCategory(category.id)}
                                                                 className="text-red-400 hover:text-red-300 p-1"
                                                                 title="Delete category"
                                                             >
-                                                                <Icon name="trash-2" size={14} />
+                                                                <Trash2 size={14} />
                                                             </button>
-                                                        )}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                                
-                                                {!collapsedNoteCategories[category.id] && (
-                                                    <div className="border-t border-gray-600/30 p-3 space-y-2">
-                                                        {category.notes.length === 0 ? (
-                                                            <div className="text-center py-4 text-gray-500 text-sm">
-                                                                No notes in this category
-                                                            </div>
-                                                        ) : (
-                                                            category.notes.map((note, index) => (
-                                                                <div
-                                                                    key={index}
-                                                                    className={`bg-gray-600/50 rounded-lg overflow-hidden border border-gray-500/30 transition-opacity ${
-                                                                        draggedNote.categoryId === category.id && draggedNote.noteIndex === index ? 'opacity-50' : ''
-                                                                    }`}
-                                                                    draggable
-                                                                    onDragStart={() => handleNoteDragStart(category.id, index)}
-                                                                    onDrop={(e) => handleNoteDrop(e, category.id, index)}
-                                                                    onDragOver={(e) => e.preventDefault()}
-                                                                >
-                                                                    <div className="flex items-center justify-between p-3 hover:bg-gray-600/70 transition-colors">
-                                                                        {editingNote.categoryId === category.id && editingNote.noteIndex === index ? (
-                                                                            <div className="flex-1 flex gap-2">
-                                                                                <textarea
-                                                                                    value={editNoteText}
-                                                                                    onChange={(e) => setEditNoteText(e.target.value)}
-                                                                                    className="flex-1 px-2 py-1 bg-gray-700 rounded border border-gray-600 text-sm min-h-[60px] resize-y"
-                                                                                    onBlur={() => {
-                                                                                        updateNote(category.id, index, editNoteText);
-                                                                                        setEditingNote({ categoryId: -1, noteIndex: -1 });
-                                                                                    }}
-                                                                                    onKeyDown={(e) => {
-                                                                                        if (e.key === 'Escape') {
-                                                                                            setEditingNote({ categoryId: -1, noteIndex: -1 });
-                                                                                        }
-                                                                                    }}
-                                                                                    autoFocus
-                                                                                />
-                                                                            </div>
-                                                                        ) : (
-                                                                            <>
-                                                                                <div className="flex items-center gap-2 flex-1">
+
+                                                    {/* Dashers */}
+                                                    {!isCategoryCollapsed && (
+                                                        <div className="border-t border-gray-600/30 p-3 space-y-2">
+                                                            {category.dashers.map((dasher) => {
+                                                                const isEditing = isDasherEditing(category.id, dasher.id);
+                                                                // Re-calculate on timerTick changes
+                                                                const timeStatus = calculateDasherTimeStatus(dasher.lastUsed);
+                                                                const dasherTitle = getDasherTitle(dasher);
+                                                                
+                                                                return (
+                                                                    <div 
+                                                                        key={dasher.id} 
+                                                                        className={`bg-gray-600/50 rounded-lg p-3 border border-gray-500/30 transition-opacity ${
+                                                                            draggedDasher.categoryId === category.id && draggedDasher.dasherId === dasher.id ? 'opacity-50' : ''
+                                                                        }`}
+                                                                        draggable={!isEditing}
+                                                                        onDragStart={(e) => { if (!isEditing) handleDasherDragStart(e, category.id, dasher.id); }}
+                                                                    >
+                                                                        {/* Dasher Header */}
+                                                                        <div className="flex items-center justify-between mb-2">
+                                                                            <div className="flex items-center gap-2 flex-1">
+                                                                                {!isEditing && (
                                                                                     <button 
                                                                                         className="text-gray-400 hover:text-gray-300 cursor-move" 
                                                                                         aria-label="Drag to reorder"
                                                                                     >
-                                                                                        <Icon name="grip-vertical" size={14} />
+                                                                                        <GripVertical size={14} />
                                                                                     </button>
-                                                                                    <span className="text-sm whitespace-pre-wrap">{note}</span>
+                                                                                )}
+                                                                                <div className="flex-1">
+                                                                                    <h5 className="font-medium text-purple-300 text-sm">
+                                                                                        {dasherTitle}
+                                                                                    </h5>
                                                                                 </div>
-                                                                                <div className="flex items-center gap-1">
-                                                                                    <button
-                                                                                        onClick={() => {
-                                                                                            setEditingNote({ categoryId: category.id, noteIndex: index });
-                                                                                            setEditNoteText(note);
-                                                                                        }}
-                                                                                        className="text-yellow-400 hover:text-yellow-300 p-1"
-                                                                                    >
-                                                                                        <Icon name="edit-2" size={14} />
-                                                                                    </button>
-                                                                                    <button
-                                                                                        onClick={() => deleteNote(category.id, index)}
-                                                                                        className="text-red-400 hover:text-red-300 p-1"
-                                                                                    >
-                                                                                        <Icon name="trash-2" size={14} />
-                                                                                    </button>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-1">
+                                                                                <button
+                                                                                    onClick={() => startDasherTimer(category.id, dasher.id)}
+                                                                                    className="text-purple-400 hover:text-purple-300 p-1"
+                                                                                    title="Start 24hr timer"
+                                                                                >
+                                                                                    <Timer size={14} />
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => toggleEditDasher(category.id, dasher.id)}
+                                                                                    className={`p-1 transition-colors ${
+                                                                                        isEditing 
+                                                                                            ? 'text-green-400 hover:text-green-300' 
+                                                                                            : 'text-yellow-400 hover:text-yellow-300'
+                                                                                    }`}
+                                                                                    title={isEditing ? 'Save changes' : 'Edit dasher'}
+                                                                                >
+                                                                                    {isEditing ? <Save size={14} /> : <Edit2 size={14} />}
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => deleteDasher(category.id, dasher.id)}
+                                                                                    className="text-red-400 hover:text-red-300 p-1"
+                                                                                    title="Delete dasher"
+                                                                                >
+                                                                                    <Trash2 size={14} />
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Dasher Details */}
+                                                                        <div className="space-y-2">
+                                                                            {/* Name */}
+                                                                            <div className="flex items-center gap-2">
+                                                                                <label className="text-xs text-gray-400 w-16">Name:</label>
+                                                                                {isEditing ? (
+                                                                                    <input
+                                                                                        type="text"
+                                                                                        value={dasher.name}
+                                                                                        onChange={(e) => updateDasher(category.id, dasher.id, 'name', e.target.value)}
+                                                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                                        placeholder="Enter name..."
+                                                                                    />
+                                                                                ) : (
+                                                                                    <>
+                                                                                        <div className="flex-1 text-xs text-gray-200">
+                                                                                            {dasher.name || <span className="italic text-gray-500">No name</span>}
+                                                                                        </div>
+                                                                                        <button
+                                                                                            onClick={(e) => {
+                                                                                                e.stopPropagation();
+                                                                                                copyToClipboard(dasher.name);
+                                                                                            }}
+                                                                                            className="text-blue-400 hover:text-blue-300 p-1"
+                                                                                            title="Copy name"
+                                                                                            disabled={!dasher.name}
+                                                                                        >
+                                                                                            <Copy size={12} />
+                                                                                        </button>
+                                                                                    </>
+                                                                                )}
+                                                                            </div>
+
+                                                                            {/* Email */}
+                                                                            <div className="flex items-center gap-2">
+                                                                                <label className="text-xs text-gray-400 w-16">Email:</label>
+                                                                                {isEditing ? (
+                                                                                    <input
+                                                                                        type="email"
+                                                                                        value={dasher.email}
+                                                                                        onChange={(e) => updateDasher(category.id, dasher.id, 'email', e.target.value)}
+                                                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                                        placeholder="Enter email..."
+                                                                                    />
+                                                                                ) : (
+                                                                                    <>
+                                                                                        <div className="flex-1 text-xs text-gray-200">
+                                                                                            {dasher.email || <span className="italic text-gray-500">No email</span>}
+                                                                                        </div>
+                                                                                        <button
+                                                                                            onClick={(e) => {
+                                                                                                e.stopPropagation();
+                                                                                                copyToClipboard(dasher.email);
+                                                                                            }}
+                                                                                            className="text-blue-400 hover:text-blue-300 p-1"
+                                                                                            title="Copy email"
+                                                                                            disabled={!dasher.email}
+                                                                                        >
+                                                                                            <Copy size={12} />
+                                                                                        </button>
+                                                                                    </>
+                                                                                )}
+                                                                            </div>
+
+                                                                            {/* Last Used Timer */}
+                                                                            <div className="flex items-center gap-2">
+                                                                                <label className="text-xs text-gray-400 w-16">Last used:</label>
+                                                                                <div className="flex-1 text-xs">
+                                                                                    {timeStatus ? (
+                                                                                        <div>
+                                                                                            <span className={`font-mono ${timeStatus.color}`}>
+                                                                                                {timeStatus.text}
+                                                                                            </span>
+                                                                                            <div className="text-gray-500 text-[10px] mt-1">
+                                                                                                {timeStatus.fullDateTime}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    ) : (
+                                                                                        <span className="italic text-gray-500">Timer not started</span>
+                                                                                    )}
                                                                                 </div>
-                                                                            </>
-                                                                        )}
+                                                                            </div>
+
+                                                                            {/* Notes */}
+                                                                            <div className="flex items-start gap-2">
+                                                                                <label className="text-xs text-gray-400 w-16 mt-1">Notes:</label>
+                                                                                {isEditing ? (
+                                                                                    <textarea
+                                                                                        value={dasher.notes}
+                                                                                        onChange={(e) => updateDasher(category.id, dasher.id, 'notes', e.target.value)}
+                                                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                                        rows={1}
+                                                                                        placeholder="Any notes..."
+                                                                                    />
+                                                                                ) : (
+                                                                                    <>
+                                                                                        <div className="flex-1 text-xs text-gray-200">
+                                                                                            {dasher.notes || <span className="italic text-gray-500">No notes</span>}
+                                                                                        </div>
+                                                                                        <button
+                                                                                            onClick={(e) => {
+                                                                                                e.stopPropagation();
+                                                                                                copyToClipboard(dasher.notes);
+                                                                                            }}
+                                                                                            className="text-blue-400 hover:text-blue-300 p-1 mt-1"
+                                                                                            title="Copy notes"
+                                                                                            disabled={!dasher.notes}
+                                                                                        >
+                                                                                            <Copy size={12} />
+                                                                                        </button>
+                                                                                    </>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
                                                                     </div>
+                                                                );
+                                                            })}
+
+                                                            {category.dashers.length === 0 && (
+                                                                <div className="text-center text-gray-500 py-2 text-xs">
+                                                                    No dashers in this category. Click + to add one.
                                                                 </div>
-                                                            ))
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-                                        
-                                        {isAddingNoteCategory ? (
-                                            <div className="flex items-center gap-2">
-                                                <input
-                                                    type="text"
-                                                    value={newNoteCategoryName}
-                                                    onChange={(e) => setNewNoteCategoryName(e.target.value)}
-                                                    placeholder="Category name"
-                                                    className="flex-1 px-3 py-2 bg-gray-700 rounded-lg text-sm"
-                                                    autoFocus
-                                                />
-                                                <button
-                                                    onClick={addNoteCategory}
-                                                    className="px-3 py-2 bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600/30 rounded-lg transition-all text-sm text-gray-300 hover:text-white"
-                                                >
-                                                    Add
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setIsAddingNoteCategory(false);
-                                                        setNewNoteCategoryName('');
-                                                    }}
-                                                    className="px-3 py-2 bg-gray-800/50 hover:bg-gray-700/50 border border-gray-600/30 rounded-lg transition-all text-sm text-gray-400 hover:text-gray-200"
-                                                >
-                                                    Cancel
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <button
-                                                onClick={() => setIsAddingNoteCategory(true)}
-                                                className="w-full bg-gray-800/50 hover:bg-gray-700 border border-gray-600/50 rounded-lg py-2.5 px-4 text-sm text-gray-400 hover:text-gray-200 transition-all duration-200 flex items-center justify-center gap-2 group"
-                                            >
-                                                <Icon name="plus-circle" size={16} className="text-gray-500 group-hover:text-gray-300 transition-colors" />
-                                                <span className="font-medium">Add New Note Category</span>
-                                            </button>
-                                        )}
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+
+                                        {/* Add New Category Button */}
+                                        <button
+                                            onClick={addDasherCategory}
+                                            className="w-full bg-gray-700/40 hover:bg-gray-700/60 border border-dashed border-gray-600 rounded-lg p-3 text-sm text-gray-300 hover:text-white transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            <Plus size={14} />
+                                            Add New Category
+                                        </button>
                                     </div>
                                 )}
                             </div>
-                            
+
                             {/* State Management Section */}
                             <div className="bg-gray-800 rounded-lg overflow-hidden">
                                 <button
@@ -1756,10 +2454,10 @@
                                     className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <Icon name="settings" size={20} className="text-purple-400" />
+                                        <Settings size={20} className="text-purple-400" />
                                         <span className="text-lg font-medium">State Management</span>
                                     </div>
-                                    <Icon name={isStateManagementOpen ? "chevron-up" : "chevron-down"} size={20} />
+                                    {isStateManagementOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </button>
                                 
                                 {isStateManagementOpen && (
@@ -1768,9 +2466,9 @@
                                             {/* Save to LocalStorage */}
                                             <button
                                                 onClick={saveAllToLocalStorage}
-                                                className="bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600/30 text-gray-300 hover:text-white px-4 py-3 rounded-lg transition-all flex items-center justify-center gap-2"
+                                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
                                             >
-                                                <Icon name="save" size={18} />
+                                                <Save size={18} />
                                                 <span className="text-sm font-medium">Save All</span>
                                             </button>
                                             
@@ -1779,7 +2477,7 @@
                                                 onClick={loadFromLocalStorage}
                                                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
                                             >
-                                                <Icon name="refresh-cw" size={18} />
+                                                <RefreshCw size={18} />
                                                 <span className="text-sm font-medium">Load Saved</span>
                                             </button>
                                             
@@ -1788,13 +2486,13 @@
                                                 onClick={exportToJSON}
                                                 className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
                                             >
-                                                <Icon name="download" size={18} />
+                                                <Download size={18} />
                                                 <span className="text-sm font-medium">Export JSON</span>
                                             </button>
                                             
                                             {/* Import from JSON */}
                                             <label className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer">
-                                                <Icon name="upload" size={18} />
+                                                <Upload size={18} />
                                                 <span className="text-sm font-medium">Import JSON</span>
                                                 <input
                                                     type="file"
@@ -1807,9 +2505,9 @@
                                             {/* Clear All Data */}
                                             <button
                                                 onClick={clearAllData}
-                                                className="bg-gray-800/50 hover:bg-gray-700/50 border border-red-900/30 text-red-400 hover:text-red-300 px-4 py-3 rounded-lg transition-all flex items-center justify-center gap-2 col-span-2 lg:col-span-1"
+                                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 col-span-2 lg:col-span-1"
                                             >
-                                                <Icon name="trash-2" size={18} />
+                                                <Trash2 size={18} />
                                                 <span className="text-sm font-medium">Clear All</span>
                                             </button>
                                         </div>
@@ -1833,20 +2531,10 @@
                 </div>
             );
         };
-        
-        // Render the application
-        ReactDOM.render(<EnhancedCalculator />, document.getElementById('root'));
-    </script>
-    
-    <!-- Service Worker Registration -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js')
-                    .then(reg => console.log('Service Worker registered'))
-                    .catch(err => console.log('Service Worker registration failed'));
-            });
-        }
+
+        // Render the React component
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(EnhancedCalculator));
     </script>
 </body>
-</html><!-- Force GitHub Pages rebuild: Sat, Aug 30, 2025  1:09:08 AM -->
+</html>
