@@ -1,14 +1,10 @@
 // Service Worker for Dash Bash Utility PWA
-const CACHE_NAME = 'dashbash-v1';
+const CACHE_NAME = 'dashbash-v2';
 const urlsToCache = [
+  './',
   './index.html',
   './favicon.svg',
-  './manifest.json',
-  'https://unpkg.com/react@18/umd/react.production.min.js',
-  'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
-  'https://unpkg.com/@babel/standalone/babel.min.js',
-  'https://unpkg.com/lucide@latest/dist/umd/lucide.js',
-  'https://cdn.tailwindcss.com'
+  './manifest.json'
 ];
 
 // Install event - cache resources
@@ -17,7 +13,14 @@ self.addEventListener('install', event => {
     caches.open(CACHE_NAME)
       .then(cache => {
         console.log('Opened cache');
-        return cache.addAll(urlsToCache);
+        // Try to cache each URL individually, don't fail if one fails
+        return Promise.all(
+          urlsToCache.map(url => {
+            return cache.add(url).catch(err => {
+              console.log('Failed to cache:', url, err);
+            });
+          })
+        );
       })
   );
   self.skipWaiting();
