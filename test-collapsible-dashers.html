@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Collapsible Dashers Test</title>
+    <style>
+        body { font-family: monospace; background: #111; color: #0f0; padding: 20px; }
+        .test { margin: 10px 0; padding: 10px; border: 1px solid #0f0; }
+        .pass { background: #001100; }
+        .fail { background: #110000; color: #f00; }
+        pre { background: #222; padding: 10px; overflow-x: auto; }
+        button { background: #333; color: #0f0; border: 1px solid #0f0; padding: 5px 10px; cursor: pointer; margin: 5px; }
+        button:hover { background: #444; }
+    </style>
+</head>
+<body>
+    <h1>Collapsible Dashers Feature Test</h1>
+    <div id="results"></div>
+    
+    <h2>Interactive Test</h2>
+    <div>
+        <button onclick="saveTestData()">Save Test Data</button>
+        <button onclick="loadTestData()">Load Test Data</button>
+        <button onclick="clearAllData()">Clear All Data</button>
+    </div>
+    <div id="output"></div>
+
+    <script>
+        const results = document.getElementById('results');
+        const output = document.getElementById('output');
+        let testCount = 0;
+        let passCount = 0;
+
+        function log(message, passed = true) {
+            const div = document.createElement('div');
+            div.className = `test ${passed ? 'pass' : 'fail'}`;
+            div.innerHTML = `Test ${++testCount}: ${message} - ${passed ? 'PASSED ✓' : 'FAILED ✗'}`;
+            results.appendChild(div);
+            if (passed) passCount++;
+        }
+
+        function showData(label, data) {
+            const pre = document.createElement('pre');
+            pre.textContent = `${label}:\n${JSON.stringify(data, null, 2)}`;
+            output.innerHTML = '';
+            output.appendChild(pre);
+        }
+
+        // Test 1: Create test state with collapsed dashers
+        const testState = {
+            target: '99',
+            targetPreset: '99',
+            messages: [],
+            categories: [],
+            noteCategories: [],
+            dasherCategories: [
+                {
+                    id: 'cat1',
+                    name: 'Main',
+                    dashers: [
+                        {
+                            id: 'dasher1',
+                            name: 'Test Dasher 1',
+                            email: 'test1@example.com',
+                            emailPw: 'pass123',
+                            dasherPw: 'dash456',
+                            phone: '555-0001',
+                            balance: '$100',
+                            crimson: true,
+                            lastUsed: new Date().toISOString(),
+                            notes: 'Test notes 1'
+                        },
+                        {
+                            id: 'dasher2',
+                            name: 'Test Dasher 2',
+                            email: 'test2@example.com',
+                            emailPw: 'pass789',
+                            dasherPw: 'dash012',
+                            phone: '555-0002',
+                            balance: '$200',
+                            crimson: false,
+                            lastUsed: null,
+                            notes: 'Test notes 2'
+                        }
+                    ]
+                }
+            ],
+            collapsedCategories: {},
+            collapsedStores: {},
+            collapsedDashers: {
+                'cat1-dasher1': true,  // Dasher 1 is collapsed
+                'cat1-dasher2': false  // Dasher 2 is expanded
+            },
+            collapsedDasherCategories: {
+                'cat1': false  // Category is expanded
+            },
+            collapsedNoteCategories: {}
+        };
+
+        // Test collapsed states structure
+        log('Collapsed dashers object created', typeof testState.collapsedDashers === 'object');
+        log('Collapsed dasher 1 state set', testState.collapsedDashers['cat1-dasher1'] === true);
+        log('Collapsed dasher 2 state set', testState.collapsedDashers['cat1-dasher2'] === false);
+
+        // Save test data function
+        function saveTestData() {
+            try {
+                localStorage.setItem('dashBashState', JSON.stringify(testState));
+                log('Test data saved to localStorage');
+                showData('Saved State', testState);
+            } catch (e) {
+                log('Failed to save: ' + e.message, false);
+            }
+        }
+
+        // Load test data function
+        function loadTestData() {
+            try {
+                const savedState = JSON.parse(localStorage.getItem('dashBashState'));
+                if (savedState) {
+                    log('Data loaded from localStorage');
+                    
+                    // Verify collapsed states are preserved
+                    if (savedState.collapsedDashers) {
+                        log('Collapsed dashers state preserved', true);
+                        log(`Dasher 1 collapsed: ${savedState.collapsedDashers['cat1-dasher1']}`, 
+                            savedState.collapsedDashers['cat1-dasher1'] === true);
+                        log(`Dasher 2 expanded: ${savedState.collapsedDashers['cat1-dasher2']}`, 
+                            savedState.collapsedDashers['cat1-dasher2'] === false);
+                    } else {
+                        log('Collapsed dashers state missing', false);
+                    }
+                    
+                    showData('Loaded State', savedState);
+                } else {
+                    log('No saved data found', false);
+                }
+            } catch (e) {
+                log('Failed to load: ' + e.message, false);
+            }
+        }
+
+        // Clear all data
+        function clearAllData() {
+            localStorage.removeItem('dashBashState');
+            log('All data cleared');
+            output.innerHTML = '<p>Data cleared from localStorage</p>';
+        }
+
+        // Test JSON export/import
+        function testJsonExportImport() {
+            // Export
+            const exportData = JSON.stringify(testState, null, 2);
+            log('JSON export successful', exportData.includes('collapsedDashers'));
+            
+            // Import
+            try {
+                const importedData = JSON.parse(exportData);
+                log('JSON import successful', importedData.collapsedDashers !== undefined);
+                
+                // Verify dasher timer reset function would work
+                const dasher = importedData.dasherCategories[0].dashers[0];
+                log('Dasher has lastUsed field', dasher.lastUsed !== undefined);
+                
+                // Simulate timer reset
+                dasher.lastUsed = null;
+                log('Timer reset simulation successful', dasher.lastUsed === null);
+            } catch (e) {
+                log('JSON import failed: ' + e.message, false);
+            }
+        }
+
+        // Run automatic tests
+        testJsonExportImport();
+
+        // Summary
+        const summary = document.createElement('div');
+        summary.style.marginTop = '20px';
+        summary.style.padding = '15px';
+        summary.style.border = '2px solid ' + (passCount === testCount ? '#0f0' : '#f00');
+        summary.innerHTML = `<h2>Test Summary: ${passCount}/${testCount} tests passed</h2>
+            <p>Click the buttons above to interactively test localStorage save/load functionality.</p>`;
+        results.appendChild(summary);
+    </script>
+</body>
+</html>

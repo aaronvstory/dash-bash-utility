@@ -17,6 +17,7 @@ const EnhancedCalculator = () => {
   const [isStateManagementOpen, setIsStateManagementOpen] = useState(false);
   const [collapsedCategories, setCollapsedCategories] = useState({});
   const [collapsedStores, setCollapsedStores] = useState({});
+  const [collapsedDashers, setCollapsedDashers] = useState({});
   const [draggedStore, setDraggedStore] = useState({ categoryId: -1, storeIndex: -1 });
   
   // State management
@@ -364,6 +365,11 @@ const EnhancedCalculator = () => {
         categories,
         noteCategories,
         dasherCategories,
+        collapsedCategories,
+        collapsedStores,
+        collapsedDashers,
+        collapsedDasherCategories,
+        collapsedNoteCategories,
         timestamp: new Date().toISOString()
       };
       localStorage.setItem('dashBashState', JSON.stringify(state));
@@ -396,6 +402,14 @@ const EnhancedCalculator = () => {
         setCategories(state.categories || []);
         setNoteCategories(state.noteCategories || noteCategories);
         setDasherCategories(state.dasherCategories || dasherCategories);
+        
+        // Load collapsed states if they exist
+        if (state.collapsedCategories) setCollapsedCategories(state.collapsedCategories);
+        if (state.collapsedStores) setCollapsedStores(state.collapsedStores);
+        if (state.collapsedDashers) setCollapsedDashers(state.collapsedDashers);
+        if (state.collapsedDasherCategories) setCollapsedDasherCategories(state.collapsedDasherCategories);
+        if (state.collapsedNoteCategories) setCollapsedNoteCategories(state.collapsedNoteCategories);
+        
         setSaveNotification('✅ Data loaded successfully!');
         setTimeout(() => setSaveNotification(''), 3000);
       } else {
@@ -975,6 +989,27 @@ const EnhancedCalculator = () => {
     setTimeout(() => {
       saveAllToLocalStorage();
     }, 100);
+  };
+
+  const resetDasherTimer = (categoryId, dasherId) => {
+    updateDasher(categoryId, dasherId, 'lastUsed', null);
+    // Auto-save after timer reset
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
+  };
+
+  const toggleDasherCollapse = (categoryId, dasherId) => {
+    const key = `${categoryId}-${dasherId}`;
+    setCollapsedDashers(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  const isDasherCollapsed = (categoryId, dasherId) => {
+    const key = `${categoryId}-${dasherId}`;
+    return collapsedDashers[key] || false;
   };
 
   const calculateDasherTimeStatus = (lastUsedTime) => {
@@ -2017,6 +2052,7 @@ const EnhancedCalculator = () => {
                         <div className="border-t border-gray-600/30 p-3 space-y-2">
                           {category.dashers.map((dasher) => {
                             const isEditing = isDasherEditing(category.id, dasher.id);
+                            const isCollapsed = isDasherCollapsed(category.id, dasher.id);
                             // Re-calculate on timerTick changes
                             const timeStatus = calculateDasherTimeStatus(dasher.lastUsed);
                             const dasherTitle = getDasherTitle(dasher);
@@ -2024,16 +2060,16 @@ const EnhancedCalculator = () => {
                             return (
                               <div 
                                 key={dasher.id} 
-                                className={`bg-gray-600/50 rounded-lg p-3 border border-gray-500/30 transition-opacity ${
+                                className={`bg-gray-600/50 rounded-lg overflow-hidden border border-gray-500/30 transition-opacity ${
                                   draggedDasher.categoryId === category.id && draggedDasher.dasherId === dasher.id ? 'opacity-50' : ''
                                 }`}
-                                draggable={!isEditing}
-                                onDragStart={(e) => { if (!isEditing) handleDasherDragStart(e, category.id, dasher.id); }}
+                                draggable={!isEditing && !isCollapsed}
+                                onDragStart={(e) => { if (!isEditing && !isCollapsed) handleDasherDragStart(e, category.id, dasher.id); }}
                               >
                                 {/* Dasher Header */}
-                                <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center justify-between p-3">
                                   <div className="flex items-center gap-2 flex-1">
-                                    {!isEditing && (
+                                    {!isEditing && !isCollapsed && (
                                       <button 
                                         className="text-gray-400 hover:text-gray-300 cursor-move" 
                                         aria-label="Drag to reorder"
@@ -2041,20 +2077,40 @@ const EnhancedCalculator = () => {
                                         <GripVertical size={14} />
                                       </button>
                                     )}
-                                    <div className="flex-1">
-                                      <h5 className="font-medium text-purple-300 text-sm">
-                                        {dasherTitle}
-                                      </h5>
-                                    </div>
+                                    <button
+                                      onClick={() => toggleDasherCollapse(category.id, dasher.id)}
+                                      className="flex items-center gap-2 flex-1 text-left"
+                                    >
+                                      {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                                      <div className="flex-1">
+                                        <h5 className="font-medium text-purple-300 text-sm flex items-center gap-2">
+                                          {dasherTitle}
+                                          {timeStatus && timeStatus.remainingMs < 86400000 && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                resetDasherTimer(category.id, dasher.id);
+                                              }}
+                                              className="text-red-400 hover:text-red-300 p-0.5"
+                                              title="Reset timer"
+                                            >
+                                              <Trash2 size={12} />
+                                            </button>
+                                          )}
+                                        </h5>
+                                      </div>
+                                    </button>
                                   </div>
                                   <div className="flex items-center gap-1">
-                                    <button
-                                      onClick={() => startDasherTimer(category.id, dasher.id)}
-                                      className="text-blue-400 hover:text-blue-300 p-1"
-                                      title="Start 24hr timer"
-                                    >
-                                      <Timer size={14} />
-                                    </button>
+                                    {!isCollapsed && (
+                                      <button
+                                        onClick={() => startDasherTimer(category.id, dasher.id)}
+                                        className="text-blue-400 hover:text-blue-300 p-1"
+                                        title="Start 24hr timer"
+                                      >
+                                        <Timer size={14} />
+                                      </button>
+                                    )}
                                     <button
                                       onClick={() => toggleEditDasher(category.id, dasher.id)}
                                       className={`p-1 transition-colors ${
@@ -2077,10 +2133,11 @@ const EnhancedCalculator = () => {
                                 </div>
 
                                 {/* Dasher Details */}
-                                <div className="space-y-2">
-                                  {/* Name */}
-                                  <div className="flex items-center gap-2">
-                                    <label className="text-xs text-gray-400 w-20">Name:</label>
+                                {!isCollapsed && (
+                                  <div className="space-y-2 p-3 pt-0 border-t border-gray-600/30">
+                                    {/* Name */}
+                                    <div className="flex items-center gap-2">
+                                      <label className="text-xs text-gray-400 w-20">Name:</label>
                                     {isEditing ? (
                                       <input
                                         type="text"
@@ -2308,7 +2365,8 @@ const EnhancedCalculator = () => {
                                       </>
                                     )}
                                   </div>
-                                </div>
+                                  </div>
+                                )}
                               </div>
                             );
                           })}
