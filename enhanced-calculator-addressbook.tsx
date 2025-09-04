@@ -890,6 +890,11 @@ const EnhancedCalculator = () => {
       id: Date.now().toString(),
       name: '',
       email: '',
+      emailPw: '',
+      dasherPw: '',
+      phone: '',
+      balance: '',
+      crimson: false,
       lastUsed: null,
       notes: ''
     };
@@ -1017,15 +1022,26 @@ const EnhancedCalculator = () => {
   };
 
   const getDasherTitle = (dasher) => {
+    let title = '';
     if (dasher.name && dasher.email) {
-      return `${dasher.name} - ${dasher.email}`;
+      title = `${dasher.name} - ${dasher.email}`;
     } else if (dasher.name) {
-      return dasher.name;
+      title = dasher.name;
     } else if (dasher.email) {
-      return dasher.email;
+      title = dasher.email;
     } else {
-      return 'New Dasher';
+      title = 'New Dasher';
     }
+    
+    // Add last used time if available
+    if (dasher.lastUsed) {
+      const timeStatus = calculateDasherTimeStatus(dasher.lastUsed);
+      if (timeStatus) {
+        title += ` (${timeStatus.text})`;
+      }
+    }
+    
+    return title;
   };
 
   const handleDasherDragStart = (e, categoryId, dasherId) => {
@@ -2064,7 +2080,7 @@ const EnhancedCalculator = () => {
                                 <div className="space-y-2">
                                   {/* Name */}
                                   <div className="flex items-center gap-2">
-                                    <label className="text-xs text-gray-400 w-16">Name:</label>
+                                    <label className="text-xs text-gray-400 w-20">Name:</label>
                                     {isEditing ? (
                                       <input
                                         type="text"
@@ -2074,15 +2090,26 @@ const EnhancedCalculator = () => {
                                         placeholder="Enter name..."
                                       />
                                     ) : (
-                                      <div className="flex-1 text-xs text-gray-200">
-                                        {dasher.name || <span className="italic text-gray-500">No name</span>}
-                                      </div>
+                                      <>
+                                        <div className="flex-1 text-xs text-gray-200">
+                                          {dasher.name || <span className="italic text-gray-500">No name</span>}
+                                        </div>
+                                        {dasher.name && (
+                                          <button
+                                            onClick={() => copyToClipboard(dasher.name)}
+                                            className="text-blue-400 hover:text-blue-300 p-1"
+                                            title="Copy name"
+                                          >
+                                            <Copy size={12} />
+                                          </button>
+                                        )}
+                                      </>
                                     )}
                                   </div>
 
                                   {/* Email */}
                                   <div className="flex items-center gap-2">
-                                    <label className="text-xs text-gray-400 w-16">Email:</label>
+                                    <label className="text-xs text-gray-400 w-20">Email:</label>
                                     {isEditing ? (
                                       <input
                                         type="email"
@@ -2092,15 +2119,155 @@ const EnhancedCalculator = () => {
                                         placeholder="Enter email..."
                                       />
                                     ) : (
-                                      <div className="flex-1 text-xs text-gray-200">
-                                        {dasher.email || <span className="italic text-gray-500">No email</span>}
-                                      </div>
+                                      <>
+                                        <div className="flex-1 text-xs text-gray-200">
+                                          {dasher.email || <span className="italic text-gray-500">No email</span>}
+                                        </div>
+                                        {dasher.email && (
+                                          <button
+                                            onClick={() => copyToClipboard(dasher.email)}
+                                            className="text-blue-400 hover:text-blue-300 p-1"
+                                            title="Copy email"
+                                          >
+                                            <Copy size={12} />
+                                          </button>
+                                        )}
+                                      </>
                                     )}
+                                  </div>
+
+                                  {/* Email Password */}
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-xs text-gray-400 w-20">Email pw:</label>
+                                    {isEditing ? (
+                                      <input
+                                        type="text"
+                                        value={dasher.emailPw || ''}
+                                        onChange={(e) => updateDasher(category.id, dasher.id, 'emailPw', e.target.value)}
+                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        placeholder="Enter email password..."
+                                      />
+                                    ) : (
+                                      <>
+                                        <div className="flex-1 text-xs text-gray-200">
+                                          {dasher.emailPw ? '••••••••' : <span className="italic text-gray-500">No password</span>}
+                                        </div>
+                                        {dasher.emailPw && (
+                                          <button
+                                            onClick={() => copyToClipboard(dasher.emailPw)}
+                                            className="text-blue-400 hover:text-blue-300 p-1"
+                                            title="Copy email password"
+                                          >
+                                            <Copy size={12} />
+                                          </button>
+                                        )}
+                                      </>
+                                    )}
+                                  </div>
+
+                                  {/* Dasher Password */}
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-xs text-gray-400 w-20">Dasher pw:</label>
+                                    {isEditing ? (
+                                      <input
+                                        type="text"
+                                        value={dasher.dasherPw || ''}
+                                        onChange={(e) => updateDasher(category.id, dasher.id, 'dasherPw', e.target.value)}
+                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        placeholder="Enter dasher password..."
+                                      />
+                                    ) : (
+                                      <>
+                                        <div className="flex-1 text-xs text-gray-200">
+                                          {dasher.dasherPw ? '••••••••' : <span className="italic text-gray-500">No password</span>}
+                                        </div>
+                                        {dasher.dasherPw && (
+                                          <button
+                                            onClick={() => copyToClipboard(dasher.dasherPw)}
+                                            className="text-blue-400 hover:text-blue-300 p-1"
+                                            title="Copy dasher password"
+                                          >
+                                            <Copy size={12} />
+                                          </button>
+                                        )}
+                                      </>
+                                    )}
+                                  </div>
+
+                                  {/* Phone */}
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-xs text-gray-400 w-20">Phone:</label>
+                                    {isEditing ? (
+                                      <input
+                                        type="tel"
+                                        value={dasher.phone || ''}
+                                        onChange={(e) => updateDasher(category.id, dasher.id, 'phone', e.target.value)}
+                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        placeholder="Enter phone number..."
+                                      />
+                                    ) : (
+                                      <>
+                                        <div className="flex-1 text-xs text-gray-200">
+                                          {dasher.phone || <span className="italic text-gray-500">No phone</span>}
+                                        </div>
+                                        {dasher.phone && (
+                                          <button
+                                            onClick={() => copyToClipboard(dasher.phone)}
+                                            className="text-blue-400 hover:text-blue-300 p-1"
+                                            title="Copy phone"
+                                          >
+                                            <Copy size={12} />
+                                          </button>
+                                        )}
+                                      </>
+                                    )}
+                                  </div>
+
+                                  {/* Balance */}
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-xs text-gray-400 w-20">Balance:</label>
+                                    {isEditing ? (
+                                      <input
+                                        type="text"
+                                        value={dasher.balance || ''}
+                                        onChange={(e) => updateDasher(category.id, dasher.id, 'balance', e.target.value)}
+                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        placeholder="Enter balance..."
+                                      />
+                                    ) : (
+                                      <>
+                                        <div className="flex-1 text-xs text-gray-200">
+                                          {dasher.balance || <span className="italic text-gray-500">No balance</span>}
+                                        </div>
+                                        {dasher.balance && (
+                                          <button
+                                            onClick={() => copyToClipboard(dasher.balance)}
+                                            className="text-blue-400 hover:text-blue-300 p-1"
+                                            title="Copy balance"
+                                          >
+                                            <Copy size={12} />
+                                          </button>
+                                        )}
+                                      </>
+                                    )}
+                                  </div>
+
+                                  {/* Crimson Checkbox */}
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-xs text-gray-400 w-20">Crimson:</label>
+                                    <input
+                                      type="checkbox"
+                                      checked={dasher.crimson || false}
+                                      onChange={(e) => updateDasher(category.id, dasher.id, 'crimson', e.target.checked)}
+                                      disabled={!isEditing}
+                                      className="h-3 w-3 text-purple-500 bg-gray-700 border-gray-600 rounded focus:ring-purple-500 focus:ring-1 disabled:opacity-50"
+                                    />
+                                    <span className="text-xs text-gray-400">{dasher.crimson ? 'Yes' : 'No'}</span>
                                   </div>
 
                                   {/* Last Used Timer */}
                                   <div className="flex items-center gap-2">
-                                    <label className="text-xs text-gray-400 w-16">Last used:</label>
+                                    <label className="text-xs text-gray-400 w-20">Last used:</label>
                                     <div className="flex-1 text-xs">
                                       {timeStatus ? (
                                         <span className={`font-mono ${timeStatus.color}`}>
@@ -2112,21 +2279,33 @@ const EnhancedCalculator = () => {
                                     </div>
                                   </div>
 
-                                  {/* Notes */}
+                                  {/* Notes - Expandable */}
                                   <div className="flex items-start gap-2">
-                                    <label className="text-xs text-gray-400 w-16 mt-1">Notes:</label>
+                                    <label className="text-xs text-gray-400 w-20 mt-1">Notes:</label>
                                     {isEditing ? (
                                       <textarea
-                                        value={dasher.notes}
+                                        value={dasher.notes || ''}
                                         onChange={(e) => updateDasher(category.id, dasher.id, 'notes', e.target.value)}
-                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                        rows={1}
+                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white resize-y min-h-[2.5rem] focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        rows={2}
                                         placeholder="Any notes..."
+                                        style={{ minHeight: '2.5rem' }}
                                       />
                                     ) : (
-                                      <div className="flex-1 text-xs text-gray-200">
-                                        {dasher.notes || <span className="italic text-gray-500">No notes</span>}
-                                      </div>
+                                      <>
+                                        <div className="flex-1 text-xs text-gray-200 whitespace-pre-wrap">
+                                          {dasher.notes || <span className="italic text-gray-500">No notes</span>}
+                                        </div>
+                                        {dasher.notes && (
+                                          <button
+                                            onClick={() => copyToClipboard(dasher.notes)}
+                                            className="text-blue-400 hover:text-blue-300 p-1 self-start"
+                                            title="Copy notes"
+                                          >
+                                            <Copy size={12} />
+                                          </button>
+                                        )}
+                                      </>
                                     )}
                                   </div>
                                 </div>
