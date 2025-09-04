@@ -1,0 +1,58 @@
+{
+  "target": "99",
+  "targetPreset": "99",
+  "prices": [
+    2.75,
+    3.5,
+    4.25,
+    5.0
+  ],
+  "messages": [
+    "Message 1",
+    "Message 2",
+    "Message 3"
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "Test Store Category",
+      "stores": [
+        {
+          "id": 1,
+          "address": "123 Test St",
+          "openTime": "0800",
+          "closeTime": "2100",
+          "notes": "Test store notes"
+        }
+      ]
+    }
+  ],
+  "noteCategories": [
+    {
+      "id": "test1",
+      "name": "Test Notes",
+      "notes": [
+        "Note 1",
+        "Note 2",
+        "Note 3"
+      ]
+    }
+  ],
+  "dasherCategories": [
+    {
+      "id": "main",
+      "name": "Main",
+      "dashers": [
+        {
+          "id": "d1",
+          "name": "Test Dasher",
+          "email": "test@test.com",
+          "lastUsed": "2025-09-04T12:00:00Z",
+          "notes": "Test dasher notes"
+        }
+      ]
+    }
+  ],
+  "timestamp": "2025-09-04T12:00:00Z",
+  "version": "2.0"
+}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Plus, Copy, ChevronDown, ChevronUp, Edit2, Save, X, GripVertical, Clock, MapPin, Calculator, MessageSquare, Building2, Settings, Download, Upload, RefreshCw, FolderOpen, Timer, Users } from 'lucide-react';
+import { Trash2, Plus, Copy, ChevronDown, ChevronUp, Edit2, Save, X, GripVertical, Clock, MapPin, Calculator, MessageSquare, Building2, Settings, Download, Upload, RefreshCw, FolderOpen, Timer, Users, FileText } from 'lucide-react';
 
 const EnhancedCalculator = () => {
   const [target, setTarget] = useState('99');
@@ -31,14 +31,23 @@ const EnhancedCalculator = () => {
   const [newMessageText, setNewMessageText] = useState('');
   const [copyNotification, setCopyNotification] = useState('');
   const [messages, setMessages] = useState([
+    "hi can u pls see if u can help get a dasher assigned quicker!? I'm in a rush to get to work asap! Thank you",
     "Ok someone got it! darn it i just noticed i put the tip so high by accident :( can u help change the tip to $0 pls?",
     "Thanks, have a great day! <3",
     "Yes",
-    "AGENT",
-    "hi can u pls see if u can help get a dasher assigned quicker!? I'm in a rush to get to work asap! Thank you",
     "unassign this driver, we have had issues in the past, restraining order, stole my order last time, ASAP PLEASE, Thank you!",
     "Adjust dasher tip to $0 for the current order",
-    "customer asked for refund if out of stock"
+    "customer asked for refund if out of stock",
+    "Got 1⚡",
+    "canceled ❌❌❌",
+    "looking for offer 👀",
+    "Got 2nd⚡⚡",
+    "Got 2nd⚡⚡  Arrived, pls lmk when removed. 🦆🦆🦆",
+    "AGENT",
+    "It applies to the other order as well! Cancel the other order I am on as well, please.  🤗",
+    "Got 1, waiting on 2nd 🤗🤗🤗",
+    "Yes I see the 3 dots but when i click it it says as everything is unavailable I need to contact support for it to be cancelled",
+    "Hello 👋 the stores oven is broken"
   ]);
 
   // Address Book state
@@ -79,6 +88,16 @@ const EnhancedCalculator = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [saveNotification, setSaveNotification] = useState('');
 
+  // Notes state
+  const [isNotesOpen, setIsNotesOpen] = useState(false);
+  const [noteCategories, setNoteCategories] = useState([
+    { id: Date.now().toString(), name: 'General', notes: [] }
+  ]);
+  const [editingNote, setEditingNote] = useState({ categoryId: '', noteIndex: -1 });
+  const [draggedNote, setDraggedNote] = useState({ categoryId: '', noteIndex: -1 });
+  const [collapsedNoteCategories, setCollapsedNoteCategories] = useState({});
+  const [editingNoteCategory, setEditingNoteCategory] = useState(-1);
+
   // Dashers state
   const [isDashersOpen, setIsDashersOpen] = useState(false);
   const [dasherCategories, setDasherCategories] = useState([
@@ -93,6 +112,7 @@ const EnhancedCalculator = () => {
   const [draggedDasher, setDraggedDasher] = useState({ categoryId: '', dasherId: '' });
   const [collapsedDasherCategories, setCollapsedDasherCategories] = useState({});
   const [dasherUpdateInterval, setDasherUpdateInterval] = useState(null);
+  const [editingDasherCategory, setEditingDasherCategory] = useState(-1);
 
   // Load from localStorage on component mount
   useEffect(() => {
@@ -711,6 +731,157 @@ const EnhancedCalculator = () => {
       }
       return a.difference - b.difference;
     })[0];
+  };
+
+  // Notes Management Functions
+  const addNoteCategory = () => {
+    const newCategory = {
+      id: Date.now().toString(),
+      name: 'New Category',
+      notes: []
+    };
+    setNoteCategories([...noteCategories, newCategory]);
+    
+    // Auto-save
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
+  };
+
+  const updateNoteCategory = (categoryId, newName) => {
+    setNoteCategories(noteCategories.map(cat => 
+      cat.id === categoryId ? { ...cat, name: newName } : cat
+    ));
+    
+    // Auto-save
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
+  };
+
+  const deleteNoteCategory = (categoryId) => {
+    if (noteCategories.length === 1) {
+      setSaveNotification('❌ Cannot delete the last category');
+      setTimeout(() => setSaveNotification(''), 3000);
+      return;
+    }
+    
+    setNoteCategories(noteCategories.filter(cat => cat.id !== categoryId));
+    
+    // Auto-save
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
+  };
+
+  const addNote = (categoryId) => {
+    const newNote = '';
+    setNoteCategories(noteCategories.map(cat => 
+      cat.id === categoryId 
+        ? { ...cat, notes: [...cat.notes, newNote] }
+        : cat
+    ));
+    
+    // Start editing the new note immediately
+    const categoryIndex = noteCategories.findIndex(cat => cat.id === categoryId);
+    if (categoryIndex !== -1) {
+      const newNoteIndex = noteCategories[categoryIndex].notes.length;
+      setEditingNote({ categoryId, noteIndex: newNoteIndex });
+    }
+    
+    // Auto-save
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
+  };
+
+  const updateNote = (categoryId, noteIndex, newText) => {
+    setNoteCategories(noteCategories.map(cat => 
+      cat.id === categoryId 
+        ? {
+            ...cat,
+            notes: cat.notes.map((note, idx) => 
+              idx === noteIndex ? newText : note
+            )
+          }
+        : cat
+    ));
+    
+    // Auto-save
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
+  };
+
+  const deleteNote = (categoryId, noteIndex) => {
+    setNoteCategories(noteCategories.map(cat => 
+      cat.id === categoryId 
+        ? { ...cat, notes: cat.notes.filter((_, idx) => idx !== noteIndex) }
+        : cat
+    ));
+    
+    // Auto-save
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
+  };
+
+  const toggleNoteEdit = (categoryId, noteIndex) => {
+    if (editingNote.categoryId === categoryId && editingNote.noteIndex === noteIndex) {
+      setEditingNote({ categoryId: '', noteIndex: -1 });
+    } else {
+      setEditingNote({ categoryId, noteIndex });
+    }
+  };
+
+  const isNoteEditing = (categoryId, noteIndex) => {
+    return editingNote.categoryId === categoryId && editingNote.noteIndex === noteIndex;
+  };
+
+  const toggleNoteCategoryCollapse = (categoryId) => {
+    setCollapsedNoteCategories(prev => ({
+      ...prev,
+      [categoryId]: !prev[categoryId]
+    }));
+  };
+
+  const handleNoteDragStart = (e, categoryId, noteIndex) => {
+    setDraggedNote({ categoryId, noteIndex });
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleNoteDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleNoteDrop = (e, targetCategoryId) => {
+    e.preventDefault();
+    if (!draggedNote.categoryId || draggedNote.noteIndex === -1) return;
+    
+    if (draggedNote.categoryId !== targetCategoryId) {
+      // Move note between categories
+      const sourceCategory = noteCategories.find(cat => cat.id === draggedNote.categoryId);
+      const noteToMove = sourceCategory.notes[draggedNote.noteIndex];
+      
+      setNoteCategories(noteCategories.map(cat => {
+        if (cat.id === draggedNote.categoryId) {
+          // Remove from source
+          return { ...cat, notes: cat.notes.filter((_, idx) => idx !== draggedNote.noteIndex) };
+        } else if (cat.id === targetCategoryId) {
+          // Add to target
+          return { ...cat, notes: [...cat.notes, noteToMove] };
+        }
+        return cat;
+      }));
+      
+      // Auto-save
+      setTimeout(() => {
+        saveAllToLocalStorage();
+      }, 100);
+    }
+    
+    setDraggedNote({ categoryId: '', noteIndex: -1 });
   };
 
   // Dasher Management Functions
@@ -1572,6 +1743,207 @@ const EnhancedCalculator = () => {
                 </div>
               )}
             </div>
+
+          {/* Notes Section */}
+          <div className="bg-gray-800 rounded-lg overflow-hidden">
+            <button
+              onClick={() => setIsNotesOpen(!isNotesOpen)}
+              className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <FileText size={20} className="text-purple-400" />
+                <span className="text-lg font-medium">
+                  Notes ({noteCategories.reduce((total, cat) => total + cat.notes.length, 0)} items)
+                </span>
+              </div>
+              {isNotesOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </button>
+            
+            {isNotesOpen && (
+              <div className="border-t border-gray-700 p-4">
+                <div className="mb-3 text-center">
+                  <p className="text-xs text-gray-400">Organize your notes by category</p>
+                </div>
+                
+                <div className="space-y-3">
+                  {noteCategories.map((category) => {
+                    const isCategoryCollapsed = collapsedNoteCategories[category.id];
+                    
+                    return (
+                      <div 
+                        key={category.id} 
+                        className="bg-gray-700/40 rounded-lg overflow-hidden border border-gray-600/30"
+                        onDragOver={handleNoteDragOver}
+                        onDrop={(e) => handleNoteDrop(e, category.id)}
+                      >
+                        {/* Category Header */}
+                        <div className="flex items-center justify-between p-3 hover:bg-gray-700/60 transition-colors">
+                          <button
+                            onClick={() => toggleNoteCategoryCollapse(category.id)}
+                            className="flex items-center gap-2 flex-1 text-left"
+                          >
+                            {isCategoryCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                            {editingNoteCategory === category.id ? (
+                              <input
+                                type="text"
+                                value={category.name}
+                                onChange={(e) => updateNoteCategory(category.id, e.target.value)}
+                                className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                onBlur={() => setEditingNoteCategory(-1)}
+                                onKeyPress={(e) => e.key === 'Enter' && setEditingNoteCategory(-1)}
+                                onClick={(e) => e.stopPropagation()}
+                                autoFocus
+                              />
+                            ) : (
+                              <h4 className="font-medium text-purple-300 flex items-center gap-2">
+                                <FileText size={14} />
+                                {category.name} ({category.notes.length})
+                              </h4>
+                            )}
+                          </button>
+                          
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => addNote(category.id)}
+                              className="text-green-400 hover:text-green-300 p-1"
+                              title="Add note"
+                            >
+                              <Plus size={14} />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingNoteCategory(category.id);
+                              }}
+                              className="text-yellow-400 hover:text-yellow-300 p-1"
+                              title="Rename category"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                            <button
+                              onClick={() => deleteNoteCategory(category.id)}
+                              className="text-red-400 hover:text-red-300 p-1"
+                              title="Delete category"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Notes */}
+                        {!isCategoryCollapsed && (
+                          <div className="border-t border-gray-600/30 p-3 space-y-2">
+                            {category.notes.map((note, noteIndex) => {
+                              const isEditing = isNoteEditing(category.id, noteIndex);
+                              
+                              return (
+                                <div 
+                                  key={noteIndex} 
+                                  className={`bg-gray-600/50 rounded-lg p-2 transition-opacity ${
+                                    draggedNote.categoryId === category.id && draggedNote.noteIndex === noteIndex ? 'opacity-50' : ''
+                                  }`}
+                                  draggable={!isEditing}
+                                  onDragStart={(e) => { if (!isEditing) handleNoteDragStart(e, category.id, noteIndex); }}
+                                >
+                                  <div className="flex items-start gap-2">
+                                    {!isEditing && (
+                                      <button 
+                                        className="text-gray-400 hover:text-gray-300 cursor-move mt-1" 
+                                        aria-label="Drag to reorder"
+                                      >
+                                        <GripVertical size={14} />
+                                      </button>
+                                    )}
+                                    
+                                    <div className="flex-1">
+                                      {isEditing ? (
+                                        <textarea
+                                          value={note}
+                                          onChange={(e) => updateNote(category.id, noteIndex, e.target.value)}
+                                          className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                          rows={3}
+                                          autoFocus
+                                          placeholder="Enter your note..."
+                                        />
+                                      ) : (
+                                        <div className="text-sm text-gray-100 whitespace-pre-wrap">
+                                          {note || <span className="italic text-gray-500">Empty note - click edit to add content</span>}
+                                        </div>
+                                      )}
+                                    </div>
+                                    
+                                    <div className="flex items-start gap-1 mt-1">
+                                      {!isEditing && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            copyToClipboard(note);
+                                          }}
+                                          className="text-blue-400 hover:text-blue-300 p-1"
+                                          title="Copy note"
+                                          disabled={!note}
+                                        >
+                                          <Copy size={14} />
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={() => toggleNoteEdit(category.id, noteIndex)}
+                                        className={`p-1 transition-colors ${
+                                          isEditing 
+                                            ? 'text-green-400 hover:text-green-300' 
+                                            : 'text-yellow-400 hover:text-yellow-300'
+                                        }`}
+                                        title={isEditing ? 'Save' : 'Edit'}
+                                      >
+                                        {isEditing ? <Save size={14} /> : <Edit2 size={14} />}
+                                      </button>
+                                      <button
+                                        onClick={() => deleteNote(category.id, noteIndex)}
+                                        className="text-red-400 hover:text-red-300 p-1"
+                                        title="Delete"
+                                      >
+                                        <Trash2 size={14} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+
+                            {category.notes.length === 0 && (
+                              <div className="text-center text-gray-500 py-2 text-xs">
+                                No notes yet. Click + to add one.
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Add Category Button */}
+                <button
+                  onClick={addNoteCategory}
+                  className="w-full mt-3 bg-gray-700/40 hover:bg-gray-700/60 border border-dashed border-gray-600 rounded-lg p-3 text-sm text-gray-300 hover:text-white transition-colors flex items-center justify-center gap-2"
+                >
+                  <Plus size={14} />
+                  Add New Category
+                </button>
+                
+                {/* Save Button */}
+                <div className="mt-3 pt-3 border-t border-gray-700">
+                  <button
+                    onClick={saveAllToLocalStorage}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Save size={16} />
+                    Save Notes
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Dashers Section */}
           <div className="bg-gray-800 rounded-lg overflow-hidden">

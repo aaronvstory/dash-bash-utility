@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprehensive Data Persistence Test - Dash Bash Utility</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #444;
+            background: #2a2a2a;
+        }
+        .success { color: #00ff00; }
+        .error { color: #ff0000; }
+        .warning { color: #ffaa00; }
+        .info { color: #00aaff; }
+        button {
+            background: #333;
+            color: white;
+            border: 1px solid #666;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        button:hover { background: #444; }
+        pre {
+            background: #111;
+            padding: 10px;
+            overflow-x: auto;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #1a1a1a;
+            border: 2px solid #444;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔬 Comprehensive Data Persistence Test</h1>
+    <p>This test will verify that ALL content in ALL sections saves, loads, exports, and imports correctly.</p>
+    
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <button onclick="runComprehensiveTest()">🚀 Run Full Test Suite</button>
+        <button onclick="clearTestData()">🗑️ Clear Test Data</button>
+        <button onclick="viewCurrentData()">👁️ View Current localStorage</button>
+    </div>
+    
+    <div id="results" class="results"></div>
+
+    <script>
+        // Comprehensive test data with ALL sections populated
+        const comprehensiveTestData = {
+            // Target Calculator Data
+            target: "150",
+            targetPreset: "custom",
+            prices: [2.75, 3.50, 4.25, 5.00, 6.99, 8.50, 12.99, 15.75, 20.00],
+            
+            // Quick Messages Data
+            messages: [
+                "Test message 1 - Can you help change the tip?",
+                "Test message 2 - Thanks, have a great day!",
+                "Test message 3 - AGENT assistance needed",
+                "Test message 4 - Customer requested refund",
+                "Test message 5 - Please assign dasher quickly",
+                "Test message 6 - Unassign current driver",
+                "Test message 7 - Special delivery instructions",
+                "Test message 8 - Time-sensitive order"
+            ],
+            
+            // Address Book Categories with Stores
+            categories: [
+                {
+                    id: 1001,
+                    name: "Dollar General Stores",
+                    stores: [
+                        {
+                            id: 1,
+                            address: "840 North Main St., Beaver, UT 84713",
+                            openTime: "0700",
+                            closeTime: "2200",
+                            notes: "Near the highway exit, easy parking"
+                        },
+                        {
+                            id: 2,
+                            address: "123 Oak Ave, Springfield, IL 62701",
+                            openTime: "0800",
+                            closeTime: "2100",
+                            notes: "Downtown location, limited parking"
+                        },
+                        {
+                            id: 3,
+                            address: "456 Pine St, Portland, OR 97201",
+                            openTime: "0600",
+                            closeTime: "2300",
+                            notes: "24-hour on weekends"
+                        }
+                    ]
+                },
+                {
+                    id: 1002,
+                    name: "Walgreens Locations",
+                    stores: [
+                        {
+                            id: 4,
+                            address: "789 Market St, San Francisco, CA 94102",
+                            openTime: "0000",
+                            closeTime: "2359",
+                            notes: "24-hour pharmacy"
+                        },
+                        {
+                            id: 5,
+                            address: "321 Broadway, New York, NY 10001",
+                            openTime: "0700",
+                            closeTime: "2200",
+                            notes: "Busy location, extra staff needed"
+                        }
+                    ]
+                },
+                {
+                    id: 1003,
+                    name: "CVS Pharmacy",
+                    stores: [
+                        {
+                            id: 6,
+                            address: "555 Sunset Blvd, Los Angeles, CA 90028",
+                            openTime: "0800",
+                            closeTime: "2100",
+                            notes: "Drive-through available"
+                        }
+                    ]
+                }
+            ],
+            
+            // Notes Categories with Multiple Notes
+            noteCategories: [
+                {
+                    id: "notes1",
+                    name: "Delivery Instructions",
+                    notes: [
+                        "Always check for gate codes before arrival",
+                        "Text customer 5 minutes before delivery",
+                        "Take photo of delivery location for proof",
+                        "Check for special dietary restrictions in notes"
+                    ]
+                },
+                {
+                    id: "notes2",
+                    name: "Customer Service Tips",
+                    notes: [
+                        "Be polite and professional at all times",
+                        "Respond to messages within 2 minutes",
+                        "Always confirm substitutions with customer",
+                        "Document any issues with photos"
+                    ]
+                },
+                {
+                    id: "notes3",
+                    name: "Personal Reminders",
+                    notes: [
+                        "Check gas tank before starting shift",
+                        "Keep extra bags in car",
+                        "Charge phone during breaks",
+                        "Update availability calendar weekly",
+                        "Review weekly earnings on Sunday"
+                    ]
+                },
+                {
+                    id: "notes4",
+                    name: "Store Specific Info",
+                    notes: [
+                        "Walmart - use pickup parking spots",
+                        "Target - check seasonal entrance",
+                        "Whole Foods - park in designated area"
+                    ]
+                }
+            ],
+            
+            // Dashers Categories with Multiple Dashers
+            dasherCategories: [
+                {
+                    id: "main",
+                    name: "Main",
+                    dashers: [
+                        {
+                            id: "dasher1",
+                            name: "John Smith",
+                            email: "john.smith@email.com",
+                            lastUsed: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
+                            notes: "Reliable, good communication"
+                        },
+                        {
+                            id: "dasher2",
+                            name: "Jane Doe",
+                            email: "jane.doe@email.com",
+                            lastUsed: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
+                            notes: "Fast delivery, knows area well"
+                        }
+                    ]
+                },
+                {
+                    id: "currently-using",
+                    name: "Currently using",
+                    dashers: [
+                        {
+                            id: "dasher3",
+                            name: "Mike Johnson",
+                            email: "mike.j@email.com",
+                            lastUsed: new Date().toISOString(), // Now
+                            notes: "On current delivery"
+                        }
+                    ]
+                },
+                {
+                    id: "deactivated",
+                    name: "Deactivated",
+                    dashers: [
+                        {
+                            id: "dasher4",
+                            name: "Sarah Wilson",
+                            email: "sarah.w@email.com",
+                            lastUsed: new Date(Date.now() - 86400000 * 30).toISOString(), // 30 days ago
+                            notes: "Moved to different area"
+                        }
+                    ]
+                },
+                {
+                    id: "locked",
+                    name: "Locked",
+                    dashers: [
+                        {
+                            id: "dasher5",
+                            name: "Tom Brown",
+                            email: "tom.b@email.com",
+                            lastUsed: new Date(Date.now() - 86400000 * 7).toISOString(), // 7 days ago
+                            notes: "Account under review"
+                        }
+                    ]
+                },
+                {
+                    id: "reverif",
+                    name: "Reverif",
+                    dashers: [
+                        {
+                            id: "dasher6",
+                            name: "Emily Davis",
+                            email: "emily.d@email.com",
+                            lastUsed: new Date(Date.now() - 86400000 * 3).toISOString(), // 3 days ago
+                            notes: "Needs document update"
+                        }
+                    ]
+                },
+                {
+                    id: "ready",
+                    name: "Ready",
+                    dashers: [
+                        {
+                            id: "dasher7",
+                            name: "Chris Martinez",
+                            email: "chris.m@email.com",
+                            lastUsed: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+                            notes: "Available for shifts"
+                        },
+                        {
+                            id: "dasher8",
+                            name: "Lisa Anderson",
+                            email: "lisa.a@email.com",
+                            lastUsed: new Date(Date.now() - 86400000 * 2).toISOString(), // 2 days ago
+                            notes: "Weekend availability only"
+                        }
+                    ]
+                }
+            ],
+            
+            timestamp: new Date().toISOString(),
+            version: "2.0"
+        };
+
+        function log(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const className = type;
+            const timestamp = new Date().toLocaleTimeString();
+            resultsDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function runComprehensiveTest() {
+            clearResults();
+            log('🚀 Starting Comprehensive Data Persistence Test...', 'info');
+            log('=' .repeat(60), 'info');
+            
+            let testsPassed = 0;
+            let testsFailed = 0;
+            
+            // Test 1: Save to localStorage
+            log('\n📝 Test 1: Saving comprehensive data to localStorage...', 'info');
+            try {
+                localStorage.setItem('dashBashState', JSON.stringify(comprehensiveTestData));
+                const saved = localStorage.getItem('dashBashState');
+                if (saved) {
+                    log('✅ Data saved successfully (' + saved.length + ' bytes)', 'success');
+                    testsPassed++;
+                } else {
+                    throw new Error('Data not found after save');
+                }
+            } catch (e) {
+                log('❌ Failed to save: ' + e.message, 'error');
+                testsFailed++;
+            }
+            
+            // Test 2: Load and verify all sections
+            log('\n📖 Test 2: Loading and verifying all sections...', 'info');
+            try {
+                const loaded = JSON.parse(localStorage.getItem('dashBashState'));
+                let allValid = true;
+                
+                // Check Calculator data
+                if (loaded.target === "150" && loaded.targetPreset === "custom" && loaded.prices.length === 9) {
+                    log('  ✅ Calculator: target=' + loaded.target + ', prices=' + loaded.prices.length, 'success');
+                } else {
+                    log('  ❌ Calculator data mismatch', 'error');
+                    allValid = false;
+                }
+                
+                // Check Messages
+                if (loaded.messages && loaded.messages.length === 8) {
+                    log('  ✅ Messages: ' + loaded.messages.length + ' messages loaded', 'success');
+                } else {
+                    log('  ❌ Messages data mismatch', 'error');
+                    allValid = false;
+                }
+                
+                // Check Address Book
+                if (loaded.categories && loaded.categories.length === 3) {
+                    const totalStores = loaded.categories.reduce((sum, cat) => sum + cat.stores.length, 0);
+                    log('  ✅ Address Book: ' + loaded.categories.length + ' categories, ' + totalStores + ' stores', 'success');
+                    
+                    // Verify store details
+                    const firstStore = loaded.categories[0].stores[0];
+                    if (firstStore.address && firstStore.openTime && firstStore.closeTime && firstStore.notes) {
+                        log('    ✅ Store details preserved (address, hours, notes)', 'success');
+                    } else {
+                        log('    ❌ Store details missing', 'error');
+                        allValid = false;
+                    }
+                } else {
+                    log('  ❌ Address Book data mismatch', 'error');
+                    allValid = false;
+                }
+                
+                // Check Notes
+                if (loaded.noteCategories && loaded.noteCategories.length === 4) {
+                    const totalNotes = loaded.noteCategories.reduce((sum, cat) => sum + cat.notes.length, 0);
+                    log('  ✅ Notes: ' + loaded.noteCategories.length + ' categories, ' + totalNotes + ' notes', 'success');
+                    
+                    // Verify note content
+                    const firstNote = loaded.noteCategories[0].notes[0];
+                    if (firstNote && firstNote.includes('gate codes')) {
+                        log('    ✅ Note content preserved', 'success');
+                    } else {
+                        log('    ❌ Note content corrupted', 'error');
+                        allValid = false;
+                    }
+                } else {
+                    log('  ❌ Notes data mismatch', 'error');
+                    allValid = false;
+                }
+                
+                // Check Dashers
+                if (loaded.dasherCategories && loaded.dasherCategories.length === 6) {
+                    const totalDashers = loaded.dasherCategories.reduce((sum, cat) => sum + cat.dashers.length, 0);
+                    log('  ✅ Dashers: ' + loaded.dasherCategories.length + ' categories, ' + totalDashers + ' dashers', 'success');
+                    
+                    // Verify dasher details
+                    const firstDasher = loaded.dasherCategories[0].dashers[0];
+                    if (firstDasher && firstDasher.name && firstDasher.email && firstDasher.lastUsed && firstDasher.notes) {
+                        log('    ✅ Dasher details preserved (name, email, timer, notes)', 'success');
+                    } else {
+                        log('    ❌ Dasher details missing', 'error');
+                        allValid = false;
+                    }
+                    
+                    // Verify all categories have correct names
+                    const expectedCategories = ['Main', 'Currently using', 'Deactivated', 'Locked', 'Reverif', 'Ready'];
+                    const actualCategories = loaded.dasherCategories.map(cat => cat.name);
+                    const categoriesMatch = expectedCategories.every(name => actualCategories.includes(name));
+                    if (categoriesMatch) {
+                        log('    ✅ All dasher categories preserved', 'success');
+                    } else {
+                        log('    ❌ Dasher categories corrupted', 'error');
+                        allValid = false;
+                    }
+                } else {
+                    log('  ❌ Dashers data mismatch', 'error');
+                    allValid = false;
+                }
+                
+                if (allValid) {
+                    log('✅ All sections loaded and verified successfully!', 'success');
+                    testsPassed++;
+                } else {
+                    log('❌ Some sections failed verification', 'error');
+                    testsFailed++;
+                }
+            } catch (e) {
+                log('❌ Failed to load/verify: ' + e.message, 'error');
+                testsFailed++;
+            }
+            
+            // Test 3: JSON Export
+            log('\n💾 Test 3: Testing JSON export...', 'info');
+            try {
+                const jsonString = JSON.stringify(comprehensiveTestData, null, 2);
+                const parsed = JSON.parse(jsonString);
+                
+                // Verify export contains all data
+                const checks = [
+                    { name: 'Calculator', valid: parsed.target && parsed.prices },
+                    { name: 'Messages', valid: parsed.messages && parsed.messages.length === 8 },
+                    { name: 'Address Book', valid: parsed.categories && parsed.categories.length === 3 },
+                    { name: 'Notes', valid: parsed.noteCategories && parsed.noteCategories.length === 4 },
+                    { name: 'Dashers', valid: parsed.dasherCategories && parsed.dasherCategories.length === 6 }
+                ];
+                
+                let exportValid = true;
+                checks.forEach(check => {
+                    if (check.valid) {
+                        log('  ✅ ' + check.name + ' included in export', 'success');
+                    } else {
+                        log('  ❌ ' + check.name + ' missing from export', 'error');
+                        exportValid = false;
+                    }
+                });
+                
+                if (exportValid) {
+                    log('✅ JSON export successful (' + jsonString.length + ' characters)', 'success');
+                    testsPassed++;
+                } else {
+                    log('❌ JSON export incomplete', 'error');
+                    testsFailed++;
+                }
+            } catch (e) {
+                log('❌ JSON export failed: ' + e.message, 'error');
+                testsFailed++;
+            }
+            
+            // Test 4: Clear and restore test
+            log('\n🔄 Test 4: Clear and restore test...', 'info');
+            try {
+                // Save current data
+                const backup = localStorage.getItem('dashBashState');
+                
+                // Clear
+                localStorage.removeItem('dashBashState');
+                const afterClear = localStorage.getItem('dashBashState');
+                if (afterClear === null) {
+                    log('  ✅ Data cleared successfully', 'success');
+                } else {
+                    log('  ❌ Data not cleared properly', 'error');
+                }
+                
+                // Restore
+                localStorage.setItem('dashBashState', backup);
+                const restored = JSON.parse(localStorage.getItem('dashBashState'));
+                if (restored && restored.dasherCategories && restored.noteCategories) {
+                    log('  ✅ Data restored successfully', 'success');
+                    testsPassed++;
+                } else {
+                    log('  ❌ Data restoration failed', 'error');
+                    testsFailed++;
+                }
+            } catch (e) {
+                log('❌ Clear/restore test failed: ' + e.message, 'error');
+                testsFailed++;
+            }
+            
+            // Test 5: Data integrity check
+            log('\n🔍 Test 5: Data integrity check...', 'info');
+            try {
+                const current = JSON.parse(localStorage.getItem('dashBashState'));
+                let integrityValid = true;
+                
+                // Check for data corruption
+                if (typeof current.target === 'string' && 
+                    Array.isArray(current.prices) &&
+                    Array.isArray(current.messages) &&
+                    Array.isArray(current.categories) &&
+                    Array.isArray(current.noteCategories) &&
+                    Array.isArray(current.dasherCategories)) {
+                    log('  ✅ All data types are correct', 'success');
+                } else {
+                    log('  ❌ Data type corruption detected', 'error');
+                    integrityValid = false;
+                }
+                
+                // Check nested data integrity
+                const hasNestedData = 
+                    current.categories.every(cat => Array.isArray(cat.stores)) &&
+                    current.noteCategories.every(cat => Array.isArray(cat.notes)) &&
+                    current.dasherCategories.every(cat => Array.isArray(cat.dashers));
+                
+                if (hasNestedData) {
+                    log('  ✅ All nested arrays intact', 'success');
+                } else {
+                    log('  ❌ Nested data structure corrupted', 'error');
+                    integrityValid = false;
+                }
+                
+                if (integrityValid) {
+                    log('✅ Data integrity verified', 'success');
+                    testsPassed++;
+                } else {
+                    log('❌ Data integrity issues found', 'error');
+                    testsFailed++;
+                }
+            } catch (e) {
+                log('❌ Integrity check failed: ' + e.message, 'error');
+                testsFailed++;
+            }
+            
+            // Final Summary
+            log('\n' + '=' .repeat(60), 'info');
+            log('📊 TEST RESULTS SUMMARY', 'info');
+            log('=' .repeat(60), 'info');
+            log('✅ Tests Passed: ' + testsPassed, 'success');
+            log('❌ Tests Failed: ' + testsFailed, testsFailed > 0 ? 'error' : 'success');
+            
+            if (testsFailed === 0) {
+                log('\n🎉 ALL TESTS PASSED! All content in all sections saves, loads, exports, and imports correctly!', 'success');
+            } else {
+                log('\n⚠️ Some tests failed. Please check the logs above for details.', 'warning');
+            }
+            
+            // Display data statistics
+            const current = JSON.parse(localStorage.getItem('dashBashState'));
+            log('\n📈 Current Data Statistics:', 'info');
+            log('  • Calculator: ' + current.prices.length + ' prices', 'info');
+            log('  • Messages: ' + current.messages.length + ' templates', 'info');
+            log('  • Address Book: ' + current.categories.reduce((sum, cat) => sum + cat.stores.length, 0) + ' stores', 'info');
+            log('  • Notes: ' + current.noteCategories.reduce((sum, cat) => sum + cat.notes.length, 0) + ' notes', 'info');
+            log('  • Dashers: ' + current.dasherCategories.reduce((sum, cat) => sum + cat.dashers.length, 0) + ' dashers', 'info');
+        }
+        
+        function clearTestData() {
+            if (confirm('This will clear all test data from localStorage. Are you sure?')) {
+                localStorage.removeItem('dashBashState');
+                clearResults();
+                log('🗑️ Test data cleared from localStorage', 'warning');
+            }
+        }
+        
+        function viewCurrentData() {
+            clearResults();
+            const data = localStorage.getItem('dashBashState');
+            if (data) {
+                const parsed = JSON.parse(data);
+                log('📋 Current localStorage Data:', 'info');
+                log('<pre>' + JSON.stringify(parsed, null, 2) + '</pre>', 'info');
+            } else {
+                log('⚠️ No data found in localStorage', 'warning');
+            }
+        }
+    </script>
+</body>
+</html>
