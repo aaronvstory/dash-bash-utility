@@ -1374,35 +1374,50 @@
             };
 
             const getDasherTitle = (dasher) => {
-                let title = '';
-                if (dasher.name && dasher.email) {
-                    title = `${dasher.name} - ${dasher.email}`;
-                } else if (dasher.name) {
-                    title = dasher.name;
-                } else if (dasher.email) {
-                    title = dasher.email;
-                } else {
-                    title = 'New Dasher';
+                const parts = [];
+                
+                // Name (purple - keep default color)
+                if (dasher.name) {
+                    parts.push(React.createElement('span', { key: 'name' }, dasher.name));
                 }
                 
-                // Add balance if available
+                // Email (blue)
+                if (dasher.email) {
+                    if (parts.length > 0) parts.push(React.createElement('span', { key: 'sep1' }, ' - '));
+                    parts.push(React.createElement('span', { key: 'email', className: 'text-blue-400' }, dasher.email));
+                }
+                
+                // If no name or email
+                if (parts.length === 0) {
+                    parts.push(React.createElement('span', { key: 'new' }, 'New Dasher'));
+                }
+                
+                // Balance (green if $0, red otherwise)
                 if (dasher.balance) {
-                    // Add $ if not already present
                     const balance = dasher.balance.toString().startsWith('$') 
                         ? dasher.balance 
                         : `$${dasher.balance}`;
-                    title += ` - ${balance}`;
+                    
+                    // Check if balance is $0
+                    const balanceValue = balance.replace('$', '');
+                    const isZero = parseFloat(balanceValue) === 0;
+                    
+                    parts.push(React.createElement('span', { key: 'sep2' }, ' - '));
+                    parts.push(React.createElement('span', { 
+                        key: 'balance',
+                        className: isZero ? 'text-green-400' : 'text-red-500'
+                    }, balance));
                 }
                 
                 // Add last used time if available
                 if (dasher.lastUsed) {
                     const timeStatus = calculateDasherTimeStatus(dasher.lastUsed);
                     if (timeStatus) {
-                        title += ` (${timeStatus.text})`;
+                        parts.push(React.createElement('span', { key: 'time' }, ` (${timeStatus.text})`));
                     }
                 }
                 
-                return title;
+                return React.createElement(React.Fragment, {}, parts);
             };
 
             const handleDasherDragStart = (e, categoryId, dasherIndex) => {
@@ -2033,7 +2048,7 @@
                                                                                             type="text"
                                                                                             value={store.address}
                                                                                             onChange={(e) => updateStore(category.id, store.id, 'address', e.target.value)}
-                                                                                            className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                                            className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                                                                                             placeholder="Enter address..."
                                                                                         />
                                                                                     ) : (
@@ -2063,7 +2078,7 @@
                                                                                                 type="text"
                                                                                                 value={store.openTime}
                                                                                                 onChange={(e) => updateStore(category.id, store.id, 'openTime', e.target.value)}
-                                                                                                className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                                                className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-xs text-white font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
                                                                                                 placeholder="0800"
                                                                                                 maxLength={4}
                                                                                             />
@@ -2080,7 +2095,7 @@
                                                                                                 type="text"
                                                                                                 value={store.closeTime}
                                                                                                 onChange={(e) => updateStore(category.id, store.id, 'closeTime', e.target.value)}
-                                                                                                className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                                                className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-xs text-white font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
                                                                                                 placeholder="2100"
                                                                                                 maxLength={4}
                                                                                             />
@@ -2099,7 +2114,7 @@
                                                                                         <textarea
                                                                                             value={store.notes}
                                                                                             onChange={(e) => updateStore(category.id, store.id, 'notes', e.target.value)}
-                                                                                            className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                                            className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-xs text-white resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
                                                                                             rows={1}
                                                                                             placeholder="Any notes..."
                                                                                         />
@@ -2282,7 +2297,7 @@
                                                                                         <textarea
                                                                                             value={note}
                                                                                             onChange={(e) => updateNote(category.id, noteIndex, e.target.value)}
-                                                                                            className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                                            className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-sm text-white resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
                                                                                             rows={3}
                                                                                             autoFocus
                                                                                             placeholder="Enter your note..."
@@ -2770,7 +2785,7 @@
                                                                                     <textarea
                                                                                         value={dasher.notes || ''}
                                                                                         onChange={(e) => updateDasher(category.id, dasher.id, 'notes', e.target.value)}
-                                                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white resize-y min-h-[2.5rem] focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-xs text-white resize-y min-h-[2.5rem] focus:outline-none focus:ring-1 focus:ring-blue-500"
                                                                                         rows={2}
                                                                                         placeholder="Any notes..."
                                                                                         style={{ minHeight: '2.5rem' }}
@@ -2829,7 +2844,7 @@
                                 >
                                     <div className="flex items-center gap-3">
                                         <Settings size={20} className="text-purple-400" />
-                                        <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.1.4</span></span>
+                                        <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.1.5</span></span>
                                     </div>
                                     {isStateManagementOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </button>

@@ -1183,35 +1183,54 @@ const EnhancedCalculator = () => {
   };
 
   const getDasherTitle = (dasher) => {
-    let title = '';
-    if (dasher.name && dasher.email) {
-      title = `${dasher.name} - ${dasher.email}`;
-    } else if (dasher.name) {
-      title = dasher.name;
-    } else if (dasher.email) {
-      title = dasher.email;
-    } else {
-      title = 'New Dasher';
+    const parts = [];
+    
+    // Name (purple - keep default color)
+    if (dasher.name) {
+      parts.push(<span key="name">{dasher.name}</span>);
     }
     
-    // Add balance if available
+    // Email (blue)
+    if (dasher.email) {
+      if (parts.length > 0) parts.push(<span key="sep1"> - </span>);
+      parts.push(<span key="email" className="text-blue-400">{dasher.email}</span>);
+    }
+    
+    // If no name or email
+    if (parts.length === 0) {
+      parts.push(<span key="new">New Dasher</span>);
+    }
+    
+    // Balance (green if $0, red otherwise)
     if (dasher.balance) {
-      // Add $ if not already present
       const balance = dasher.balance.toString().startsWith('$') 
         ? dasher.balance 
         : `$${dasher.balance}`;
-      title += ` - ${balance}`;
+      
+      // Check if balance is $0
+      const balanceValue = balance.replace('$', '');
+      const isZero = parseFloat(balanceValue) === 0;
+      
+      parts.push(<span key="sep2"> - </span>);
+      parts.push(
+        <span 
+          key="balance" 
+          className={isZero ? "text-green-400" : "text-red-500"}
+        >
+          {balance}
+        </span>
+      );
     }
     
     // Add last used time if available
     if (dasher.lastUsed) {
       const timeStatus = calculateDasherTimeStatus(dasher.lastUsed);
       if (timeStatus) {
-        title += ` (${timeStatus.text})`;
+        parts.push(<span key="time"> ({timeStatus.text})</span>);
       }
     }
     
-    return title;
+    return <>{parts}</>;
   };
 
   const handleDasherDragStart = (e, categoryId, dasherIndex) => {
@@ -2344,12 +2363,12 @@ const EnhancedCalculator = () => {
                                         type="text"
                                         value={dasher.name}
                                         onChange={(e) => updateDasher(category.id, dasher.id, 'name', e.target.value)}
-                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                                         placeholder="Enter name..."
                                       />
                                     ) : (
                                       <>
-                                        <div className="flex-1 text-xs text-gray-200">
+                                        <div className="flex-1 text-xs text-gray-200 px-2 py-0.5">
                                           {dasher.name || <span className="italic text-gray-500">No name</span>}
                                         </div>
                                         {dasher.name && (
@@ -2373,12 +2392,12 @@ const EnhancedCalculator = () => {
                                         type="email"
                                         value={dasher.email}
                                         onChange={(e) => updateDasher(category.id, dasher.id, 'email', e.target.value)}
-                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                                         placeholder="Enter email..."
                                       />
                                     ) : (
                                       <>
-                                        <div className="flex-1 text-xs text-gray-200">
+                                        <div className="flex-1 text-xs text-gray-200 px-2 py-0.5">
                                           {dasher.email || <span className="italic text-gray-500">No email</span>}
                                         </div>
                                         {dasher.email && (
@@ -2402,12 +2421,12 @@ const EnhancedCalculator = () => {
                                         type="text"
                                         value={dasher.emailPw || ''}
                                         onChange={(e) => updateDasher(category.id, dasher.id, 'emailPw', e.target.value)}
-                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                                         placeholder="Enter email password..."
                                       />
                                     ) : (
                                       <>
-                                        <div className="flex-1 text-xs text-gray-200">
+                                        <div className="flex-1 text-xs text-gray-200 px-2 py-0.5">
                                           {dasher.emailPw ? '••••••••' : <span className="italic text-gray-500">No password</span>}
                                         </div>
                                         {dasher.emailPw && (
@@ -2431,12 +2450,12 @@ const EnhancedCalculator = () => {
                                         type="text"
                                         value={dasher.dasherPw || ''}
                                         onChange={(e) => updateDasher(category.id, dasher.id, 'dasherPw', e.target.value)}
-                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                                         placeholder="Enter dasher password..."
                                       />
                                     ) : (
                                       <>
-                                        <div className="flex-1 text-xs text-gray-200">
+                                        <div className="flex-1 text-xs text-gray-200 px-2 py-0.5">
                                           {dasher.dasherPw ? '••••••••' : <span className="italic text-gray-500">No password</span>}
                                         </div>
                                         {dasher.dasherPw && (
@@ -2460,12 +2479,12 @@ const EnhancedCalculator = () => {
                                         type="tel"
                                         value={dasher.phone || ''}
                                         onChange={(e) => updateDasher(category.id, dasher.id, 'phone', e.target.value)}
-                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                                         placeholder="Enter phone number..."
                                       />
                                     ) : (
                                       <>
-                                        <div className="flex-1 text-xs text-gray-200">
+                                        <div className="flex-1 text-xs text-gray-200 px-2 py-0.5">
                                           {dasher.phone || <span className="italic text-gray-500">No phone</span>}
                                         </div>
                                         {dasher.phone && (
@@ -2489,12 +2508,12 @@ const EnhancedCalculator = () => {
                                         type="text"
                                         value={dasher.balance || ''}
                                         onChange={(e) => updateDasher(category.id, dasher.id, 'balance', e.target.value)}
-                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                                         placeholder="Enter balance..."
                                       />
                                     ) : (
                                       <>
-                                        <div className="flex-1 text-xs text-gray-200">
+                                        <div className="flex-1 text-xs text-gray-200 px-2 py-0.5">
                                           {dasher.balance || <span className="italic text-gray-500">No balance</span>}
                                         </div>
                                         {dasher.balance && (
@@ -2594,7 +2613,7 @@ const EnhancedCalculator = () => {
             >
               <div className="flex items-center gap-3">
                 <Settings size={20} className="text-purple-400" />
-                <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.1.4</span></span>
+                <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.1.5</span></span>
               </div>
               {isStateManagementOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
             </button>
