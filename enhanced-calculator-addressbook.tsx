@@ -491,8 +491,13 @@ const EnhancedCalculator = () => {
         categories,
         noteCategories,
         dasherCategories,
+        collapsedCategories,
+        collapsedStores,
+        collapsedDashers,
+        collapsedDasherCategories,
+        collapsedNoteCategories,
         exportDate: new Date().toISOString(),
-        version: '2.0'
+        version: '2.1'
       };
       
       const dataStr = JSON.stringify(state, null, 2);
@@ -539,8 +544,21 @@ const EnhancedCalculator = () => {
         // Don't use defaults if we have saved state
         if (state.noteCategories) setNoteCategories(state.noteCategories);
         if (state.dasherCategories) setDasherCategories(state.dasherCategories);
+        
+        // Load collapsed states if they exist
+        if (state.collapsedCategories) setCollapsedCategories(state.collapsedCategories);
+        if (state.collapsedStores) setCollapsedStores(state.collapsedStores);
+        if (state.collapsedDashers) setCollapsedDashers(state.collapsedDashers);
+        if (state.collapsedDasherCategories) setCollapsedDasherCategories(state.collapsedDasherCategories);
+        if (state.collapsedNoteCategories) setCollapsedNoteCategories(state.collapsedNoteCategories);
+        
         setImportNotification(`✅ Imported data from ${file.name}`);
         setTimeout(() => setImportNotification(''), 3000);
+        
+        // Auto-save after import
+        setTimeout(() => {
+          saveAllToLocalStorage();
+        }, 100);
       } catch (err) {
         setImportNotification('❌ Failed to import - invalid file format');
         setTimeout(() => setImportNotification(''), 3000);
@@ -768,6 +786,27 @@ const EnhancedCalculator = () => {
   const isStoreCollapsed = (categoryId, storeId) => {
     const key = `${categoryId}-${storeId}`;
     return collapsedStores[key] || false;
+  };
+
+  // Expand/Collapse all for Store Address Book
+  const expandAllCategories = () => {
+    setCollapsedCategories({});
+    // Auto-save after expanding all
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
+  };
+
+  const collapseAllCategories = () => {
+    const allCollapsed = {};
+    categories.forEach(cat => {
+      allCollapsed[cat.id] = true;
+    });
+    setCollapsedCategories(allCollapsed);
+    // Auto-save after collapsing all
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
   };
 
   const getStoresStatusCount = (stores) => {
@@ -1136,6 +1175,37 @@ const EnhancedCalculator = () => {
     const key = `${categoryId}-${dasherId}`;
     // Default to collapsed (true) if no saved state exists
     return collapsedDashers[key] !== undefined ? collapsedDashers[key] : true;
+  };
+
+  // Expand/Collapse all for Dashers
+  const expandAllDashers = () => {
+    const allExpanded = {};
+    dasherCategories.forEach(cat => {
+      cat.dashers.forEach(dasher => {
+        const key = `${cat.id}-${dasher.id}`;
+        allExpanded[key] = false;
+      });
+    });
+    setCollapsedDashers(allExpanded);
+    // Auto-save after expanding all
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
+  };
+
+  const collapseAllDashers = () => {
+    const allCollapsed = {};
+    dasherCategories.forEach(cat => {
+      cat.dashers.forEach(dasher => {
+        const key = `${cat.id}-${dasher.id}`;
+        allCollapsed[key] = true;
+      });
+    });
+    setCollapsedDashers(allCollapsed);
+    // Auto-save after collapsing all
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
   };
 
   const calculateDasherTimeStatus = (lastUsedTime) => {
@@ -1741,7 +1811,27 @@ const EnhancedCalculator = () => {
             </button>
               
             {isAddressBookOpen && (
-              <div className="border-t border-gray-700 p-4 space-y-3">
+              <div className="border-t border-gray-700">
+                {/* Expand/Collapse All Buttons */}
+                <div className="flex items-center justify-end gap-2 px-4 pt-3 pb-1">
+                  <button
+                    onClick={expandAllCategories}
+                    className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-700/50 transition-colors"
+                    title="Expand all categories"
+                  >
+                    <ChevronDown size={12} />
+                    Expand All
+                  </button>
+                  <button
+                    onClick={collapseAllCategories}
+                    className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-700/50 transition-colors"
+                    title="Collapse all categories"
+                  >
+                    <ChevronUp size={12} />
+                    Collapse All
+                  </button>
+                </div>
+                <div className="p-4 pt-2 space-y-3">
                 {categories.map((category) => {
                   const { openCount, closedCount } = getStoresStatusCount(category.stores);
                   const isCategoryCollapsed = collapsedCategories[category.id];
@@ -2019,8 +2109,9 @@ const EnhancedCalculator = () => {
                     </div>
                   )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+          </div>
 
           {/* Notes Section */}
           <div className="bg-gray-800 rounded-lg overflow-hidden">
@@ -2229,7 +2320,27 @@ const EnhancedCalculator = () => {
             </button>
             
             {isDashersOpen && (
-              <div className="border-t border-gray-700 p-4 space-y-3">
+              <div className="border-t border-gray-700">
+                {/* Expand/Collapse All Buttons */}
+                <div className="flex items-center justify-end gap-2 px-4 pt-3 pb-1">
+                  <button
+                    onClick={expandAllDashers}
+                    className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-700/50 transition-colors"
+                    title="Expand all dashers"
+                  >
+                    <ChevronDown size={12} />
+                    Expand All
+                  </button>
+                  <button
+                    onClick={collapseAllDashers}
+                    className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-700/50 transition-colors"
+                    title="Collapse all dashers"
+                  >
+                    <ChevronUp size={12} />
+                    Collapse All
+                  </button>
+                </div>
+                <div className="p-4 pt-2 space-y-3">
                 {dasherCategories.map((category) => {
                   const isCategoryCollapsed = collapsedDasherCategories[category.id];
                   
@@ -2606,6 +2717,7 @@ const EnhancedCalculator = () => {
                     </div>
                   );
                 })}
+                </div>
               </div>
             )}
           </div>
@@ -2618,7 +2730,7 @@ const EnhancedCalculator = () => {
             >
               <div className="flex items-center gap-3">
                 <Settings size={20} className="text-purple-400" />
-                <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.1.6</span></span>
+                <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.2.0</span></span>
               </div>
               {isStateManagementOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
             </button>
