@@ -37,21 +37,34 @@ python serve-pwa.py
 ```
 
 ### Deployment to GitHub Pages
+
+⚠️ **IMPORTANT**: Always ensure changes are compiled from TSX to index.html before deploying!
+
 ```bash
-# Commit changes to main branch
-git add -A
-git commit -m "Your message"
+# Step 1: Verify changes are in index.html
+# Check that your TSX changes are reflected in index.html
+
+# Step 2: Stage specific files (avoid Windows reserved files like 'nul')
+git add enhanced-calculator-addressbook.tsx index.html
+# Or if no reserved files: git add -A
+
+# Step 3: Commit with descriptive message
+git commit -m "Your descriptive message"
+
+# Step 4: Push to main branch
 git push origin main
 
-# Deploy to GitHub Pages (gh-pages branch)
+# Step 5: Deploy to GitHub Pages (gh-pages branch)
 git checkout gh-pages
 git merge main --no-edit
 git push origin gh-pages
 git checkout main
 
-# GitHub Actions will automatically deploy
-# Live site: https://aaronvstory.github.io/dash-bash-utility/
+# The site will update at: https://aaronvstory.github.io/dash-bash-utility/
+# Note: GitHub Pages may take 1-2 minutes to reflect changes
 ```
+
+**Regular Commit Practice**: Commit frequently to avoid losing work and maintain version history. Each feature or fix should be its own commit.
 
 ### Development Integration (Optional)
 ```bash
@@ -78,6 +91,16 @@ npm run dev
 
 ### Core Design Pattern
 Single-file React application using functional components and hooks. No build process required - runs directly in browser with CDN dependencies. The TSX component (`enhanced-calculator-addressbook.tsx`) is compiled to inline JavaScript in `index.html` for standalone use.
+
+### ⚠️ CRITICAL: TSX to HTML Compilation
+**IMPORTANT**: Changes made to `enhanced-calculator-addressbook.tsx` are NOT automatically reflected in the app. The TSX file is the source component, but `index.html` contains the actual served inline JavaScript that runs in the browser.
+
+**When modifying the application:**
+1. Make changes to `enhanced-calculator-addressbook.tsx` (source component)
+2. **MUST manually update** corresponding code in `index.html` (served file)
+3. The JavaScript in `index.html` is between `<script type="text/babel">` tags
+4. Lucide icons are defined as: `const IconName = (props) => React.createElement(Icon, { ...props, name: 'icon-name' });`
+5. Test locally with `launch.bat` or `python serve-pwa.py` before deploying
 
 ### State Management
 - **Unified State**: Single `dashBashState` key in localStorage containing all app data
@@ -258,6 +281,7 @@ const copyToClipboard = async (text) => {
 - Full date/time with day of week display
 - Purple timer icon (distinct from blue copy buttons)
 - 1000ms update interval for real-time accuracy
+- Added TimerOff icon for timer reset (orange color for visual distinction)
 
 ### Feature Additions
 - Copy buttons for ALL fields (Dashers name/email/notes, Notes content)
@@ -265,6 +289,11 @@ const copyToClipboard = async (text) => {
 - Category deletion with trash icons
 - "Add New Category" buttons for dynamic organization
 - Target Calculator collapsed by default (better mobile UX)
+
+### Bug Fixes (Latest)
+- **Fixed dasher drag-and-drop**: Individual dashers now only draggable by their drag handle (GripVertical icon), preventing accidental category dragging
+- **Improved timer reset icon**: Replaced Trash2 with TimerOff icon for better UX clarity
+- **Drag handle isolation**: Drag operations now properly isolated to prevent event bubbling
 
 ### State Management Updates
 - Added `editingDasherCategory` and `editingNoteCategory` states
