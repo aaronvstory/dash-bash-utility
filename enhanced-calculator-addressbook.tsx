@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Plus, Copy, ChevronDown, ChevronUp, Edit2, Save, X, GripVertical, Clock, MapPin, Calculator, MessageSquare, Building2, Settings, Download, Upload, RefreshCw, FolderOpen, Timer, Users, FileText, TimerOff } from 'lucide-react';
+import { Trash2, Plus, Copy, ChevronDown, ChevronUp, Edit2, X, GripVertical, Clock, MapPin, Calculator, MessageSquare, Building2, Settings, Download, Upload, RefreshCw, FolderOpen, Timer, Users, FileText, TimerOff } from 'lucide-react';
 
 const EnhancedCalculator = () => {
   const [target, setTarget] = useState('99');
@@ -430,8 +430,8 @@ const EnhancedCalculator = () => {
         timestamp: new Date().toISOString()
       };
       localStorage.setItem('dashBashState', JSON.stringify(state));
-      setSaveNotification('✅ All data saved successfully!');
-      setTimeout(() => setSaveNotification(''), 3000);
+      setSaveNotification('✅ Saved automatically');
+      setTimeout(() => setSaveNotification(''), 2000);
     } catch (e) {
       console.error('Error saving to localStorage:', e);
       setSaveNotification('❌ Failed to save data');
@@ -747,6 +747,10 @@ const EnhancedCalculator = () => {
       ...prev,
       [categoryId]: !prev[categoryId]
     }));
+    // Auto-save after toggle
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
   };
 
   const toggleStoreCollapse = (categoryId, storeId) => {
@@ -755,6 +759,10 @@ const EnhancedCalculator = () => {
       ...prev,
       [key]: !prev[key]
     }));
+    // Auto-save after toggle
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
   };
 
   const isStoreCollapsed = (categoryId, storeId) => {
@@ -947,6 +955,10 @@ const EnhancedCalculator = () => {
       ...prev,
       [categoryId]: !prev[categoryId]
     }));
+    // Auto-save after toggle
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
   };
 
   const handleNoteDragStart = (e, categoryId, noteIndex) => {
@@ -1085,6 +1097,10 @@ const EnhancedCalculator = () => {
       ...prev,
       [categoryId]: !prev[categoryId]
     }));
+    // Auto-save after toggle
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
   };
 
   const startDasherTimer = (categoryId, dasherId) => {
@@ -1110,6 +1126,10 @@ const EnhancedCalculator = () => {
       ...prev,
       [key]: !prev[key]
     }));
+    // Auto-save after toggle
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
   };
 
   const isDasherCollapsed = (categoryId, dasherId) => {
@@ -1172,6 +1192,11 @@ const EnhancedCalculator = () => {
       title = dasher.email;
     } else {
       title = 'New Dasher';
+    }
+    
+    // Add dollar amount if available
+    if (dasher.dollarAmount && dasher.dollarAmount > 0) {
+      title += ` - $${dasher.dollarAmount}`;
     }
     
     // Add last used time if available
@@ -1279,10 +1304,31 @@ const EnhancedCalculator = () => {
         </div>
       )}
       
-      {/* Save Notification */}
+      {/* Save Notification - Beautiful Toast */}
       {saveNotification && (
-        <div className="fixed top-16 right-4 z-50 bg-blue-900/90 border border-blue-600/50 text-blue-100 px-4 py-2 rounded-lg shadow-lg backdrop-blur-sm animate-pulse">
-          {saveNotification}
+        <div className="fixed top-20 right-6 z-50 transform transition-all duration-300 ease-out animate-in slide-in-from-right">
+          <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-6 py-3 rounded-xl shadow-2xl backdrop-blur-sm flex items-center gap-3 border border-white/20">
+            <div className="flex-shrink-0">
+              {saveNotification.includes('✅') && (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
+              {saveNotification.includes('❌') && (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
+              {saveNotification.includes('⚠️') && (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              )}
+            </div>
+            <div className="text-sm font-medium">
+              {saveNotification.replace(/[✅❌⚠️]/g, '').trim()}
+            </div>
+          </div>
         </div>
       )}
       
@@ -1373,9 +1419,8 @@ const EnhancedCalculator = () => {
                       />
                       <button
                         onClick={handleCustomTargetSave}
-                        className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors flex items-center gap-1"
+                        className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors"
                       >
-                        <Save size={16} />
                         Set
                       </button>
                     </div>
@@ -1584,8 +1629,8 @@ const EnhancedCalculator = () => {
                         <div className="flex items-center gap-0.5 flex-shrink-0">
                           {editingIndex === index ? (
                             <>
-                              <button onClick={saveEdit} className="text-green-400 hover:text-green-300 p-1" title="Save">
-                                <Save size={12} />
+                              <button onClick={saveEdit} className="text-green-400 hover:text-green-300 p-1" title="Done">
+                                ✓
                               </button>
                               <button onClick={cancelEdit} className="text-gray-400 hover:text-gray-300 p-1" title="Cancel">
                                 <X size={12} />
@@ -1620,7 +1665,7 @@ const EnhancedCalculator = () => {
                         />
                         <div className="flex gap-0.5">
                           <button onClick={addNewMessage} className="text-green-400 hover:text-green-300 p-1" title="Add">
-                            <Save size={12} />
+                            ✓
                           </button>
                           <button onClick={cancelAddNew} className="text-gray-400 hover:text-gray-300 p-1" title="Cancel">
                             <X size={12} />
@@ -1780,9 +1825,9 @@ const EnhancedCalculator = () => {
                                           ? 'text-green-400 hover:text-green-300' 
                                           : 'text-yellow-400 hover:text-yellow-300'
                                       }`}
-                                      title={isEditing ? 'Save changes' : 'Edit store'}
+                                      title={isEditing ? 'Done' : 'Edit store'}
                                     >
-                                      {isEditing ? <Save size={14} /> : <Edit2 size={14} />}
+                                      {isEditing ? '✓' : <Edit2 size={14} />}
                                     </button>
                                     <button
                                       onClick={() => deleteStore(category.id, store.id)}
@@ -1910,7 +1955,7 @@ const EnhancedCalculator = () => {
                           autoFocus
                         />
                         <button onClick={addCategory} className="text-green-400 hover:text-green-300 p-1" title="Add">
-                          <Save size={14} />
+                          ✓
                         </button>
                         <button onClick={() => { setIsAddingCategory(false); setNewCategoryName(''); }} className="text-gray-400 hover:text-gray-300 p-1" title="Cancel">
                           <X size={14} />
@@ -2085,9 +2130,9 @@ const EnhancedCalculator = () => {
                                             ? 'text-green-400 hover:text-green-300' 
                                             : 'text-yellow-400 hover:text-yellow-300'
                                         }`}
-                                        title={isEditing ? 'Save' : 'Edit'}
+                                        title={isEditing ? 'Done' : 'Edit'}
                                       >
-                                        {isEditing ? <Save size={14} /> : <Edit2 size={14} />}
+                                        {isEditing ? '✓' : <Edit2 size={14} />}
                                       </button>
                                       <button
                                         onClick={() => deleteNote(category.id, noteIndex)}
@@ -2123,16 +2168,6 @@ const EnhancedCalculator = () => {
                   Add New Category
                 </button>
                 
-                {/* Save Button */}
-                <div className="mt-3 pt-3 border-t border-gray-700">
-                  <button
-                    onClick={saveAllToLocalStorage}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Save size={16} />
-                    Save Notes
-                  </button>
-                </div>
               </div>
             )}
           </div>
@@ -2236,6 +2271,17 @@ const EnhancedCalculator = () => {
                                       {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
                                       <div className="flex-1">
                                         <h5 className="font-medium text-purple-300 text-sm flex items-center gap-2">
+                                          {/* Crimson "C" Icon */}
+                                          <span 
+                                            className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold transition-all ${
+                                              dasher.crimson 
+                                                ? 'bg-red-600 text-white shadow-lg shadow-red-600/50 animate-pulse' 
+                                                : 'bg-gray-700 text-gray-500 opacity-50'
+                                            }`}
+                                            title={dasher.crimson ? 'Crimson: Yes' : 'Crimson: No'}
+                                          >
+                                            C
+                                          </span>
                                           {dasherTitle}
                                           {dasher.lastUsed && (
                                             <button
@@ -2268,9 +2314,9 @@ const EnhancedCalculator = () => {
                                           ? 'text-green-400 hover:text-green-300' 
                                           : 'text-yellow-400 hover:text-yellow-300'
                                       }`}
-                                      title={isEditing ? 'Save changes' : 'Edit dasher'}
+                                      title={isEditing ? 'Done' : 'Edit dasher'}
                                     >
-                                      {isEditing ? <Save size={14} /> : <Edit2 size={14} />}
+                                      {isEditing ? '✓' : <Edit2 size={14} />}
                                     </button>
                                     <button
                                       onClick={() => deleteDasher(category.id, dasher.id)}
@@ -2543,23 +2589,14 @@ const EnhancedCalculator = () => {
             >
               <div className="flex items-center gap-3">
                 <Settings size={20} className="text-purple-400" />
-                <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.0.9</span></span>
+                <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.1.2</span></span>
               </div>
               {isStateManagementOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
             </button>
             
             {isStateManagementOpen && (
               <div className="border-t border-gray-700 p-4">
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                  {/* Save to LocalStorage */}
-                  <button
-                    onClick={saveAllToLocalStorage}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Save size={18} />
-                    <span className="text-sm font-medium">Save All</span>
-                  </button>
-                  
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                   {/* Load from LocalStorage */}
                   <button
                     onClick={loadFromLocalStorage}
@@ -2604,7 +2641,7 @@ const EnhancedCalculator = () => {
                 <div className="mt-4 p-3 bg-gray-700/50 rounded-lg">
                   <h4 className="text-sm font-medium text-gray-300 mb-2">Instructions:</h4>
                   <ul className="text-xs text-gray-400 space-y-1">
-                    <li>• <strong>Save All:</strong> Saves all current data to browser storage</li>
+                    <li>• <strong>Auto-Save:</strong> All changes are saved automatically</li>
                     <li>• <strong>Load Saved:</strong> Restores previously saved data from browser storage</li>
                     <li>• <strong>Export JSON:</strong> Downloads all data as a JSON file for backup</li>
                     <li>• <strong>Import JSON:</strong> Loads data from a previously exported JSON file</li>
