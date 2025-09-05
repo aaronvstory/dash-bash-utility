@@ -1009,7 +1009,8 @@ const EnhancedCalculator = () => {
 
   const isDasherCollapsed = (categoryId, dasherId) => {
     const key = `${categoryId}-${dasherId}`;
-    return collapsedDashers[key] || false;
+    // Default to collapsed (true) if no saved state exists
+    return collapsedDashers[key] !== undefined ? collapsedDashers[key] : true;
   };
 
   const calculateDasherTimeStatus = (lastUsedTime) => {
