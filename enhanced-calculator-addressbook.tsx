@@ -1201,6 +1201,24 @@ const EnhancedCalculator = () => {
       parts.push(<span key="new">New Dasher</span>);
     }
     
+    // Crimson Indicator (between email and balance)
+    if (dasher.crimson !== undefined) {
+      parts.push(<span key="sep-c"> - </span>);
+      parts.push(
+        <span 
+          key="crimson"
+          className={`inline-flex items-center transition-all ${
+            dasher.crimson 
+              ? 'text-red-500' 
+              : 'text-gray-400'  // Changed from gray-600 to gray-400 for better contrast
+          }`}
+          title={dasher.crimson ? 'Crimson: Yes' : 'Crimson: No'}
+        >
+          <span className="text-xs">C</span>
+        </span>
+      );
+    }
+    
     // Balance (green if $0, red otherwise)
     if (dasher.balance) {
       const balance = dasher.balance.toString().startsWith('$') 
@@ -2294,19 +2312,6 @@ const EnhancedCalculator = () => {
                                       <div className="flex-1">
                                         <h5 className="font-medium text-purple-300 text-sm flex items-center gap-2">
                                           {dasherTitle}
-                                          {/* Crimson Indicator */}
-                                          {dasher.crimson !== undefined && (
-                                            <span 
-                                              className={`inline-flex items-center transition-all ${
-                                                dasher.crimson 
-                                                  ? 'text-red-500' 
-                                                  : 'text-gray-600'
-                                              }`}
-                                              title={dasher.crimson ? 'Crimson: Yes' : 'Crimson: No'}
-                                            >
-                                              <span className="text-xs">C</span>
-                                            </span>
-                                          )}
                                           {dasher.lastUsed && (
                                             <button
                                               onClick={(e) => {
@@ -2613,7 +2618,7 @@ const EnhancedCalculator = () => {
             >
               <div className="flex items-center gap-3">
                 <Settings size={20} className="text-purple-400" />
-                <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.1.5</span></span>
+                <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.1.6</span></span>
               </div>
               {isStateManagementOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
             </button>
