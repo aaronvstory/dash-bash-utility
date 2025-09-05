@@ -2501,7 +2501,7 @@ const EnhancedCalculator = () => {
             >
               <div className="flex items-center gap-3">
                 <Settings size={20} className="text-purple-400" />
-                <span className="text-lg font-medium">State Management</span>
+                <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.0.5</span></span>
               </div>
               {isStateManagementOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
             </button>
