@@ -40,28 +40,41 @@ python serve-pwa.py
 
 ⚠️ **IMPORTANT**: Always ensure changes are compiled from TSX to index.html before deploying!
 
+#### Version Tracking (MANDATORY)
+**Before deployment, ALWAYS update the version number:**
+1. Locate "State Management" section in both files
+2. Update version in `enhanced-calculator-addressbook.tsx` (search for "State Management" and find the version span)
+3. Update version in `index.html` (search for "State Management" and find the version span)
+4. Format: `v1.0.X` where X increments with each change
+5. Current version: **v1.0.6** (as of latest drag-and-drop fixes)
+
 ```bash
-# Step 1: Verify changes are in index.html
+# Step 1: Update version number in both files
+# Search for: State Management <span className="text-sm text-gray-400 ml-2">v1.0.X</span>
+# Increment the version number
+
+# Step 2: Verify changes are in index.html
 # Check that your TSX changes are reflected in index.html
 
-# Step 2: Stage specific files (avoid Windows reserved files like 'nul')
+# Step 3: Stage specific files (avoid Windows reserved files like 'nul')
 git add enhanced-calculator-addressbook.tsx index.html
 # Or if no reserved files: git add -A
 
-# Step 3: Commit with descriptive message
-git commit -m "Your descriptive message"
+# Step 4: Commit with descriptive message including version
+git commit -m "Fix: [description] (v1.0.X)"
 
-# Step 4: Push to main branch
+# Step 5: Push to main branch
 git push origin main
 
-# Step 5: Deploy to GitHub Pages (gh-pages branch)
+# Step 6: Deploy to GitHub Pages (gh-pages branch)
 git checkout gh-pages
-git merge main --no-edit
-git push origin gh-pages
+git merge main --no-edit  # Or use: git reset --hard main
+git push origin gh-pages --force
 git checkout main
 
 # The site will update at: https://aaronvstory.github.io/dash-bash-utility/
 # Note: GitHub Pages may take 1-2 minutes to reflect changes
+# To verify deployment: Check State Management header shows new version number
 ```
 
 **Regular Commit Practice**: Commit frequently to avoid losing work and maintain version history. Each feature or fix should be its own commit.
@@ -290,10 +303,15 @@ const copyToClipboard = async (text) => {
 - "Add New Category" buttons for dynamic organization
 - Target Calculator collapsed by default (better mobile UX)
 
-### Bug Fixes (Latest)
-- **Fixed dasher drag-and-drop**: Individual dashers now only draggable by their drag handle (GripVertical icon), preventing accidental category dragging
-- **Improved timer reset icon**: Replaced Trash2 with TimerOff icon for better UX clarity
-- **Drag handle isolation**: Drag operations now properly isolated to prevent event bubbling
+### Bug Fixes (Latest - v1.0.6)
+- **Fixed dasher drag-and-drop completely**: 
+  - Dashers now draggable by entire card (matching Address Book pattern)
+  - Categories are fixed and non-draggable (no drag handles on category headers)
+  - Empty categories now accept drops with proper drop zones
+  - Cross-category dragging works (e.g., Ready → Main)
+  - Fixed "stop sign" cursor issue with proper preventDefault calls
+- **Added version tracking**: Version number displayed in State Management header for deployment verification
+- **Improved timer reset icon**: TimerOff icon for timer reset (orange color for visual distinction)
 
 ### State Management Updates
 - Added `editingDasherCategory` and `editingNoteCategory` states
@@ -335,16 +353,34 @@ dash-bash-utility/
 └── exports/                            # User data backups
 ```
 
+## Version History
+
+### v1.0.6 (Current)
+- Fixed dasher drag-and-drop to work exactly like Address Book
+- Added drop zones for empty categories
+- Fixed preventDefault issues causing "stop sign" cursor
+
+### v1.0.5
+- Added version number to State Management header for deployment tracking
+- Removed drag functionality from dasher categories
+- Made only individual dashers draggable
+
+### Previous Versions
+- v1.0.4 and earlier: Various drag-and-drop iterations and fixes
+
 ## Testing Checklist
 
 When making changes, verify:
+- [ ] **Version number updated in both files (TSX and HTML)**
+- [ ] **Version displays correctly in State Management header**
 - [ ] All sections have inline editing (no popups)
 - [ ] Timers show seconds and update every second
 - [ ] Copy buttons work for all fields
-- [ ] Drag-and-drop works within and between categories
+- [ ] Drag-and-drop works within and between categories (especially dashers)
 - [ ] localStorage saves/loads correctly
 - [ ] JSON export/import includes all data
 - [ ] PWA installs and works offline
 - [ ] Mobile responsive layout maintained
 - [ ] Focus indicators present for accessibility
 - [ ] Toast notifications appear/dismiss properly
+- [ ] GitHub Pages deployment shows correct version number
