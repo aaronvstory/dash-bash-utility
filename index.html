@@ -2413,6 +2413,9 @@
                                                                         className={`bg-gray-600/50 rounded-lg overflow-hidden border border-gray-500/30 transition-opacity ${
                                                                             draggedDasher.categoryId === category.id && draggedDasher.dasherIndex === dasherIndex ? 'opacity-50' : ''
                                                                         }`}
+                                                                        draggable={!isEditing}
+                                                                        onDragStart={(e) => { if (!isEditing) handleDasherDragStart(e, category.id, dasherIndex); }}
+                                                                        onDragEnd={handleDasherDragEnd}
                                                                         onDragOver={(e) => {
                                                                             e.preventDefault();
                                                                             e.stopPropagation();
@@ -2429,15 +2432,6 @@
                                                                                     <div 
                                                                                         className="text-gray-400 hover:text-gray-300 cursor-move" 
                                                                                         aria-label="Drag to reorder"
-                                                                                        draggable="true"
-                                                                                        onDragStart={(e) => {
-                                                                                            e.stopPropagation();
-                                                                                            handleDasherDragStart(e, category.id, dasherIndex);
-                                                                                        }}
-                                                                                        onDragEnd={(e) => {
-                                                                                            e.stopPropagation();
-                                                                                            handleDasherDragEnd(e);
-                                                                                        }}
                                                                                     >
                                                                                         <GripVertical size={14} />
                                                                                     </div>

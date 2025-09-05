@@ -2172,6 +2172,7 @@ const EnhancedCalculator = () => {
                                 }`}
                                 draggable={!isEditing}
                                 onDragStart={(e) => { if (!isEditing) handleDasherDragStart(e, category.id, dasherIndex); }}
+                                onDragEnd={handleDasherDragEnd}
                                 onDragOver={handleDasherDragOver}
                                 onDrop={(e) => handleDasherDrop(e, category.id, dasherIndex)}
                               >
