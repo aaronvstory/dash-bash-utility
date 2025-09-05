@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Plus, Copy, ChevronDown, ChevronUp, Edit2, X, GripVertical, Clock, MapPin, Calculator, MessageSquare, Building2, Settings, Download, Upload, RefreshCw, FolderOpen, Timer, Users, FileText, TimerOff } from 'lucide-react';
+import { Trash2, Plus, Copy, ChevronDown, ChevronUp, Edit2, Save, X, GripVertical, Clock, MapPin, Calculator, MessageSquare, Building2, Settings, Download, Upload, RefreshCw, FolderOpen, Timer, Users, FileText, TimerOff } from 'lucide-react';
 
 const EnhancedCalculator = () => {
   const [target, setTarget] = useState('99');
@@ -1194,9 +1194,9 @@ const EnhancedCalculator = () => {
       title = 'New Dasher';
     }
     
-    // Add dollar amount if available
-    if (dasher.dollarAmount && dasher.dollarAmount > 0) {
-      title += ` - $${dasher.dollarAmount}`;
+    // Add balance if available
+    if (dasher.balance) {
+      title += ` - ${dasher.balance}`;
     }
     
     // Add last used time if available
@@ -2271,18 +2271,20 @@ const EnhancedCalculator = () => {
                                       {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
                                       <div className="flex-1">
                                         <h5 className="font-medium text-purple-300 text-sm flex items-center gap-2">
-                                          {/* Crimson "C" Icon */}
-                                          <span 
-                                            className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold transition-all ${
-                                              dasher.crimson 
-                                                ? 'bg-red-600 text-white shadow-lg shadow-red-600/50 animate-pulse' 
-                                                : 'bg-gray-700 text-gray-500 opacity-50'
-                                            }`}
-                                            title={dasher.crimson ? 'Crimson: Yes' : 'Crimson: No'}
-                                          >
-                                            C
-                                          </span>
                                           {dasherTitle}
+                                          {/* Crimson Indicator */}
+                                          {dasher.crimson !== undefined && (
+                                            <span 
+                                              className={`inline-flex items-center transition-all ${
+                                                dasher.crimson 
+                                                  ? 'text-red-500' 
+                                                  : 'text-gray-600'
+                                              }`}
+                                              title={dasher.crimson ? 'Crimson: Yes' : 'Crimson: No'}
+                                            >
+                                              <span className="text-xs">C</span>
+                                            </span>
+                                          )}
                                           {dasher.lastUsed && (
                                             <button
                                               onClick={(e) => {
@@ -2589,7 +2591,7 @@ const EnhancedCalculator = () => {
             >
               <div className="flex items-center gap-3">
                 <Settings size={20} className="text-purple-400" />
-                <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.1.2</span></span>
+                <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.1.3</span></span>
               </div>
               {isStateManagementOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
             </button>
@@ -2597,6 +2599,15 @@ const EnhancedCalculator = () => {
             {isStateManagementOpen && (
               <div className="border-t border-gray-700 p-4">
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  {/* Save All Button */}
+                  <button
+                    onClick={saveAllToLocalStorage}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Save size={18} />
+                    <span className="text-sm font-medium">Save All</span>
+                  </button>
+                  
                   {/* Load from LocalStorage */}
                   <button
                     onClick={loadFromLocalStorage}
