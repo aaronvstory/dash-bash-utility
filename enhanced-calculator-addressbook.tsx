@@ -163,8 +163,9 @@ const EnhancedCalculator = () => {
         setPrices(state.prices || []);
         setMessages(state.messages || messages);
         setCategories(state.categories || []);
-        setNoteCategories(state.noteCategories || noteCategories);
-        setDasherCategories(state.dasherCategories || dasherCategories);
+        // Don't use defaults if we have saved state - this preserves timer state
+        if (state.noteCategories) setNoteCategories(state.noteCategories);
+        if (state.dasherCategories) setDasherCategories(state.dasherCategories);
       } catch (e) {
         console.error('Error loading saved state:', e);
       }
@@ -1231,7 +1232,7 @@ const EnhancedCalculator = () => {
     const interval = setInterval(() => {
       // Increment tick to trigger re-render only for timer displays
       setTimerTick(prev => prev + 1);
-    }, 60000); // Update every minute
+    }, 1000); // Update every second for real-time countdown
     
     return () => clearInterval(interval);
   }, []);
@@ -2511,7 +2512,7 @@ const EnhancedCalculator = () => {
             >
               <div className="flex items-center gap-3">
                 <Settings size={20} className="text-purple-400" />
-                <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.0.7</span></span>
+                <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.0.8</span></span>
               </div>
               {isStateManagementOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
             </button>
