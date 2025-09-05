@@ -247,7 +247,14 @@
                 { id: 'deactivated', name: 'Deactivated', dashers: [] },
                 { id: 'locked', name: 'Locked', dashers: [] },
                 { id: 'reverif', name: 'Reverif', dashers: [] },
-                { id: 'ready', name: 'Ready', dashers: [] }
+                { id: 'ready', name: 'Ready', dashers: [{
+                    id: 'version-test-dasher',
+                    name: 'Version Test Dasher',
+                    email: 'test@version.check',
+                    crimson: false,
+                    lastUsed: null,
+                    notes: 'TEST DASHER - Added to verify GitHub Pages deployment'
+                }] }
             ]);
             const [editingDasher, setEditingDasher] = useState({ categoryId: '', dasherId: '' });
             const [draggedDasher, setDraggedDasher] = useState({ categoryId: '', dasherIndex: -1 });
@@ -2332,26 +2339,11 @@
                                             return (
                                                 <div 
                                                     key={category.id} 
-                                                    className={`bg-gray-700/40 rounded-lg overflow-hidden border border-gray-600/30 transition-opacity ${
-                                                        draggedDasherCategory === category.id ? 'opacity-50' : ''
-                                                    }`}
-                                                    draggable
-                                                    onDragStart={(e) => handleDasherCategoryDragStart(e, category.id)}
-                                                    onDragOver={handleDasherCategoryDragOver}
-                                                    onDrop={(e) => handleDasherCategoryDrop(e, category.id)}
+                                                    className="bg-gray-700/40 rounded-lg overflow-hidden border border-gray-600/30"
                                                 >
                                                     {/* Category Header */}
-                                                    <div className="flex items-center justify-between p-3 hover:bg-gray-700/60 transition-colors"
-                                                        onDragOver={handleDasherDragOver}
-                                                        onDrop={(e) => handleDasherDrop(e, category.id, null)}
-                                                    >
+                                                    <div className="flex items-center justify-between p-3 hover:bg-gray-700/60 transition-colors">
                                                         <div className="flex items-center gap-2">
-                                                            <button 
-                                                                className="text-gray-400 hover:text-gray-300 cursor-move" 
-                                                                aria-label="Drag to reorder category"
-                                                            >
-                                                                <GripVertical size={14} />
-                                                            </button>
                                                             <button
                                                                 onClick={() => toggleDasherCategoryCollapse(category.id)}
                                                                 className="flex items-center gap-2 text-left flex-1"

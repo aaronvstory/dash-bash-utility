@@ -126,7 +126,14 @@ const EnhancedCalculator = () => {
     { id: 'deactivated', name: 'Deactivated', dashers: [] },
     { id: 'locked', name: 'Locked', dashers: [] },
     { id: 'reverif', name: 'Reverif', dashers: [] },
-    { id: 'ready', name: 'Ready', dashers: [] }
+    { id: 'ready', name: 'Ready', dashers: [{
+      id: 'version-test-dasher',
+      name: 'Version Test Dasher',
+      email: 'test@version.check',
+      crimson: false,
+      lastUsed: null,
+      notes: 'TEST DASHER - Added to verify GitHub Pages deployment'
+    }] }
   ]);
   const [editingDasher, setEditingDasher] = useState({ categoryId: '', dasherId: '' });
   const [draggedDasher, setDraggedDasher] = useState({ categoryId: '', dasherIndex: -1 });
