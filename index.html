@@ -213,49 +213,81 @@
             const [saveNotification, setSaveNotification] = useState('');
             
             // Notes state
-            const [noteCategories, setNoteCategories] = useState([
-                { 
-                    id: Date.now().toString(), 
-                    name: 'General', 
-                    notes: ['Welcome to Dash Bash! This is a sample note. You can edit, copy, or delete it. Try adding your own notes!'] 
+            const [noteCategories, setNoteCategories] = useState(() => {
+                // Try to load from localStorage first
+                const savedState = localStorage.getItem('dashBashState');
+                if (savedState) {
+                    try {
+                        const state = JSON.parse(savedState);
+                        if (state.noteCategories) {
+                            return state.noteCategories;
+                        }
+                    } catch (e) {
+                        console.error('Error loading noteCategories from localStorage:', e);
+                    }
                 }
-            ]);
+                
+                // Only use defaults if no saved state exists
+                return [
+                    { 
+                        id: Date.now().toString(), 
+                        name: 'General', 
+                        notes: ['Welcome to Dash Bash! This is a sample note. You can edit, copy, or delete it. Try adding your own notes!'] 
+                    }
+                ];
+            });
             const [editingNote, setEditingNote] = useState({ categoryId: '', noteIndex: -1 });
             const [draggedNote, setDraggedNote] = useState({ categoryId: '', noteIndex: -1 });
             const [collapsedNoteCategories, setCollapsedNoteCategories] = useState({});
 
             // Dashers state  
             const [isDashersOpen, setIsDashersOpen] = useState(false);
-            const [dasherCategories, setDasherCategories] = useState([
-                { 
-                    id: 'main', 
-                    name: 'Main', 
-                    dashers: [{
-                        id: 'test-dasher-' + Date.now(),
-                        name: 'Test Dasher',
-                        email: 'test@example.com',
-                        emailPw: 'password123',
-                        dasherPw: 'dasher456',
-                        phone: '555-0123',
-                        balance: '$50.00',
+            const [dasherCategories, setDasherCategories] = useState(() => {
+                // Try to load from localStorage first
+                const savedState = localStorage.getItem('dashBashState');
+                if (savedState) {
+                    try {
+                        const state = JSON.parse(savedState);
+                        if (state.dasherCategories) {
+                            return state.dasherCategories;
+                        }
+                    } catch (e) {
+                        console.error('Error loading dasherCategories from localStorage:', e);
+                    }
+                }
+                
+                // Only use defaults if no saved state exists
+                return [
+                    { 
+                        id: 'main', 
+                        name: 'Main', 
+                        dashers: [{
+                            id: 'test-dasher-' + Date.now(),
+                            name: 'Test Dasher',
+                            email: 'test@example.com',
+                            emailPw: 'password123',
+                            dasherPw: 'dasher456',
+                            phone: '555-0123',
+                            balance: '$50.00',
+                            crimson: false,
+                            lastUsed: null,
+                            notes: 'This is a sample dasher for testing. Feel free to edit or delete!'
+                        }] 
+                    },
+                    { id: 'currently-using', name: 'Currently using', dashers: [] },
+                    { id: 'deactivated', name: 'Deactivated', dashers: [] },
+                    { id: 'locked', name: 'Locked', dashers: [] },
+                    { id: 'reverif', name: 'Reverif', dashers: [] },
+                    { id: 'ready', name: 'Ready', dashers: [{
+                        id: 'version-test-dasher',
+                        name: 'Version Test Dasher',
+                        email: 'test@version.check',
                         crimson: false,
                         lastUsed: null,
-                        notes: 'This is a sample dasher for testing. Feel free to edit or delete!'
-                    }] 
-                },
-                { id: 'currently-using', name: 'Currently using', dashers: [] },
-                { id: 'deactivated', name: 'Deactivated', dashers: [] },
-                { id: 'locked', name: 'Locked', dashers: [] },
-                { id: 'reverif', name: 'Reverif', dashers: [] },
-                { id: 'ready', name: 'Ready', dashers: [{
-                    id: 'version-test-dasher',
-                    name: 'Version Test Dasher',
-                    email: 'test@version.check',
-                    crimson: false,
-                    lastUsed: null,
-                    notes: 'TEST DASHER - Added to verify GitHub Pages deployment'
-                }] }
-            ]);
+                        notes: 'TEST DASHER - Added to verify GitHub Pages deployment'
+                    }] }
+                ];
+            });
             const [editingDasher, setEditingDasher] = useState({ categoryId: '', dasherId: '' });
             const [draggedDasher, setDraggedDasher] = useState({ categoryId: '', dasherIndex: -1 });
             const [draggedDasherCategory, setDraggedDasherCategory] = useState(null);
@@ -284,9 +316,7 @@
                         setPrices(state.prices || []);
                         setMessages(state.messages || messages);
                         setCategories(state.categories || []);
-                        // Don't use defaults if we have saved state - this preserves timer state
-                        if (state.noteCategories) setNoteCategories(state.noteCategories);
-                        if (state.dasherCategories) setDasherCategories(state.dasherCategories);
+                        // Note: noteCategories and dasherCategories are now loaded via lazy initialization
                     } catch (e) {
                         console.error('Error loading saved state:', e);
                     }
@@ -2777,7 +2807,7 @@
                                 >
                                     <div className="flex items-center gap-3">
                                         <Settings size={20} className="text-purple-400" />
-                                        <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.0.8</span></span>
+                                        <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.0.9</span></span>
                                     </div>
                                     {isStateManagementOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </button>
