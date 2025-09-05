@@ -1102,8 +1102,14 @@ const EnhancedCalculator = () => {
   };
 
   const handleDasherDragStart = (e, categoryId, dasherId) => {
+    e.stopPropagation(); // Prevent category from being dragged
     setDraggedDasher({ categoryId, dasherId });
     e.dataTransfer.effectAllowed = 'move';
+  };
+  
+  const handleDasherDragEnd = (e) => {
+    e.stopPropagation();
+    setDraggedDasher({ categoryId: '', dasherId: '' }); // Reset dragged state
   };
 
   const handleDasherDragOver = (e) => {
@@ -2087,6 +2093,7 @@ const EnhancedCalculator = () => {
                                 }`}
                                 draggable={!isEditing && !isCollapsed}
                                 onDragStart={(e) => { if (!isEditing && !isCollapsed) handleDasherDragStart(e, category.id, dasher.id); }}
+                                onDragEnd={handleDasherDragEnd}
                               >
                                 {/* Dasher Header */}
                                 <div className="flex items-center justify-between p-3">
