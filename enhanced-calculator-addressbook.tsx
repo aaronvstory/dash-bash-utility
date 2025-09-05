@@ -612,6 +612,11 @@ const EnhancedCalculator = () => {
       setCategories([...categories, newCategory]);
       setNewCategoryName('');
       setIsAddingCategory(false);
+      
+      // Auto-save
+      setTimeout(() => {
+        saveAllToLocalStorage();
+      }, 100);
     }
   };
 
@@ -619,10 +624,20 @@ const EnhancedCalculator = () => {
     setCategories(categories.map(cat => 
       cat.id === categoryId ? { ...cat, name: newName } : cat
     ));
+    
+    // Auto-save
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
   };
 
   const deleteCategory = (categoryId) => {
     setCategories(categories.filter(cat => cat.id !== categoryId));
+    
+    // Auto-save
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
   };
 
   const addStore = (categoryId) => {
@@ -638,6 +653,11 @@ const EnhancedCalculator = () => {
         ? { ...cat, stores: [...cat.stores, newStore] }
         : cat
     ));
+    
+    // Auto-save
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
   };
 
   const updateStore = (categoryId, storeId, field, value) => {
@@ -651,6 +671,11 @@ const EnhancedCalculator = () => {
           }
         : cat
     ));
+    
+    // Auto-save
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
   };
 
   const deleteStore = (categoryId, storeId) => {
@@ -659,6 +684,11 @@ const EnhancedCalculator = () => {
         ? { ...cat, stores: cat.stores.filter(store => store.id !== storeId) }
         : cat
     ));
+    
+    // Auto-save
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
   };
 
   const toggleEditStore = (categoryId, storeId) => {
@@ -938,6 +968,11 @@ const EnhancedCalculator = () => {
         ? { ...cat, dashers: [...cat.dashers, newDasher] }
         : cat
     ));
+    
+    // Auto-save
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
   };
 
   const updateDasher = (categoryId, dasherId, field, value) => {
@@ -974,6 +1009,11 @@ const EnhancedCalculator = () => {
           }
         : cat
     ));
+    
+    // Auto-save
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
   };
 
   const deleteDasher = (categoryId, dasherId) => {
@@ -982,6 +1022,11 @@ const EnhancedCalculator = () => {
         ? { ...cat, dashers: cat.dashers.filter(dasher => dasher.id !== dasherId) }
         : cat
     ));
+    
+    // Auto-save
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
   };
 
   const toggleEditDasher = (categoryId, dasherId) => {
@@ -2102,7 +2147,13 @@ const EnhancedCalculator = () => {
                                           e.stopPropagation();
                                           handleDasherDragStart(e, category.id, dasher.id);
                                         }}
-                                        onDragEnd={handleDasherDragEnd}
+                                        onDragEnd={(e) => {
+                                          e.stopPropagation();
+                                          handleDasherDragEnd(e);
+                                        }}
+                                        onDrag={(e) => {
+                                          e.stopPropagation();
+                                        }}
                                         className="text-gray-400 hover:text-gray-300 cursor-move" 
                                         aria-label="Drag to reorder"
                                       >
@@ -2117,7 +2168,7 @@ const EnhancedCalculator = () => {
                                       <div className="flex-1">
                                         <h5 className="font-medium text-purple-300 text-sm flex items-center gap-2">
                                           {dasherTitle}
-                                          {timeStatus && timeStatus.remainingMs < 86400000 && (
+                                          {dasher.lastUsed && (
                                             <button
                                               onClick={(e) => {
                                                 e.stopPropagation();
