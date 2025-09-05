@@ -2399,7 +2399,19 @@
 
                                                     {/* Dashers */}
                                                     {!isCategoryCollapsed && (
-                                                        <div className="border-t border-gray-600/30 p-3 space-y-2">
+                                                        <div 
+                                                            className="border-t border-gray-600/30 p-3 space-y-2 min-h-[50px]"
+                                                            onDragOver={(e) => {
+                                                                e.preventDefault();
+                                                                e.dataTransfer.dropEffect = 'move';
+                                                            }}
+                                                            onDrop={(e) => {
+                                                                e.preventDefault();
+                                                                if (category.dashers.length === 0) {
+                                                                    handleDasherDrop(e, category.id, 0);
+                                                                }
+                                                            }}
+                                                        >
                                                             {category.dashers.map((dasher, dasherIndex) => {
                                                                 const isEditing = isDasherEditing(category.id, dasher.id);
                                                                 const isCollapsed = isDasherCollapsed(category.id, dasher.id);
@@ -2766,7 +2778,7 @@
                                 >
                                     <div className="flex items-center gap-3">
                                         <Settings size={20} className="text-purple-400" />
-                                        <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.0.5</span></span>
+                                        <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.0.6</span></span>
                                     </div>
                                     {isStateManagementOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </button>
