@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Dash Bash Utility is a React-based Progressive Web App (PWA) designed for delivery service drivers (primarily DoorDash). It's a single-file application that runs directly in the browser without any build process required.
+Dash Bash Utility is a React-based Progressive Web App (PWA) designed for delivery service drivers (primarily DoorDash). It's a **single-file application** that runs directly in the browser without any build process required.
 
 **Core Features:**
 - **Target Calculator**: Calculates optimal quantities to reach target dollar amounts ($99/$120/custom)
@@ -38,67 +38,33 @@ python serve-pwa.py
 
 ### Deployment to GitHub Pages
 
-⚠️ **IMPORTANT**: Always ensure changes are compiled from TSX to index.html before deploying!
-
-#### Version Tracking (MANDATORY)
-**Before deployment, ALWAYS update the version number:**
-1. Locate "State Management" section in both files
-2. Update version in `enhanced-calculator-addressbook.tsx` (search for "State Management" and find the version span)
-3. Update version in `index.html` (search for "State Management" and find the version span)
-4. Format: `v1.0.X` where X increments with each change
-5. Current version: **v1.0.6** (as of latest drag-and-drop fixes)
+⚠️ **CRITICAL**: Always ensure changes are compiled from TSX to index.html before deploying!
 
 ```bash
-# Step 1: Update version number in both files
-# Search for: State Management <span className="text-sm text-gray-400 ml-2">v1.0.X</span>
-# Increment the version number
-
-# Step 2: Verify changes are in index.html
+# Step 1: Verify changes are in index.html
 # Check that your TSX changes are reflected in index.html
 
-# Step 3: Stage specific files (avoid Windows reserved files like 'nul')
+# Step 2: Stage specific files (avoid Windows reserved files like 'nul')
 git add enhanced-calculator-addressbook.tsx index.html
 # Or if no reserved files: git add -A
 
-# Step 4: Commit with descriptive message including version
-git commit -m "Fix: [description] (v1.0.X)"
+# Step 3: Commit with descriptive message
+git commit -m "Your descriptive message"
 
-# Step 5: Push to main branch
+# Step 4: Push to main branch
 git push origin main
 
-# Step 6: Deploy to GitHub Pages (gh-pages branch)
+# Step 5: Deploy to GitHub Pages (gh-pages branch)
 git checkout gh-pages
-git merge main --no-edit  # Or use: git reset --hard main
-git push origin gh-pages --force
+git merge main --no-edit
+git push origin gh-pages
 git checkout main
 
 # The site will update at: https://aaronvstory.github.io/dash-bash-utility/
 # Note: GitHub Pages may take 1-2 minutes to reflect changes
-# To verify deployment: Check State Management header shows new version number
 ```
 
 **Regular Commit Practice**: Commit frequently to avoid losing work and maintain version history. Each feature or fix should be its own commit.
-
-### Development Integration (Optional)
-```bash
-# Option 1: Create React App
-npx create-react-app dash-bash --template typescript
-cp enhanced-calculator-addressbook.tsx src/App.tsx
-npm install lucide-react
-npm start
-
-# Option 2: Vite
-npm create vite@latest dash-bash -- --template react-ts
-cp enhanced-calculator-addressbook.tsx src/App.tsx  
-npm install lucide-react
-npm run dev
-
-# Option 3: Next.js
-npx create-next-app@latest dash-bash --typescript --tailwind
-cp enhanced-calculator-addressbook.tsx app/page.tsx
-npm install lucide-react
-npm run dev
-```
 
 ## Architecture
 
@@ -118,8 +84,9 @@ Single-file React application using functional components and hooks. No build pr
 ### State Management
 - **Unified State**: Single `dashBashState` key in localStorage containing all app data
 - **Hook-based**: useState for local state, useEffect for persistence
-- **Auto-save**: Critical data saved on change, manual save for address book
-- **Import/Export**: Full state backup/restore via JSON files
+- **Auto-save**: Critical data saved on change with 100ms debounce
+- **Import/Export**: Full state backup/restore via JSON files (v2.1 format)
+- **Collapse States**: All UI collapse states persisted across sessions
 
 ### Component Structure
 ```
@@ -135,14 +102,16 @@ EnhancedCalculator (main component)
 │   └── Drag-and-drop with inline editing
 ├── Address Book (right column middle)
 │   ├── Store categories with inline renaming
-│   └── Real-time hours calculation
+│   ├── Real-time hours calculation
+│   └── Expand/Collapse all buttons (v1.2.0+)
 ├── Notes Section (right column middle-bottom)
 │   ├── Multi-category with inline renaming
 │   └── Copy buttons for all fields
 └── Dashers Section (right column bottom)
     ├── 24-hour countdown timers (updates every second)
     ├── Inline category renaming
-    └── Drag-and-drop between categories
+    ├── Drag-and-drop between categories
+    └── Expand/Collapse all buttons (v1.2.0+)
 ```
 
 ## Key Algorithms
@@ -171,6 +140,15 @@ Real-time store hours tracking:
 - Timer icon color: purple (distinct from blue copy buttons)
 - Uses `timerTick` counter updating every 1000ms for efficient re-renders
 
+### Dasher Title Display (`getDasherTitle`)
+Dynamic title generation with color coding (v1.1.5+):
+- Name: Purple (default text color)
+- Email: Blue (`text-blue-400`)
+- Crimson indicator: "C" between email and balance (red when active, gray when not)
+- Balance: Green if $0 (`text-green-400`), Red otherwise (`text-red-500`)
+- Format: "Name - Email - C - Balance"
+- Returns JSX/React.Fragment with styled spans
+
 ## localStorage Structure
 
 **Single unified key**: `dashBashState` contains all application data as JSON:
@@ -178,10 +156,17 @@ Real-time store hours tracking:
 {
   "target": "99",
   "targetPreset": "99",  // "99", "120", or "custom"
+  "prices": [...],
   "messages": [...],
   "categories": [...],        // Address book
   "noteCategories": [...],    // Notes sections  
-  "dasherCategories": [...]   // Dashers with timers
+  "dasherCategories": [...],  // Dashers with timers
+  "collapsedCategories": {...},     // Address book collapse states
+  "collapsedStores": {...},         // Individual store collapse states
+  "collapsedDashers": {...},        // Individual dasher collapse states  
+  "collapsedDasherCategories": {...}, // Dasher category collapse states
+  "collapsedNoteCategories": {...},   // Note category collapse states
+  "timestamp": "2025-01-01T00:00:00.000Z"
 }
 ```
 
@@ -202,7 +187,7 @@ const [editingNoteCategory, setEditingNoteCategory] = useState(-1);
     type="text"
     value={category.name}
     onChange={(e) => updateCategory(category.id, e.target.value)}
-    className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm"
+    className="bg-gray-600 border border-gray-500 rounded px-2 py-0.5 text-sm"
     onBlur={() => setEditingCategory(-1)}
     onKeyPress={(e) => e.key === 'Enter' && setEditingCategory(-1)}
     onClick={(e) => e.stopPropagation()}
@@ -212,6 +197,11 @@ const [editingNoteCategory, setEditingNoteCategory] = useState(-1);
   <h4 className="font-medium text-blue-300">{category.name}</h4>
 )}
 ```
+
+### Padding Consistency (v1.1.5+)
+- Input fields: `px-2 py-0.5` (not `py-1`)
+- Display text: `px-2 py-0.5` (matching padding)
+- Prevents layout jumps when switching between view/edit modes
 
 ## PWA Configuration
 
@@ -241,12 +231,14 @@ const [editingNoteCategory, setEditingNoteCategory] = useState(-1);
 - **Drag handles**: GripVertical icon with cursor-move
 - **Copy buttons**: Blue with hover state
 - **Toast notifications**: Fixed positioning with auto-dismiss
+- **Expand/Collapse All**: Small buttons aligned right with section-specific colors
 
 ### Spacing Convention
 - **Container padding**: `p-4` (1rem)
 - **Section spacing**: `space-y-4` (1rem gaps)
 - **Inline spacing**: `space-x-2` (0.5rem gaps)
 - **Grid gaps**: `gap-4` for sections
+- **Expand/Collapse buttons**: `px-4 pt-3 pb-1` for button container
 
 ## Development Patterns
 
@@ -265,6 +257,7 @@ All draggable sections use the same pattern:
 2. `onDragStart`, `onDragOver`, `onDrop` handlers
 3. Visual feedback with opacity changes
 4. Reorder arrays and persist to localStorage
+5. Auto-save after drop with 100ms delay
 
 ### Copy to Clipboard Pattern
 ```javascript
@@ -275,49 +268,57 @@ const copyToClipboard = async (text) => {
 };
 ```
 
+### Expand/Collapse All Pattern (v1.2.0+)
+```javascript
+const expandAllCategories = () => {
+  setCollapsedCategories({});
+  setTimeout(() => saveAllToLocalStorage(), 100);
+};
+
+const collapseAllCategories = () => {
+  const allCollapsed = {};
+  categories.forEach(cat => {
+    allCollapsed[cat.id] = true;
+  });
+  setCollapsedCategories(allCollapsed);
+  setTimeout(() => saveAllToLocalStorage(), 100);
+};
+```
+
+### Auto-save Pattern
+All state modifications trigger auto-save:
+```javascript
+setTimeout(() => {
+  saveAllToLocalStorage();
+}, 100); // 100ms debounce
+```
+
 ### Performance Optimizations
 - **Timer Updates**: Use `timerTick` counter (1000ms interval) for seconds display
 - **Debounced Saves**: Auto-save with 100ms delay after changes
 - **Lazy State Init**: Heavy computations only on mount
 - **Event Delegation**: Single handlers for repeated elements
 
-## Recent Updates (September 2025)
+## Recent Updates (v1.2.0 - January 2025)
 
-### UI Consistency Improvements
-- Replaced ALL popup prompts with inline editing
-- Dashers and Notes sections now use same pattern as Address Book
-- Consistent focus ring colors matching section themes
-- Professional, cohesive interface throughout
+### Expand/Collapse All Feature
+- Added "Expand All" and "Collapse All" buttons for Store Address Book
+- Added "Expand All" and "Collapse All" buttons for Dashers section
+- All collapse states persist in localStorage and JSON export/import
+- Auto-save triggers after bulk operations
 
-### Timer Enhancements
-- Added seconds display to 24-hour countdown
-- Full date/time with day of week display
-- Purple timer icon (distinct from blue copy buttons)
-- 1000ms update interval for real-time accuracy
-- Added TimerOff icon for timer reset (orange color for visual distinction)
+### UI Improvements (v1.1.x series)
+- Color-coded dasher titles (name=purple, email=blue, balance=green/red)
+- Crimson indicator "C" positioned between email and balance
+- Fixed padding consistency to prevent layout jumps (py-0.5)
+- Timer reset with TimerOff icon (orange color)
+- Drag handle isolation to prevent accidental dragging
 
-### Feature Additions
-- Copy buttons for ALL fields (Dashers name/email/notes, Notes content)
-- Drag-and-drop category reordering for Dashers
-- Category deletion with trash icons
-- "Add New Category" buttons for dynamic organization
-- Target Calculator collapsed by default (better mobile UX)
-
-### Bug Fixes (Latest - v1.0.6)
-- **Fixed dasher drag-and-drop completely**: 
-  - Dashers now draggable by entire card (matching Address Book pattern)
-  - Categories are fixed and non-draggable (no drag handles on category headers)
-  - Empty categories now accept drops with proper drop zones
-  - Cross-category dragging works (e.g., Ready → Main)
-  - Fixed "stop sign" cursor issue with proper preventDefault calls
-- **Added version tracking**: Version number displayed in State Management header for deployment verification
-- **Improved timer reset icon**: TimerOff icon for timer reset (orange color for visual distinction)
-
-### State Management Updates
-- Added `editingDasherCategory` and `editingNoteCategory` states
-- Full localStorage integration for all new features
-- JSON export/import supports all sections
-- Backward compatibility maintained
+### State Management Enhancements
+- JSON export version updated to 2.1
+- All UI collapse states included in export/import
+- Auto-save after JSON import
+- Comprehensive localStorage persistence
 
 ## GitHub Pages Deployment
 
@@ -353,34 +354,18 @@ dash-bash-utility/
 └── exports/                            # User data backups
 ```
 
-## Version History
-
-### v1.0.6 (Current)
-- Fixed dasher drag-and-drop to work exactly like Address Book
-- Added drop zones for empty categories
-- Fixed preventDefault issues causing "stop sign" cursor
-
-### v1.0.5
-- Added version number to State Management header for deployment tracking
-- Removed drag functionality from dasher categories
-- Made only individual dashers draggable
-
-### Previous Versions
-- v1.0.4 and earlier: Various drag-and-drop iterations and fixes
-
 ## Testing Checklist
 
 When making changes, verify:
-- [ ] **Version number updated in both files (TSX and HTML)**
-- [ ] **Version displays correctly in State Management header**
 - [ ] All sections have inline editing (no popups)
 - [ ] Timers show seconds and update every second
 - [ ] Copy buttons work for all fields
-- [ ] Drag-and-drop works within and between categories (especially dashers)
+- [ ] Drag-and-drop works within and between categories
 - [ ] localStorage saves/loads correctly
-- [ ] JSON export/import includes all data
+- [ ] JSON export/import includes all data and collapse states
 - [ ] PWA installs and works offline
 - [ ] Mobile responsive layout maintained
 - [ ] Focus indicators present for accessibility
 - [ ] Toast notifications appear/dismiss properly
-- [ ] GitHub Pages deployment shows correct version number
+- [ ] Expand/Collapse All buttons function correctly
+- [ ] No layout jumping when switching edit/view modes

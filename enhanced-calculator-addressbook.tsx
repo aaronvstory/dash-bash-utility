@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Plus, Copy, ChevronDown, ChevronUp, Edit2, Check, Save, X, GripVertical, Clock, MapPin, Calculator, MessageSquare, Building2, Settings, Download, Upload, RefreshCw, FolderOpen, Timer, Users, FileText, TimerOff } from 'lucide-react';
+import { Trash2, Plus, Copy, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, Edit2, Check, Save, X, GripVertical, Clock, MapPin, Calculator, MessageSquare, Building2, Settings, Download, Upload, RefreshCw, FolderOpen, Timer, Users, FileText, TimerOff } from 'lucide-react';
 
 const EnhancedCalculator = () => {
   const [target, setTarget] = useState('99');
@@ -1208,6 +1208,60 @@ const EnhancedCalculator = () => {
     }, 100);
   };
 
+  // Expand/Collapse all dashers in a specific category
+  const expandAllDashersInCategory = (categoryId) => {
+    const category = dasherCategories.find(c => c.id === categoryId);
+    if (category) {
+      const updatedCollapsed = { ...collapsedDashers };
+      category.dashers.forEach(dasher => {
+        const key = `${categoryId}-${dasher.id}`;
+        updatedCollapsed[key] = false;
+      });
+      setCollapsedDashers(updatedCollapsed);
+      setTimeout(() => saveAllToLocalStorage(), 100);
+    }
+  };
+
+  const collapseAllDashersInCategory = (categoryId) => {
+    const category = dasherCategories.find(c => c.id === categoryId);
+    if (category) {
+      const updatedCollapsed = { ...collapsedDashers };
+      category.dashers.forEach(dasher => {
+        const key = `${categoryId}-${dasher.id}`;
+        updatedCollapsed[key] = true;
+      });
+      setCollapsedDashers(updatedCollapsed);
+      setTimeout(() => saveAllToLocalStorage(), 100);
+    }
+  };
+
+  // Expand/Collapse all stores in a specific category
+  const expandAllStoresInCategory = (categoryId) => {
+    const category = categories.find(c => c.id === categoryId);
+    if (category) {
+      const updatedCollapsed = { ...collapsedStores };
+      category.stores.forEach(store => {
+        const key = `${categoryId}-${store.id}`;
+        updatedCollapsed[key] = false;
+      });
+      setCollapsedStores(updatedCollapsed);
+      setTimeout(() => saveAllToLocalStorage(), 100);
+    }
+  };
+
+  const collapseAllStoresInCategory = (categoryId) => {
+    const category = categories.find(c => c.id === categoryId);
+    if (category) {
+      const updatedCollapsed = { ...collapsedStores };
+      category.stores.forEach(store => {
+        const key = `${categoryId}-${store.id}`;
+        updatedCollapsed[key] = true;
+      });
+      setCollapsedStores(updatedCollapsed);
+      setTimeout(() => saveAllToLocalStorage(), 100);
+    }
+  };
+
   const calculateDasherTimeStatus = (lastUsedTime) => {
     if (!lastUsedTime) return null;
     
@@ -1872,6 +1926,32 @@ const EnhancedCalculator = () => {
                         </button>
                         
                         <div className="flex items-center gap-1">
+                          {/* Expand/Collapse all stores in this category */}
+                          {category.stores.length > 0 && (
+                            <>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  expandAllStoresInCategory(category.id);
+                                }}
+                                className="text-amber-400 hover:text-amber-300 p-1"
+                                title="Expand all stores in this category"
+                              >
+                                <ChevronsDown size={14} />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  collapseAllStoresInCategory(category.id);
+                                }}
+                                className="text-amber-400 hover:text-amber-300 p-1"
+                                title="Collapse all stores in this category"
+                              >
+                                <ChevronsUp size={14} />
+                              </button>
+                              <div className="w-px h-4 bg-gray-600 mx-1" />
+                            </>
+                          )}
                           <button
                             onClick={() => addStore(category.id)}
                             className="text-green-400 hover:text-green-300 p-1"
@@ -2363,6 +2443,32 @@ const EnhancedCalculator = () => {
                         </button>
                         
                         <div className="flex items-center gap-1">
+                          {/* Expand/Collapse all dashers in this category */}
+                          {category.dashers.length > 0 && (
+                            <>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  expandAllDashersInCategory(category.id);
+                                }}
+                                className="text-indigo-400 hover:text-indigo-300 p-1"
+                                title="Expand all dashers in this category"
+                              >
+                                <ChevronsDown size={14} />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  collapseAllDashersInCategory(category.id);
+                                }}
+                                className="text-indigo-400 hover:text-indigo-300 p-1"
+                                title="Collapse all dashers in this category"
+                              >
+                                <ChevronsUp size={14} />
+                              </button>
+                              <div className="w-px h-4 bg-gray-600 mx-1" />
+                            </>
+                          )}
                           <button
                             onClick={() => addDasher(category.id)}
                             className="text-green-400 hover:text-green-300 p-1"
