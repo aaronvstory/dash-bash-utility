@@ -1162,26 +1162,57 @@ const EnhancedCalculator = () => {
     e.dataTransfer.dropEffect = 'move';
   };
 
-  const handleDasherDrop = (e, targetCategoryId) => {
+  const handleDasherDrop = (e, targetCategoryId, targetDasherId = null) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!draggedDasher.categoryId || !draggedDasher.dasherId) return;
     
-    if (draggedDasher.categoryId !== targetCategoryId) {
+    const sourceCategoryId = draggedDasher.categoryId;
+    const sourceDasherId = draggedDasher.dasherId;
+    
+    if (sourceCategoryId === targetCategoryId && targetDasherId) {
+      // Reorder within the same category
+      const category = dasherCategories.find(cat => cat.id === targetCategoryId);
+      if (!category) return;
+      
+      const sourceIndex = category.dashers.findIndex(d => d.id === sourceDasherId);
+      const targetIndex = category.dashers.findIndex(d => d.id === targetDasherId);
+      
+      if (sourceIndex !== -1 && targetIndex !== -1 && sourceIndex !== targetIndex) {
+        const newDashers = [...category.dashers];
+        const [movedDasher] = newDashers.splice(sourceIndex, 1);
+        newDashers.splice(targetIndex, 0, movedDasher);
+        
+        setDasherCategories(dasherCategories.map(cat => 
+          cat.id === targetCategoryId ? { ...cat, dashers: newDashers } : cat
+        ));
+        
+        // Auto-save
+        setTimeout(() => {
+          saveAllToLocalStorage();
+        }, 100);
+      }
+    } else if (sourceCategoryId !== targetCategoryId) {
       // Move dasher between categories
-      const sourceCategory = dasherCategories.find(cat => cat.id === draggedDasher.categoryId);
-      const dasherToMove = sourceCategory.dashers.find(d => d.id === draggedDasher.dasherId);
+      const sourceCategory = dasherCategories.find(cat => cat.id === sourceCategoryId);
+      const dasherToMove = sourceCategory?.dashers.find(d => d.id === sourceDasherId);
       
       if (dasherToMove) {
         setDasherCategories(dasherCategories.map(cat => {
-          if (cat.id === draggedDasher.categoryId) {
+          if (cat.id === sourceCategoryId) {
             // Remove from source
-            return { ...cat, dashers: cat.dashers.filter(d => d.id !== draggedDasher.dasherId) };
+            return { ...cat, dashers: cat.dashers.filter(d => d.id !== sourceDasherId) };
           } else if (cat.id === targetCategoryId) {
             // Add to target
             return { ...cat, dashers: [...cat.dashers, dasherToMove] };
           }
           return cat;
         }));
+        
+        // Auto-save
+        setTimeout(() => {
+          saveAllToLocalStorage();
+        }, 100);
       }
     }
     
@@ -2094,7 +2125,7 @@ const EnhancedCalculator = () => {
                       key={category.id} 
                       className="bg-gray-700/40 rounded-lg overflow-hidden border border-gray-600/30"
                       onDragOver={handleDasherDragOver}
-                      onDrop={(e) => handleDasherDrop(e, category.id)}
+                      onDrop={(e) => handleDasherDrop(e, category.id, null)}
                     >
                       {/* Category Header */}
                       <div className="flex items-center justify-between p-3 hover:bg-gray-700/60 transition-colors">
@@ -2136,27 +2167,32 @@ const EnhancedCalculator = () => {
                                 className={`bg-gray-600/50 rounded-lg overflow-hidden border border-gray-500/30 transition-opacity ${
                                   draggedDasher.categoryId === category.id && draggedDasher.dasherId === dasher.id ? 'opacity-50' : ''
                                 }`}
+                                draggable={!isEditing}
+                                onDragStart={(e) => {
+                                  if (!isEditing) {
+                                    e.stopPropagation();
+                                    handleDasherDragStart(e, category.id, dasher.id);
+                                  }
+                                }}
+                                onDragEnd={(e) => {
+                                  e.stopPropagation();
+                                  handleDasherDragEnd(e);
+                                }}
+                                onDragOver={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                }}
+                                onDrop={(e) => {
+                                  e.stopPropagation();
+                                  handleDasherDrop(e, category.id, dasher.id);
+                                }}
                               >
                                 {/* Dasher Header */}
                                 <div className="flex items-center justify-between p-3">
                                   <div className="flex items-center gap-2 flex-1">
-                                    {!isEditing && !isCollapsed && (
-                                      <div
-                                        draggable
-                                        onDragStart={(e) => {
-                                          e.stopPropagation();
-                                          handleDasherDragStart(e, category.id, dasher.id);
-                                        }}
-                                        onDragEnd={(e) => {
-                                          e.stopPropagation();
-                                          handleDasherDragEnd(e);
-                                        }}
-                                        onDrag={(e) => {
-                                          e.stopPropagation();
-                                        }}
-                                        className="text-gray-400 hover:text-gray-300 cursor-move" 
-                                        aria-label="Drag to reorder"
-                                      >
+                                    {!isEditing && (
+                                      <div className="text-gray-400 hover:text-gray-300 cursor-move" 
+                                           aria-label="Drag to reorder">
                                         <GripVertical size={14} />
                                       </div>
                                     )}
