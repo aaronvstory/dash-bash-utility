@@ -433,6 +433,7 @@ const EnhancedCalculator = () => {
       setSaveNotification('✅ All data saved successfully!');
       setTimeout(() => setSaveNotification(''), 3000);
     } catch (e) {
+      console.error('Error saving to localStorage:', e);
       setSaveNotification('❌ Failed to save data');
       setTimeout(() => setSaveNotification(''), 3000);
     }
