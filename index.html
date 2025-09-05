@@ -2473,15 +2473,13 @@
                                                                                 </button>
                                                                             </div>
                                                                             <div className="flex items-center gap-1">
-                                                                                {!isCollapsed && (
-                                                                                    <button
-                                                                                        onClick={() => startDasherTimer(category.id, dasher.id)}
-                                                                                        className="text-purple-400 hover:text-purple-300 p-1"
-                                                                                        title="Start 24hr timer"
-                                                                                    >
-                                                                                        <Timer size={14} />
-                                                                                    </button>
-                                                                                )}
+                                                                                <button
+                                                                                    onClick={() => startDasherTimer(category.id, dasher.id)}
+                                                                                    className="text-purple-400 hover:text-purple-300 p-1"
+                                                                                    title="Start 24hr timer"
+                                                                                >
+                                                                                    <Timer size={14} />
+                                                                                </button>
                                                                                 <button
                                                                                     onClick={() => toggleEditDasher(category.id, dasher.id)}
                                                                                     className={`p-1 transition-colors ${
@@ -2778,7 +2776,7 @@
                                 >
                                     <div className="flex items-center gap-3">
                                         <Settings size={20} className="text-purple-400" />
-                                        <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.0.6</span></span>
+                                        <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.0.7</span></span>
                                     </div>
                                     {isStateManagementOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </button>
