@@ -92,7 +92,11 @@ const EnhancedCalculator = () => {
   // Notes state
   const [isNotesOpen, setIsNotesOpen] = useState(false);
   const [noteCategories, setNoteCategories] = useState([
-    { id: Date.now().toString(), name: 'General', notes: [] }
+    { 
+      id: Date.now().toString(), 
+      name: 'General', 
+      notes: ['Welcome to Dash Bash! This is a sample note. You can edit, copy, or delete it. Try adding your own notes!'] 
+    }
   ]);
   const [editingNote, setEditingNote] = useState({ categoryId: '', noteIndex: -1 });
   const [draggedNote, setDraggedNote] = useState({ categoryId: '', noteIndex: -1 });
@@ -102,7 +106,22 @@ const EnhancedCalculator = () => {
   // Dashers state
   const [isDashersOpen, setIsDashersOpen] = useState(false);
   const [dasherCategories, setDasherCategories] = useState([
-    { id: 'main', name: 'Main', dashers: [] },
+    { 
+      id: 'main', 
+      name: 'Main', 
+      dashers: [{
+        id: 'test-dasher-' + Date.now(),
+        name: 'Test Dasher',
+        email: 'test@example.com',
+        emailPw: 'password123',
+        dasherPw: 'dasher456',
+        phone: '555-0123',
+        balance: '$50.00',
+        crimson: false,
+        lastUsed: null,
+        notes: 'This is a sample dasher for testing. Feel free to edit or delete!'
+      }] 
+    },
     { id: 'currently-using', name: 'Currently using', dashers: [] },
     { id: 'deactivated', name: 'Deactivated', dashers: [] },
     { id: 'locked', name: 'Locked', dashers: [] },
@@ -400,8 +419,9 @@ const EnhancedCalculator = () => {
         setPrices(state.prices || []);
         setMessages(state.messages || []);
         setCategories(state.categories || []);
-        setNoteCategories(state.noteCategories || noteCategories);
-        setDasherCategories(state.dasherCategories || dasherCategories);
+        // Don't use defaults if we have saved state
+        if (state.noteCategories) setNoteCategories(state.noteCategories);
+        if (state.dasherCategories) setDasherCategories(state.dasherCategories);
         
         // Load collapsed states if they exist
         if (state.collapsedCategories) setCollapsedCategories(state.collapsedCategories);
@@ -477,8 +497,9 @@ const EnhancedCalculator = () => {
         setPrices(state.prices || []);
         setMessages(state.messages || []);
         setCategories(state.categories || []);
-        setNoteCategories(state.noteCategories || noteCategories);
-        setDasherCategories(state.dasherCategories || dasherCategories);
+        // Don't use defaults if we have saved state
+        if (state.noteCategories) setNoteCategories(state.noteCategories);
+        if (state.dasherCategories) setDasherCategories(state.dasherCategories);
         setImportNotification(`✅ Imported data from ${file.name}`);
         setTimeout(() => setImportNotification(''), 3000);
       } catch (err) {
