@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Plus, Copy, ChevronDown, ChevronUp, Edit2, Save, X, GripVertical, Clock, MapPin, Calculator, MessageSquare, Building2, Settings, Download, Upload, RefreshCw, FolderOpen, Timer, Users, FileText } from 'lucide-react';
+import { Trash2, Plus, Copy, ChevronDown, ChevronUp, Edit2, Save, X, GripVertical, Clock, MapPin, Calculator, MessageSquare, Building2, Settings, Download, Upload, RefreshCw, FolderOpen, Timer, Users, FileText, TimerOff } from 'lucide-react';
 
 const EnhancedCalculator = () => {
   const [target, setTarget] = useState('99');
@@ -2091,20 +2091,23 @@ const EnhancedCalculator = () => {
                                 className={`bg-gray-600/50 rounded-lg overflow-hidden border border-gray-500/30 transition-opacity ${
                                   draggedDasher.categoryId === category.id && draggedDasher.dasherId === dasher.id ? 'opacity-50' : ''
                                 }`}
-                                draggable={!isEditing && !isCollapsed}
-                                onDragStart={(e) => { if (!isEditing && !isCollapsed) handleDasherDragStart(e, category.id, dasher.id); }}
-                                onDragEnd={handleDasherDragEnd}
                               >
                                 {/* Dasher Header */}
                                 <div className="flex items-center justify-between p-3">
                                   <div className="flex items-center gap-2 flex-1">
-                                    {!isEditing && (
-                                      <button 
+                                    {!isEditing && !isCollapsed && (
+                                      <div
+                                        draggable
+                                        onDragStart={(e) => {
+                                          e.stopPropagation();
+                                          handleDasherDragStart(e, category.id, dasher.id);
+                                        }}
+                                        onDragEnd={handleDasherDragEnd}
                                         className="text-gray-400 hover:text-gray-300 cursor-move" 
                                         aria-label="Drag to reorder"
                                       >
                                         <GripVertical size={14} />
-                                      </button>
+                                      </div>
                                     )}
                                     <button
                                       onClick={() => toggleDasherCollapse(category.id, dasher.id)}
@@ -2120,10 +2123,10 @@ const EnhancedCalculator = () => {
                                                 e.stopPropagation();
                                                 resetDasherTimer(category.id, dasher.id);
                                               }}
-                                              className="text-red-400 hover:text-red-300 p-0.5"
+                                              className="text-orange-400 hover:text-orange-300 p-0.5"
                                               title="Reset timer"
                                             >
-                                              <Trash2 size={12} />
+                                              <TimerOff size={12} />
                                             </button>
                                           )}
                                         </h5>
