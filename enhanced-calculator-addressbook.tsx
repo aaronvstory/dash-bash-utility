@@ -129,7 +129,7 @@ const EnhancedCalculator = () => {
     { id: 'ready', name: 'Ready', dashers: [] }
   ]);
   const [editingDasher, setEditingDasher] = useState({ categoryId: '', dasherId: '' });
-  const [draggedDasher, setDraggedDasher] = useState({ categoryId: '', dasherId: '' });
+  const [draggedDasher, setDraggedDasher] = useState({ categoryId: '', dasherIndex: -1 });
   const [collapsedDasherCategories, setCollapsedDasherCategories] = useState({});
   const [dasherUpdateInterval, setDasherUpdateInterval] = useState(null);
   const [editingDasherCategory, setEditingDasherCategory] = useState(-1);
@@ -1146,15 +1146,13 @@ const EnhancedCalculator = () => {
     return title;
   };
 
-  const handleDasherDragStart = (e, categoryId, dasherId) => {
-    e.stopPropagation(); // Prevent category from being dragged
-    setDraggedDasher({ categoryId, dasherId });
+  const handleDasherDragStart = (e, categoryId, dasherIndex) => {
+    setDraggedDasher({ categoryId, dasherIndex });
     e.dataTransfer.effectAllowed = 'move';
   };
   
-  const handleDasherDragEnd = (e) => {
-    e.stopPropagation();
-    setDraggedDasher({ categoryId: '', dasherId: '' }); // Reset dragged state
+  const handleDasherDragEnd = () => {
+    setDraggedDasher({ categoryId: '', dasherIndex: -1 });
   };
 
   const handleDasherDragOver = (e) => {
@@ -1162,26 +1160,29 @@ const EnhancedCalculator = () => {
     e.dataTransfer.dropEffect = 'move';
   };
 
-  const handleDasherDrop = (e, targetCategoryId, targetDasherId = null) => {
+  const handleDasherDrop = (e, targetCategoryId, targetDasherIndex) => {
     e.preventDefault();
-    e.stopPropagation();
-    if (!draggedDasher.categoryId || !draggedDasher.dasherId) return;
+    
+    if (!draggedDasher.categoryId || draggedDasher.dasherIndex === -1) return;
     
     const sourceCategoryId = draggedDasher.categoryId;
-    const sourceDasherId = draggedDasher.dasherId;
+    const sourceDasherIndex = draggedDasher.dasherIndex;
     
-    if (sourceCategoryId === targetCategoryId && targetDasherId) {
-      // Reorder within the same category
-      const category = dasherCategories.find(cat => cat.id === targetCategoryId);
-      if (!category) return;
-      
-      const sourceIndex = category.dashers.findIndex(d => d.id === sourceDasherId);
-      const targetIndex = category.dashers.findIndex(d => d.id === targetDasherId);
-      
-      if (sourceIndex !== -1 && targetIndex !== -1 && sourceIndex !== targetIndex) {
-        const newDashers = [...category.dashers];
-        const [movedDasher] = newDashers.splice(sourceIndex, 1);
-        newDashers.splice(targetIndex, 0, movedDasher);
+    // Move dasher between or within categories
+    const sourceCategory = dasherCategories.find(cat => cat.id === sourceCategoryId);
+    const targetCategory = dasherCategories.find(cat => cat.id === targetCategoryId);
+    
+    if (!sourceCategory || !targetCategory) return;
+    
+    const dasherToMove = sourceCategory.dashers[sourceDasherIndex];
+    if (!dasherToMove) return;
+    
+    if (sourceCategoryId === targetCategoryId) {
+      // Reordering within the same category
+      if (sourceDasherIndex !== targetDasherIndex) {
+        const newDashers = [...sourceCategory.dashers];
+        newDashers.splice(sourceDasherIndex, 1);
+        newDashers.splice(targetDasherIndex, 0, dasherToMove);
         
         setDasherCategories(dasherCategories.map(cat => 
           cat.id === targetCategoryId ? { ...cat, dashers: newDashers } : cat
@@ -1192,31 +1193,28 @@ const EnhancedCalculator = () => {
           saveAllToLocalStorage();
         }, 100);
       }
-    } else if (sourceCategoryId !== targetCategoryId) {
-      // Move dasher between categories
-      const sourceCategory = dasherCategories.find(cat => cat.id === sourceCategoryId);
-      const dasherToMove = sourceCategory?.dashers.find(d => d.id === sourceDasherId);
+    } else {
+      // Moving between categories
+      setDasherCategories(dasherCategories.map(cat => {
+        if (cat.id === sourceCategoryId) {
+          // Remove from source
+          return { ...cat, dashers: cat.dashers.filter((_, idx) => idx !== sourceDasherIndex) };
+        } else if (cat.id === targetCategoryId) {
+          // Add to target at specific position
+          const newDashers = [...cat.dashers];
+          newDashers.splice(targetDasherIndex, 0, dasherToMove);
+          return { ...cat, dashers: newDashers };
+        }
+        return cat;
+      }));
       
-      if (dasherToMove) {
-        setDasherCategories(dasherCategories.map(cat => {
-          if (cat.id === sourceCategoryId) {
-            // Remove from source
-            return { ...cat, dashers: cat.dashers.filter(d => d.id !== sourceDasherId) };
-          } else if (cat.id === targetCategoryId) {
-            // Add to target
-            return { ...cat, dashers: [...cat.dashers, dasherToMove] };
-          }
-          return cat;
-        }));
-        
-        // Auto-save
-        setTimeout(() => {
-          saveAllToLocalStorage();
-        }, 100);
-      }
+      // Auto-save
+      setTimeout(() => {
+        saveAllToLocalStorage();
+      }, 100);
     }
     
-    setDraggedDasher({ categoryId: '', dasherId: '' });
+    setDraggedDasher({ categoryId: '', dasherIndex: -1 });
   };
 
   // Update timer display with a tick counter instead of forcing re-renders
@@ -2124,8 +2122,6 @@ const EnhancedCalculator = () => {
                     <div 
                       key={category.id} 
                       className="bg-gray-700/40 rounded-lg overflow-hidden border border-gray-600/30"
-                      onDragOver={handleDasherDragOver}
-                      onDrop={(e) => handleDasherDrop(e, category.id, null)}
                     >
                       {/* Category Header */}
                       <div className="flex items-center justify-between p-3 hover:bg-gray-700/60 transition-colors">
@@ -2154,7 +2150,7 @@ const EnhancedCalculator = () => {
                       {/* Dashers */}
                       {!isCategoryCollapsed && (
                         <div className="border-t border-gray-600/30 p-3 space-y-2">
-                          {category.dashers.map((dasher) => {
+                          {category.dashers.map((dasher, dasherIndex) => {
                             const isEditing = isDasherEditing(category.id, dasher.id);
                             const isCollapsed = isDasherCollapsed(category.id, dasher.id);
                             // Re-calculate on timerTick changes
@@ -2165,27 +2161,12 @@ const EnhancedCalculator = () => {
                               <div 
                                 key={dasher.id} 
                                 className={`bg-gray-600/50 rounded-lg overflow-hidden border border-gray-500/30 transition-opacity ${
-                                  draggedDasher.categoryId === category.id && draggedDasher.dasherId === dasher.id ? 'opacity-50' : ''
+                                  draggedDasher.categoryId === category.id && draggedDasher.dasherIndex === dasherIndex ? 'opacity-50' : ''
                                 }`}
                                 draggable={!isEditing}
-                                onDragStart={(e) => {
-                                  if (!isEditing) {
-                                    e.stopPropagation();
-                                    handleDasherDragStart(e, category.id, dasher.id);
-                                  }
-                                }}
-                                onDragEnd={(e) => {
-                                  e.stopPropagation();
-                                  handleDasherDragEnd(e);
-                                }}
-                                onDragOver={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                }}
-                                onDrop={(e) => {
-                                  e.stopPropagation();
-                                  handleDasherDrop(e, category.id, dasher.id);
-                                }}
+                                onDragStart={(e) => { if (!isEditing) handleDasherDragStart(e, category.id, dasherIndex); }}
+                                onDragOver={handleDasherDragOver}
+                                onDrop={(e) => handleDasherDrop(e, category.id, dasherIndex)}
                               >
                                 {/* Dasher Header */}
                                 <div className="flex items-center justify-between p-3">
