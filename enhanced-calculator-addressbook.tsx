@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Plus, Copy, ChevronDown, ChevronUp, Edit2, Save, X, GripVertical, Clock, MapPin, Calculator, MessageSquare, Building2, Settings, Download, Upload, RefreshCw, FolderOpen, Timer, Users, FileText, TimerOff } from 'lucide-react';
+import { Trash2, Plus, Copy, ChevronDown, ChevronUp, Edit2, Check, Save, X, GripVertical, Clock, MapPin, Calculator, MessageSquare, Building2, Settings, Download, Upload, RefreshCw, FolderOpen, Timer, Users, FileText, TimerOff } from 'lucide-react';
 
 const EnhancedCalculator = () => {
   const [target, setTarget] = useState('99');
@@ -1196,7 +1196,11 @@ const EnhancedCalculator = () => {
     
     // Add balance if available
     if (dasher.balance) {
-      title += ` - ${dasher.balance}`;
+      // Add $ if not already present
+      const balance = dasher.balance.toString().startsWith('$') 
+        ? dasher.balance 
+        : `$${dasher.balance}`;
+      title += ` - ${balance}`;
     }
     
     // Add last used time if available
@@ -2258,12 +2262,11 @@ const EnhancedCalculator = () => {
                                 {/* Dasher Header */}
                                 <div className="flex items-center justify-between p-3">
                                   <div className="flex items-center gap-2 flex-1">
-                                    {!isEditing && (
-                                      <div className="text-gray-400 hover:text-gray-300 cursor-move" 
-                                           aria-label="Drag to reorder">
-                                        <GripVertical size={14} />
-                                      </div>
-                                    )}
+                                    <div className={`${isEditing ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 hover:text-gray-300 cursor-move'}`}
+                                         aria-label="Drag to reorder"
+                                         style={{ pointerEvents: isEditing ? 'none' : 'auto' }}>
+                                      <GripVertical size={14} />
+                                    </div>
                                     <button
                                       onClick={() => toggleDasherCollapse(category.id, dasher.id)}
                                       className="flex items-center gap-2 flex-1 text-left"
@@ -2318,7 +2321,7 @@ const EnhancedCalculator = () => {
                                       }`}
                                       title={isEditing ? 'Done' : 'Edit dasher'}
                                     >
-                                      {isEditing ? '✓' : <Edit2 size={14} />}
+                                      {isEditing ? <Check size={14} /> : <Edit2 size={14} />}
                                     </button>
                                     <button
                                       onClick={() => deleteDasher(category.id, dasher.id)}
@@ -2591,7 +2594,7 @@ const EnhancedCalculator = () => {
             >
               <div className="flex items-center gap-3">
                 <Settings size={20} className="text-purple-400" />
-                <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.1.3</span></span>
+                <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.1.4</span></span>
               </div>
               {isStateManagementOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
             </button>

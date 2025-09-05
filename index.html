@@ -104,6 +104,7 @@
         const ChevronDown = (props) => React.createElement(Icon, { ...props, name: 'chevron-down' });
         const ChevronUp = (props) => React.createElement(Icon, { ...props, name: 'chevron-up' });
         const Edit2 = (props) => React.createElement(Icon, { ...props, name: 'edit-2' });
+        const Check = (props) => React.createElement(Icon, { ...props, name: 'check' });
         const Save = (props) => React.createElement(Icon, { ...props, name: 'save' });
         const X = (props) => React.createElement(Icon, { ...props, name: 'x' });
         const GripVertical = (props) => React.createElement(Icon, { ...props, name: 'grip-vertical' });
@@ -1386,7 +1387,11 @@
                 
                 // Add balance if available
                 if (dasher.balance) {
-                    title += ` - ${dasher.balance}`;
+                    // Add $ if not already present
+                    const balance = dasher.balance.toString().startsWith('$') 
+                        ? dasher.balance 
+                        : `$${dasher.balance}`;
+                    title += ` - ${balance}`;
                 }
                 
                 // Add last used time if available
@@ -2005,7 +2010,7 @@
                                                                                     }`}
                                                                                     title={isEditing ? 'Save changes' : 'Edit store'}
                                                                                 >
-                                                                                    {isEditing ? '✓' : <Edit2 size={14} />}
+                                                                                    {isEditing ? <Check size={14} /> : <Edit2 size={14} />}
                                                                                 </button>
                                                                                 <button
                                                                                     onClick={() => deleteStore(category.id, store.id)}
@@ -2312,7 +2317,7 @@
                                                                                         }`}
                                                                                         title={isEditing ? 'Save' : 'Edit'}
                                                                                     >
-                                                                                        {isEditing ? '✓' : <Edit2 size={14} />}
+                                                                                        {isEditing ? <Check size={14} /> : <Edit2 size={14} />}
                                                                                     </button>
                                                                                     <button
                                                                                         onClick={() => deleteNote(category.id, noteIndex)}
@@ -2476,14 +2481,13 @@
                                                                         {/* Dasher Header */}
                                                                         <div className="flex items-center justify-between p-3">
                                                                             <div className="flex items-center gap-2 flex-1">
-                                                                                {!isEditing && (
-                                                                                    <div 
-                                                                                        className="text-gray-400 hover:text-gray-300 cursor-move" 
-                                                                                        aria-label="Drag to reorder"
-                                                                                    >
-                                                                                        <GripVertical size={14} />
-                                                                                    </div>
-                                                                                )}
+                                                                                <div 
+                                                                                    className={`${isEditing ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 hover:text-gray-300 cursor-move'}`}
+                                                                                    aria-label="Drag to reorder"
+                                                                                    style={{ pointerEvents: isEditing ? 'none' : 'auto' }}
+                                                                                >
+                                                                                    <GripVertical size={14} />
+                                                                                </div>
                                                                                 <button
                                                                                     onClick={() => toggleDasherCollapse(category.id, dasher.id)}
                                                                                     className="flex items-center gap-2 flex-1 text-left"
@@ -2538,7 +2542,7 @@
                                                                                     }`}
                                                                                     title={isEditing ? 'Save changes' : 'Edit dasher'}
                                                                                 >
-                                                                                    {isEditing ? '✓' : <Edit2 size={14} />}
+                                                                                    {isEditing ? <Check size={14} /> : <Edit2 size={14} />}
                                                                                 </button>
                                                                                 <button
                                                                                     onClick={() => deleteDasher(category.id, dasher.id)}
@@ -2825,7 +2829,7 @@
                                 >
                                     <div className="flex items-center gap-3">
                                         <Settings size={20} className="text-purple-400" />
-                                        <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.1.3</span></span>
+                                        <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.1.4</span></span>
                                     </div>
                                     {isStateManagementOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </button>
