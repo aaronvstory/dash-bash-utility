@@ -14,6 +14,7 @@ const EnhancedCalculator = () => {
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(true);
   const [isMessagesOpen, setIsMessagesOpen] = useState(false);
   const [isAddressBookOpen, setIsAddressBookOpen] = useState(false);
+  const [isStatisticsOpen, setIsStatisticsOpen] = useState(false);
   const [isStateManagementOpen, setIsStateManagementOpen] = useState(false);
   const [collapsedCategories, setCollapsedCategories] = useState({});
   const [collapsedStores, setCollapsedStores] = useState({});
@@ -2960,6 +2961,130 @@ const EnhancedCalculator = () => {
                     </div>
                   );
                 })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Statistics Section */}
+          <div className="bg-gray-800 rounded-lg overflow-hidden">
+            <button
+              onClick={() => setIsStatisticsOpen(!isStatisticsOpen)}
+              className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <BarChart3 size={20} className="text-cyan-400" />
+                <span className="text-lg font-medium">Statistics</span>
+              </div>
+              {isStatisticsOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </button>
+            
+            {isStatisticsOpen && (
+              <div className="border-t border-gray-700 p-4 space-y-4">
+                {/* Dasher Count Statistics */}
+                <div className="bg-gray-700/40 rounded-lg p-3 space-y-2">
+                  <h4 className="text-sm font-medium text-cyan-300 mb-2">Dashers per Category</h4>
+                  {dasherCategories.map((category) => (
+                    <div key={category.id} className="flex justify-between items-center text-xs">
+                      <span className="text-gray-400">{category.name}:</span>
+                      <span className="text-gray-200 font-medium">{category.dashers.length} dashers</span>
+                    </div>
+                  ))}
+                  <div className="border-t border-gray-600 pt-2 mt-2">
+                    <div className="flex justify-between items-center text-sm font-medium">
+                      <span className="text-cyan-300">Total Dashers:</span>
+                      <span className="text-cyan-200">
+                        {dasherCategories.reduce((total, cat) => total + cat.dashers.length, 0)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Balance Statistics */}
+                <div className="bg-gray-700/40 rounded-lg p-3 space-y-2">
+                  <h4 className="text-sm font-medium text-cyan-300 mb-2">Balance Breakdown</h4>
+                  {(() => {
+                    let totalWithCrimson = 0;
+                    let totalWithoutCrimson = 0;
+                    let countWithCrimson = 0;
+                    let countWithoutCrimson = 0;
+                    
+                    dasherCategories.forEach(category => {
+                      category.dashers.forEach(dasher => {
+                        // Parse balance (remove $ and commas, convert to number)
+                        const balanceStr = dasher.balance || '$0.00';
+                        const balanceNum = parseFloat(balanceStr.replace(/[$,]/g, '')) || 0;
+                        
+                        if (dasher.crimson) {
+                          totalWithCrimson += balanceNum;
+                          countWithCrimson++;
+                        } else {
+                          totalWithoutCrimson += balanceNum;
+                          countWithoutCrimson++;
+                        }
+                      });
+                    });
+                    
+                    const totalBalance = totalWithCrimson + totalWithoutCrimson;
+                    
+                    return (
+                      <>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-gray-400">With Crimson ({countWithCrimson}):</span>
+                          <span className={`font-medium ${totalWithCrimson > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                            ${totalWithCrimson.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-gray-400">Without Crimson ({countWithoutCrimson}):</span>
+                          <span className={`font-medium ${totalWithoutCrimson > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                            ${totalWithoutCrimson.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="border-t border-gray-600 pt-2 mt-2">
+                          <div className="flex justify-between items-center text-sm font-medium">
+                            <span className="text-cyan-300">Total Balance:</span>
+                            <span className={totalBalance > 0 ? 'text-red-400' : 'text-green-400'}>
+                              ${totalBalance.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+
+                {/* Category Balance Details */}
+                <div className="bg-gray-700/40 rounded-lg p-3 space-y-2">
+                  <h4 className="text-sm font-medium text-cyan-300 mb-2">Balance by Category</h4>
+                  {dasherCategories.map((category) => {
+                    const categoryBalance = category.dashers.reduce((sum, dasher) => {
+                      const balanceStr = dasher.balance || '$0.00';
+                      const balanceNum = parseFloat(balanceStr.replace(/[$,]/g, '')) || 0;
+                      return sum + balanceNum;
+                    }, 0);
+                    
+                    const crimsonCount = category.dashers.filter(d => d.crimson).length;
+                    const nonCrimsonCount = category.dashers.length - crimsonCount;
+                    
+                    return (
+                      <div key={category.id} className="space-y-1">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-gray-400">{category.name}:</span>
+                          <span className={`font-medium ${categoryBalance > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                            ${categoryBalance.toFixed(2)}
+                          </span>
+                        </div>
+                        {category.dashers.length > 0 && (
+                          <div className="text-xs text-gray-500 pl-4">
+                            {crimsonCount > 0 && <span className="text-red-500">{crimsonCount} crimson</span>}
+                            {crimsonCount > 0 && nonCrimsonCount > 0 && <span className="text-gray-600"> / </span>}
+                            {nonCrimsonCount > 0 && <span className="text-gray-400">{nonCrimsonCount} regular</span>}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

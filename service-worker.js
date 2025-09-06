@@ -1,6 +1,6 @@
 // Service Worker for Dash Bash Utility PWA
-// Version 1.3.0 - Update this version number with each release
-const VERSION = '1.3.0';
+// Version 1.4.0 - Update this version number with each release
+const VERSION = '1.4.0';
 const CACHE_NAME = `dashbash-v${VERSION}`;
 const urlsToCache = [
   './',
