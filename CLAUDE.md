@@ -203,13 +203,63 @@ const [editingNoteCategory, setEditingNoteCategory] = useState(-1);
 - Display text: `px-2 py-0.5` (matching padding)
 - Prevents layout jumps when switching between view/edit modes
 
+## Version Management & Cache Busting
+
+### Version Update Process
+When releasing a new version, update the version number in **4 locations**:
+
+1. **service-worker.js** (Line 3):
+   ```javascript
+   const VERSION = '1.2.0'; // Update this version number
+   ```
+
+2. **index.html - Meta tag** (Line 9):
+   ```html
+   <meta name="app-version" content="1.2.0">
+   ```
+
+3. **index.html - JavaScript constant** (Line 72):
+   ```javascript
+   const APP_VERSION = '1.2.0'; // Update this with each release
+   ```
+
+4. **index.html - App title display** (Line 1744):
+   ```html
+   <span className="text-lg text-gray-400">v1.2.0</span>
+   ```
+
+### Cache Busting Implementation
+The application implements several cache-busting strategies to ensure users always get the latest version:
+
+- **Version-based cache names**: Service worker uses `dashbash-v${VERSION}` format
+- **Query parameters**: All resources loaded with `?v=1.2.0` parameter
+- **Network-first for HTML**: Always fetches fresh HTML when online
+- **Cache-first for assets**: Static resources cached with background updates
+- **Auto-update notifications**: Users see a green banner when new version available
+- **Cache control meta tags**: Prevents aggressive browser caching
+
+### How It Works
+1. **On Version Update**:
+   - Service worker cache name changes automatically
+   - Old caches are deleted on activation
+   - Resources fetched with new version parameters
+
+2. **User Experience**:
+   - Fresh content loads on next visit (network-first for HTML)
+   - Update notification appears if app is already open
+   - "Update Now" button for immediate refresh
+   - Auto-reload when service worker updates
+   - Checks for updates every hour automatically
+   - Version check on tab visibility change
+
 ## PWA Configuration
 
 ### Service Worker
-- **Cache Strategy**: Cache-first with network fallback
-- **Offline Support**: All resources cached for offline use
-- **Cache Name**: `dashbash-v1` with automatic cleanup
+- **Cache Strategy**: Network-first for HTML, cache-first with background updates for assets
+- **Offline Support**: All resources cached for offline use  
+- **Cache Name**: Version-based `dashbash-v${VERSION}` with automatic cleanup
 - **Resources Cached**: HTML, JS (React/Babel), CSS (Tailwind), icons (Lucide)
+- **Update Detection**: Automatic with user notification
 
 ### Manifest
 - **Display**: Standalone for app-like experience
@@ -217,28 +267,144 @@ const [editingNoteCategory, setEditingNoteCategory] = useState(-1);
 - **Icons**: Multiple sizes for different devices
 - **Start URL**: index.html
 
-## Style Guide (STYLE_GUIDE.md)
+## Stylesheet Architecture
 
-### Color Hierarchy
-- **Backgrounds**: gray-900 → gray-800 → gray-700 → gray-600
-- **Text**: gray-100 (primary) → gray-300 → gray-400 → gray-500
-- **Actions**: blue (copy), green (save), yellow (edit), red (delete), purple (special)
-- **Section Icons**: blue-400 (calculator), green-400 (messages), amber-400 (address), purple-400 (notes), indigo-400 (dashers)
+### External Stylesheet (styles.css)
+The application now uses a comprehensive external stylesheet (`styles.css`) designed for maintainability and future theming. The stylesheet is version-controlled and loaded with cache-busting parameters.
 
-### Component Patterns
-- **Collapsible headers**: ChevronDown/ChevronUp with item counts
-- **Inline editing**: Focus rings matching section colors
-- **Drag handles**: GripVertical icon with cursor-move
-- **Copy buttons**: Blue with hover state
-- **Toast notifications**: Fixed positioning with auto-dismiss
-- **Expand/Collapse All**: Small buttons aligned right with section-specific colors
+**Key Features:**
+- **CSS Variables**: All colors, spacing, typography, and animations defined as variables
+- **Theming Ready**: Support for dark/light themes via `data-theme` attribute
+- **Component Classes**: Reusable classes for buttons, cards, inputs, and UI patterns
+- **Responsive Utilities**: Mobile-first breakpoints (sm, md, lg, xl)
+- **Accessibility**: Focus styles, screen reader support, reduced motion
+- **Print Styles**: Clean printing with appropriate element hiding
 
-### Spacing Convention
-- **Container padding**: `p-4` (1rem)
-- **Section spacing**: `space-y-4` (1rem gaps)
-- **Inline spacing**: `space-x-2` (0.5rem gaps)
-- **Grid gaps**: `gap-4` for sections
-- **Expand/Collapse buttons**: `px-4 pt-3 pb-1` for button container
+**File Location**: `styles.css?v=1.2.0` (update version on changes)
+
+### CSS Variable System
+The stylesheet uses CSS custom properties for easy theming:
+```css
+--color-primary-*: Blue palette for primary actions
+--color-gray-*: Gray scale for backgrounds and borders
+--color-success/warning/error: Semantic colors
+--color-calculator/messages/address/notes/dashers: Section colors
+--bg-primary/secondary/tertiary: Background hierarchy
+--text-primary/secondary/tertiary: Text color hierarchy
+--spacing-xs/sm/md/lg/xl: Consistent spacing scale
+--radius-sm/md/lg/xl/full: Border radius scale
+--transition-fast/base/slow: Animation timing
+```
+
+### Updating Styles
+When modifying styles:
+1. Update `styles.css` with new styles/variables
+2. Increment version in `index.html` link tag
+3. Test all themes and responsive breakpoints
+4. Document significant changes in this file
+
+## UI Patterns & Components
+
+### Chevron Expand/Collapse Pattern
+The application uses a consistent chevron pattern for collapsible sections:
+
+**Implementation:**
+```javascript
+// Icon definitions
+const ChevronDown = (props) => React.createElement(Icon, { ...props, name: 'chevron-down' });
+const ChevronUp = (props) => React.createElement(Icon, { ...props, name: 'chevron-up' });
+
+// Usage in component
+{isOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+```
+
+**Chevron Locations:**
+- **Main Sections**: Calculator, Messages, Address Book, Notes, Dashers, State Management
+- **Categories**: Each category header within Address Book, Notes, and Dashers
+- **Individual Items**: Stores within categories, Dashers within categories
+
+**Behavior Patterns:**
+- Click header to toggle section/category/item
+- Chevron rotates on state change (down=collapsed, up=expanded)
+- State persisted in localStorage
+- Smooth transition animations (200ms)
+
+### Expand/Collapse All Buttons
+Per-category bulk operations for better UX:
+
+**Implementation Pattern:**
+```javascript
+// Expand all items in a category
+const expandAllStoresInCategory = (categoryId) => {
+    const newCollapsed = { ...collapsedStores };
+    categories.find(c => c.id === categoryId)?.stores?.forEach(store => {
+        delete newCollapsed[store.id];
+    });
+    setCollapsedStores(newCollapsed);
+};
+
+// Collapse all items in a category
+const collapseAllStoresInCategory = (categoryId) => {
+    const newCollapsed = { ...collapsedStores };
+    categories.find(c => c.id === categoryId)?.stores?.forEach(store => {
+        newCollapsed[store.id] = true;
+    });
+    setCollapsedStores(newCollapsed);
+};
+```
+
+**Button Locations:**
+- Address Book categories: Expand/collapse all stores
+- Dasher categories: Expand/collapse all dashers
+- Positioned inline with category edit button
+- Small size with hover effects
+
+### Collapsible State Management
+All collapse states are tracked and persisted:
+
+**State Structure:**
+```javascript
+collapsedCategories: { [categoryId]: boolean }      // Address book categories
+collapsedStores: { [storeId]: boolean }            // Individual stores
+collapsedDashers: { [dasherId]: boolean }           // Individual dashers
+collapsedDasherCategories: { [categoryId]: boolean } // Dasher categories
+collapsedNoteCategories: { [categoryId]: boolean }  // Note categories
+```
+
+**Persistence:**
+- Saved to localStorage on every change
+- Included in JSON export/import
+- Restored on app load
+
+### Component Class Reference
+From `styles.css`, use these classes for consistent UI:
+
+**Buttons:**
+- `.btn` - Base button styles
+- `.btn-primary` - Primary action buttons
+- `.btn-secondary` - Secondary buttons
+- `.btn-success` - Success state buttons
+- `.btn-danger` - Danger/delete buttons
+- `.btn-sm` - Small variant
+- `.btn-lg` - Large variant
+
+**Cards & Sections:**
+- `.card` - Card container with border and padding
+- `.section-header` - Collapsible section headers
+- `.collapsible-header` - Category/item headers
+- `.collapsible-content` - Animated content areas
+
+**Chevron Components:**
+- `.chevron-icon` - Base chevron styling
+- `.chevron-rotate` - 180deg rotation for state
+- `.expand-all-btn` - Expand all button
+- `.collapse-all-btn` - Collapse all button
+
+**Utilities:**
+- `.text-calculator/messages/address/notes/dashers` - Section colors
+- `.animate-pulse` - Pulsing animation
+- `.draggable` - Drag-and-drop items
+- `.copy-btn` - Copy to clipboard buttons
 
 ## Development Patterns
 
@@ -337,12 +503,14 @@ The app deploys automatically via GitHub Actions:
 ```
 dash-bash-utility/
 ├── index.html                          # Main application (standalone HTML/React)
+├── styles.css                          # External stylesheet with theming support
 ├── enhanced-calculator-addressbook.tsx # React component source
 ├── CLAUDE.md                           # This file - AI assistance guide
+├── VERSION_UPDATE_GUIDE.md             # Version update instructions
 ├── STYLE_GUIDE.md                      # Comprehensive style documentation
 ├── README.md                           # User documentation
 ├── manifest.json                       # PWA manifest
-├── service-worker.js                   # Offline functionality
+├── service-worker.js                   # Offline functionality with cache busting
 ├── favicon.svg                         # App icon
 ├── serve-pwa.py                        # Local HTTPS server
 ├── serve-pwa.bat                       # Windows launcher
@@ -353,6 +521,39 @@ dash-bash-utility/
 │   └── versions/                      # Version history
 └── exports/                            # User data backups
 ```
+
+## Stylesheet Maintenance Guidelines
+
+### When to Update styles.css
+- **Adding New Components**: Define component classes with appropriate variants
+- **Theme Changes**: Update CSS variables in `:root` and theme selectors
+- **Responsive Updates**: Add/modify breakpoint-specific styles
+- **Animation Changes**: Define new keyframes and animation classes
+- **Accessibility Improvements**: Update focus styles and ARIA support
+
+### Version Control for Styles
+1. **Update styles.css**: Make your CSS changes
+2. **Increment version**: Update `?v=1.2.0` in index.html link tag
+3. **Update service worker**: Change VERSION constant if major update
+4. **Document changes**: Note significant style changes in this file
+5. **Test thoroughly**: Check all breakpoints and themes
+
+### CSS Architecture Best Practices
+- **Use CSS Variables**: All colors, spacing, and sizing via custom properties
+- **Component-Based**: Create reusable component classes
+- **Utility Classes**: Use utility classes for common patterns
+- **Mobile-First**: Start with mobile styles, add breakpoints for larger screens
+- **Semantic Naming**: Use descriptive class names that indicate purpose
+- **Avoid !important**: Use specificity properly instead
+- **Document Complex Styles**: Add comments for non-obvious implementations
+
+### Theme Development
+To add new themes:
+1. Create new `[data-theme="theme-name"]` selector
+2. Override CSS variables within theme selector
+3. Test all components with new theme
+4. Add theme toggle functionality in React component
+5. Update documentation with theme details
 
 ## Testing Checklist
 
@@ -369,3 +570,11 @@ When making changes, verify:
 - [ ] Toast notifications appear/dismiss properly
 - [ ] Expand/Collapse All buttons function correctly
 - [ ] No layout jumping when switching edit/view modes
+- [ ] Version numbers updated in all 4 locations
+- [ ] Service worker cache busting works (check DevTools > Application)
+- [ ] Update notification appears when new version deployed
+- [ ] Chevron icons rotate smoothly on expand/collapse
+- [ ] External stylesheet loads with version parameter
+- [ ] CSS variables apply correctly to all components
+- [ ] Theme switching works if implemented
+- [ ] Print styles hide appropriate elements

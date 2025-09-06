@@ -4,14 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dash Bash Utility</title>
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    
+    <!-- Version 1.2.0 - Update this version with each release -->
+    <meta name="app-version" content="1.2.0">
+    
+    <!-- Cache Control Headers -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <link rel="icon" type="image/svg+xml" href="favicon.svg?v=1.2.0">
     <link rel="alternate icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%231f2937'/%3E%3Ctext x='16' y='22' font-family='Arial, sans-serif' font-size='18' font-weight='bold' text-anchor='middle' fill='%23fbbf24'%3E$%3C/text%3E%3Crect x='6' y='8' width='6' height='2' fill='%2360a5fa' opacity='0.8'/%3E%3Crect x='20' y='8' width='6' height='2' fill='%2360a5fa' opacity='0.8'/%3E%3Crect x='6' y='22' width='6' height='2' fill='%23a78bfa' opacity='0.8'/%3E%3Crect x='20' y='22' width='6' height='2' fill='%23a78bfa' opacity='0.8'/%3E%3C/svg%3E" />
     <meta name="description" content="Target Calculator & Address Book Utility with Dashers Management">
     <meta name="theme-color" content="#111827">
     
     <!-- PWA Support -->
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="manifest" href="manifest.json?v=1.2.0">
+    <link rel="apple-touch-icon" href="icon-192.png?v=1.2.0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
@@ -22,51 +31,85 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- Tailwind CSS -->
+    <!-- External Stylesheet (v1.2.0) -->
+    <link rel="stylesheet" href="styles.css?v=1.2.0">
+    
+    <!-- Tailwind CSS (for backward compatibility during transition) -->
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-    
-    <style>
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #374151;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #6b7280;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #9ca3af;
-        }
-        
-        /* Animation */
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        .animate-pulse {
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-    </style>
 </head>
 <body class="bg-gray-900">
     <div id="root"></div>
     
-    <!-- Service Worker Registration -->
+    <!-- Service Worker Registration with Version Check -->
     <script>
+        const APP_VERSION = '1.2.0'; // Update this with each release
+        
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js')
-                    .then(registration => console.log('ServiceWorker registered'))
-                    .catch(err => console.log('ServiceWorker registration failed'));
+                // Register service worker with cache bust parameter
+                navigator.serviceWorker.register(`service-worker.js?v=${APP_VERSION}`)
+                    .then(registration => {
+                        console.log('ServiceWorker registered for version', APP_VERSION);
+                        
+                        // Check for updates every hour
+                        setInterval(() => {
+                            registration.update();
+                        }, 3600000);
+                        
+                        // Handle updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New version available
+                                    console.log('New version available!');
+                                    // Create update notification
+                                    const updateBanner = document.createElement('div');
+                                    updateBanner.innerHTML = `
+                                        <div style="position: fixed; top: 10px; right: 10px; background: #059669; color: white; padding: 12px 20px; border-radius: 8px; z-index: 9999; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 10px;">
+                                            <span>New version available!</span>
+                                            <button onclick="window.location.reload(true)" style="background: white; color: #059669; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                                                Update Now
+                                            </button>
+                                        </div>
+                                    `;
+                                    document.body.appendChild(updateBanner);
+                                    
+                                    // Auto-hide after 30 seconds
+                                    setTimeout(() => {
+                                        if (updateBanner.parentNode) {
+                                            updateBanner.remove();
+                                        }
+                                    }, 30000);
+                                }
+                            });
+                        });
+                        
+                        // Immediate update check
+                        registration.update();
+                    })
+                    .catch(err => console.log('ServiceWorker registration failed:', err));
+            });
+            
+            // Handle controller change (new service worker activated)
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) {
+                    refreshing = true;
+                    window.location.reload(true);
+                }
             });
         }
+        
+        // Version check on visibility change
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && navigator.serviceWorker && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({ type: 'VERSION_CHECK', version: APP_VERSION });
+            }
+        });
     </script>
     
     <script type="text/babel">
@@ -1674,7 +1717,7 @@
                     <div className="max-w-5xl mx-auto">
                         {/* Header with time */}
                         <div className="text-center mb-6">
-                            <h1 className="text-3xl font-bold">Dash Bash Utility</h1>
+                            <h1 className="text-3xl font-bold">Dash Bash Utility <span className="text-lg text-gray-400">v1.2.0</span></h1>
                             <div className="flex items-center justify-center gap-2 mt-2 text-gray-400">
                                 <Clock size={16} />
                                 <span className="text-sm">

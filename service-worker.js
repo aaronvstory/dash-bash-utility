@@ -1,5 +1,7 @@
 // Service Worker for Dash Bash Utility PWA
-const CACHE_NAME = 'dashbash-v2';
+// Version 1.2.0 - Update this version number with each release
+const VERSION = '1.2.0';
+const CACHE_NAME = `dashbash-v${VERSION}`;
 const urlsToCache = [
   './',
   './index.html',
@@ -43,7 +45,7 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// Fetch event - serve from cache when offline
+// Fetch event - network first strategy for HTML, cache first for assets
 self.addEventListener('fetch', event => {
   // Skip caching for external resources to avoid CORS issues
   const url = new URL(event.request.url);
@@ -52,37 +54,64 @@ self.addEventListener('fetch', event => {
     return;
   }
   
+  // Network-first strategy for HTML files to ensure fresh content
+  if (event.request.mode === 'navigate' || event.request.url.includes('.html')) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          // Update cache with fresh version
+          if (response && response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          // If network fails, fall back to cache
+          return caches.match(event.request);
+        })
+    );
+    return;
+  }
+  
+  // Cache-first strategy for other assets
   event.respondWith(
     caches.match(event.request)
       .then(response => {
-        // Cache hit - return response
         if (response) {
+          // Return cached version but update in background
+          fetch(event.request).then(fetchResponse => {
+            if (fetchResponse && fetchResponse.status === 200) {
+              caches.open(CACHE_NAME).then(cache => {
+                cache.put(event.request, fetchResponse);
+              });
+            }
+          }).catch(() => {});
           return response;
         }
         
-        // Clone the request
-        const fetchRequest = event.request.clone();
-        
-        return fetch(fetchRequest).then(response => {
-          // Check if valid response
+        // Not in cache, fetch from network
+        return fetch(event.request).then(response => {
           if (!response || response.status !== 200 || response.type === 'error') {
             return response;
           }
           
-          // Clone the response
           const responseToCache = response.clone();
-          
-          // Add to cache for future offline use
-          caches.open(CACHE_NAME)
-            .then(cache => {
-              cache.put(event.request, responseToCache);
-            });
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseToCache);
+          });
           
           return response;
-        }).catch(() => {
-          // Network request failed, try to get from cache
-          return caches.match(event.request);
         });
       })
   );
+});
+
+// Message event - handle skip waiting
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
