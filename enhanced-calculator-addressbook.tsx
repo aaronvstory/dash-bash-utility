@@ -1000,6 +1000,27 @@ const EnhancedCalculator = () => {
     }, 100);
   };
 
+  // Expand/Collapse all note categories
+  const expandAllNoteCategories = () => {
+    setCollapsedNoteCategories({});
+    // Auto-save after expanding all
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
+  };
+
+  const collapseAllNoteCategories = () => {
+    const allCollapsed = {};
+    noteCategories.forEach(cat => {
+      allCollapsed[cat.id] = true;
+    });
+    setCollapsedNoteCategories(allCollapsed);
+    // Auto-save after collapsing all
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
+  };
+
   const handleNoteDragStart = (e, categoryId, noteIndex) => {
     setDraggedNote({ categoryId, noteIndex });
     e.dataTransfer.effectAllowed = 'move';
@@ -1175,6 +1196,27 @@ const EnhancedCalculator = () => {
     const key = `${categoryId}-${dasherId}`;
     // Default to collapsed (true) if no saved state exists
     return collapsedDashers[key] !== undefined ? collapsedDashers[key] : true;
+  };
+
+  // Expand/Collapse all dasher categories
+  const expandAllDasherCategories = () => {
+    setCollapsedDasherCategories({});
+    // Auto-save after expanding all
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
+  };
+
+  const collapseAllDasherCategories = () => {
+    const allCollapsed = {};
+    dasherCategories.forEach(cat => {
+      allCollapsed[cat.id] = true;
+    });
+    setCollapsedDasherCategories(allCollapsed);
+    // Auto-save after collapsing all
+    setTimeout(() => {
+      saveAllToLocalStorage();
+    }, 100);
   };
 
   // Expand/Collapse all for Dashers
@@ -1860,6 +1902,31 @@ const EnhancedCalculator = () => {
               <div className="flex items-center gap-3">
                 <Building2 size={20} className="text-orange-400" />
                 <span className="text-lg font-medium">Store Address Book ({categories.reduce((total, cat) => total + cat.stores.length, 0)} locations)</span>
+                {/* Category Expand/Collapse Chevrons */}
+                {isAddressBookOpen && categories.length > 0 && (
+                  <div className="flex items-center gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        expandAllCategories();
+                      }}
+                      className="text-orange-400 hover:text-orange-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
+                      title="Expand all categories"
+                    >
+                      <ChevronDown size={16} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        collapseAllCategories();
+                      }}
+                      className="text-orange-400 hover:text-orange-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
+                      title="Collapse all categories"
+                    >
+                      <ChevronUp size={16} />
+                    </button>
+                  </div>
+                )}
               </div>
               {isAddressBookOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
             </button>
@@ -2204,6 +2271,31 @@ const EnhancedCalculator = () => {
                 <span className="text-lg font-medium">
                   Notes ({noteCategories.reduce((total, cat) => total + cat.notes.length, 0)} items)
                 </span>
+                {/* Category Expand/Collapse Chevrons */}
+                {isNotesOpen && noteCategories.length > 0 && (
+                  <div className="flex items-center gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        expandAllNoteCategories();
+                      }}
+                      className="text-purple-400 hover:text-purple-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
+                      title="Expand all categories"
+                    >
+                      <ChevronDown size={16} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        collapseAllNoteCategories();
+                      }}
+                      className="text-purple-400 hover:text-purple-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
+                      title="Collapse all categories"
+                    >
+                      <ChevronUp size={16} />
+                    </button>
+                  </div>
+                )}
               </div>
               {isNotesOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
             </button>
@@ -2395,6 +2487,31 @@ const EnhancedCalculator = () => {
                 <span className="text-lg font-medium">
                   Dashers ({dasherCategories.reduce((total, cat) => total + cat.dashers.length, 0)} total)
                 </span>
+                {/* Category Expand/Collapse Chevrons */}
+                {isDashersOpen && dasherCategories.length > 0 && (
+                  <div className="flex items-center gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        expandAllDasherCategories();
+                      }}
+                      className="text-indigo-400 hover:text-indigo-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
+                      title="Expand all categories"
+                    >
+                      <ChevronDown size={16} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        collapseAllDasherCategories();
+                      }}
+                      className="text-indigo-400 hover:text-indigo-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
+                      title="Collapse all categories"
+                    >
+                      <ChevronUp size={16} />
+                    </button>
+                  </div>
+                )}
               </div>
               {isDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
             </button>
