@@ -1928,22 +1928,22 @@ const EnhancedCalculator = () => {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        expandAllCategories();
-                      }}
-                      className="text-orange-400 hover:text-orange-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
-                      title="Expand all categories"
-                    >
-                      <ChevronDown size={16} />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
                         collapseAllCategories();
                       }}
                       className="text-orange-400 hover:text-orange-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
                       title="Collapse all categories"
                     >
                       <ChevronUp size={16} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        expandAllCategories();
+                      }}
+                      className="text-orange-400 hover:text-orange-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
+                      title="Expand all categories"
+                    >
+                      <ChevronDown size={16} />
                     </button>
                   </div>
                 )}
@@ -1956,20 +1956,20 @@ const EnhancedCalculator = () => {
                 {/* Expand/Collapse All Buttons */}
                 <div className="flex items-center justify-end gap-2 px-4 pt-3 pb-1">
                   <button
-                    onClick={expandAllCategories}
-                    className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-700/50 transition-colors"
-                    title="Expand all categories"
-                  >
-                    <ChevronDown size={12} />
-                    Expand All
-                  </button>
-                  <button
                     onClick={collapseAllCategories}
                     className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-700/50 transition-colors"
                     title="Collapse all categories"
                   >
                     <ChevronUp size={12} />
                     Collapse All
+                  </button>
+                  <button
+                    onClick={expandAllCategories}
+                    className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-700/50 transition-colors"
+                    title="Expand all categories"
+                  >
+                    <ChevronDown size={12} />
+                    Expand All
                   </button>
                 </div>
                 <div className="p-4 pt-2 space-y-3">
@@ -2019,22 +2019,22 @@ const EnhancedCalculator = () => {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  expandAllStoresInCategory(category.id);
-                                }}
-                                className="text-amber-400 hover:text-amber-300 p-1"
-                                title="Expand all stores in this category"
-                              >
-                                <ChevronsDown size={14} />
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
                                   collapseAllStoresInCategory(category.id);
                                 }}
                                 className="text-amber-400 hover:text-amber-300 p-1"
                                 title="Collapse all stores in this category"
                               >
                                 <ChevronsUp size={14} />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  expandAllStoresInCategory(category.id);
+                                }}
+                                className="text-amber-400 hover:text-amber-300 p-1"
+                                title="Expand all stores in this category"
+                              >
+                                <ChevronsDown size={14} />
                               </button>
                               <div className="w-px h-4 bg-gray-600 mx-1" />
                             </>
@@ -2297,22 +2297,22 @@ const EnhancedCalculator = () => {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        expandAllNoteCategories();
-                      }}
-                      className="text-purple-400 hover:text-purple-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
-                      title="Expand all categories"
-                    >
-                      <ChevronDown size={16} />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
                         collapseAllNoteCategories();
                       }}
                       className="text-purple-400 hover:text-purple-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
                       title="Collapse all categories"
                     >
                       <ChevronUp size={16} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        expandAllNoteCategories();
+                      }}
+                      className="text-purple-400 hover:text-purple-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
+                      title="Expand all categories"
+                    >
+                      <ChevronDown size={16} />
                     </button>
                   </div>
                 )}
@@ -2513,22 +2513,22 @@ const EnhancedCalculator = () => {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        expandAllDasherCategories();
-                      }}
-                      className="text-indigo-400 hover:text-indigo-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
-                      title="Expand all categories"
-                    >
-                      <ChevronDown size={16} />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
                         collapseAllDasherCategories();
                       }}
                       className="text-indigo-400 hover:text-indigo-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
                       title="Collapse all categories"
                     >
                       <ChevronUp size={16} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        expandAllDasherCategories();
+                      }}
+                      className="text-indigo-400 hover:text-indigo-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
+                      title="Expand all categories"
+                    >
+                      <ChevronDown size={16} />
                     </button>
                   </div>
                 )}
@@ -2541,20 +2541,20 @@ const EnhancedCalculator = () => {
                 {/* Expand/Collapse All Buttons */}
                 <div className="flex items-center justify-end gap-2 px-4 pt-3 pb-1">
                   <button
-                    onClick={expandAllDashers}
-                    className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-700/50 transition-colors"
-                    title="Expand all dashers"
-                  >
-                    <ChevronDown size={12} />
-                    Expand All
-                  </button>
-                  <button
                     onClick={collapseAllDashers}
                     className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-700/50 transition-colors"
                     title="Collapse all dashers"
                   >
                     <ChevronUp size={12} />
                     Collapse All
+                  </button>
+                  <button
+                    onClick={expandAllDashers}
+                    className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-700/50 transition-colors"
+                    title="Expand all dashers"
+                  >
+                    <ChevronDown size={12} />
+                    Expand All
                   </button>
                 </div>
                 <div className="p-4 pt-2 space-y-3">
@@ -2586,22 +2586,22 @@ const EnhancedCalculator = () => {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  expandAllDashersInCategory(category.id);
-                                }}
-                                className="text-indigo-400 hover:text-indigo-300 p-1"
-                                title="Expand all dashers in this category"
-                              >
-                                <ChevronsDown size={14} />
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
                                   collapseAllDashersInCategory(category.id);
                                 }}
                                 className="text-indigo-400 hover:text-indigo-300 p-1"
                                 title="Collapse all dashers in this category"
                               >
                                 <ChevronsUp size={14} />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  expandAllDashersInCategory(category.id);
+                                }}
+                                className="text-indigo-400 hover:text-indigo-300 p-1"
+                                title="Expand all dashers in this category"
+                              >
+                                <ChevronsDown size={14} />
                               </button>
                               <div className="w-px h-4 bg-gray-600 mx-1" />
                             </>
