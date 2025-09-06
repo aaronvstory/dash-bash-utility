@@ -1198,12 +1198,12 @@ const EnhancedCalculator = () => {
     return collapsedDashers[key] !== undefined ? collapsedDashers[key] : true;
   };
 
-  // Expand/Collapse all dasher categories AND all dashers
+  // Expand/Collapse all dashers (keep categories visible, like Store Address Book)
   const expandAllDasherCategories = () => {
-    // Expand all categories
+    // Expand all categories (make them visible)
     setCollapsedDasherCategories({});
     
-    // Expand all individual dashers
+    // Expand all individual dashers within categories
     const allDashersExpanded = {};
     dasherCategories.forEach(cat => {
       cat.dashers.forEach(dasher => {
@@ -1220,14 +1220,10 @@ const EnhancedCalculator = () => {
   };
 
   const collapseAllDasherCategories = () => {
-    // Collapse all categories
-    const allCategoriesCollapsed = {};
-    dasherCategories.forEach(cat => {
-      allCategoriesCollapsed[cat.id] = true;
-    });
-    setCollapsedDasherCategories(allCategoriesCollapsed);
+    // Keep categories expanded/visible (don't collapse them)
+    setCollapsedDasherCategories({});
     
-    // Collapse all individual dashers
+    // Collapse all individual dashers only
     const allDashersCollapsed = {};
     dasherCategories.forEach(cat => {
       cat.dashers.forEach(dasher => {
