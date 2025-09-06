@@ -1198,9 +1198,21 @@ const EnhancedCalculator = () => {
     return collapsedDashers[key] !== undefined ? collapsedDashers[key] : true;
   };
 
-  // Expand/Collapse all dasher categories
+  // Expand/Collapse all dasher categories AND all dashers
   const expandAllDasherCategories = () => {
+    // Expand all categories
     setCollapsedDasherCategories({});
+    
+    // Expand all individual dashers
+    const allDashersExpanded = {};
+    dasherCategories.forEach(cat => {
+      cat.dashers.forEach(dasher => {
+        const key = `${cat.id}-${dasher.id}`;
+        allDashersExpanded[key] = false;
+      });
+    });
+    setCollapsedDashers(allDashersExpanded);
+    
     // Auto-save after expanding all
     setTimeout(() => {
       saveAllToLocalStorage();
@@ -1208,11 +1220,23 @@ const EnhancedCalculator = () => {
   };
 
   const collapseAllDasherCategories = () => {
-    const allCollapsed = {};
+    // Collapse all categories
+    const allCategoriesCollapsed = {};
     dasherCategories.forEach(cat => {
-      allCollapsed[cat.id] = true;
+      allCategoriesCollapsed[cat.id] = true;
     });
-    setCollapsedDasherCategories(allCollapsed);
+    setCollapsedDasherCategories(allCategoriesCollapsed);
+    
+    // Collapse all individual dashers
+    const allDashersCollapsed = {};
+    dasherCategories.forEach(cat => {
+      cat.dashers.forEach(dasher => {
+        const key = `${cat.id}-${dasher.id}`;
+        allDashersCollapsed[key] = true;
+      });
+    });
+    setCollapsedDashers(allDashersCollapsed);
+    
     // Auto-save after collapsing all
     setTimeout(() => {
       saveAllToLocalStorage();
