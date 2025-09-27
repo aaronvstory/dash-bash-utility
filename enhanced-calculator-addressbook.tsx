@@ -150,6 +150,7 @@ const EnhancedCalculator = () => {
           phone: '555-0123',
           balance: '$50.00',
           crimson: false,
+          redCard: false,
           lastUsed: null,
           notes: 'This is a sample dasher for testing. Feel free to edit or delete!'
         }] 
@@ -163,6 +164,7 @@ const EnhancedCalculator = () => {
         name: 'Version Test Dasher',
         email: 'test@version.check',
         crimson: false,
+        redCard: false,
         lastUsed: null,
         notes: 'TEST DASHER - Added to verify GitHub Pages deployment'
       }] }
@@ -1072,6 +1074,7 @@ const EnhancedCalculator = () => {
       phone: '',
       balance: '',
       crimson: false,
+      redCard: false,
       lastUsed: null,
       notes: ''
     };
@@ -1392,11 +1395,11 @@ const EnhancedCalculator = () => {
     if (dasher.crimson !== undefined) {
       parts.push(<span key="sep-c"> - </span>);
       parts.push(
-        <span 
+        <span
           key="crimson"
           className={`inline-flex items-center transition-all ${
-            dasher.crimson 
-              ? 'text-red-500' 
+            dasher.crimson
+              ? 'text-red-500'
               : 'text-gray-400'  // Changed from gray-600 to gray-400 for better contrast
           }`}
           title={dasher.crimson ? 'Crimson: Yes' : 'Crimson: No'}
@@ -1405,7 +1408,25 @@ const EnhancedCalculator = () => {
         </span>
       );
     }
-    
+
+    // Red Card Indicator (after Crimson, before balance)
+    if (dasher.redCard !== undefined) {
+      parts.push(<span key="sep-r"> - </span>);
+      parts.push(
+        <span
+          key="redCard"
+          className={`inline-flex items-center transition-all ${
+            dasher.redCard
+              ? 'text-red-600'
+              : 'text-gray-400'
+          }`}
+          title={dasher.redCard ? 'Red Card: Yes' : 'Red Card: No'}
+        >
+          <span className="text-xs">R</span>
+        </span>
+      );
+    }
+
     // Balance (green if $0, red otherwise)
     if (dasher.balance) {
       const balance = dasher.balance.toString().startsWith('$') 
@@ -1839,7 +1860,7 @@ const EnhancedCalculator = () => {
                             <textarea
                               value={editText}
                               onChange={(e) => setEditText(e.target.value)}
-                              className="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-base text-white resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              className="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-base text-white resize-y min-h-[3rem] focus:outline-none focus:ring-1 focus:ring-blue-500"
                               rows={Math.max(1, editText.split('\n').length)}
                               autoFocus
                             />
@@ -1886,7 +1907,7 @@ const EnhancedCalculator = () => {
                         <textarea
                           value={newMessageText}
                           onChange={(e) => setNewMessageText(e.target.value)}
-                          className="flex-1 bg-gray-600 border border-gray-500 rounded px-2 py-1 text-base text-white resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="flex-1 bg-gray-600 border border-gray-500 rounded px-2 py-1 text-base text-white resize-y min-h-[3rem] focus:outline-none focus:ring-1 focus:ring-blue-500"
                           rows={2}
                           autoFocus
                           placeholder="Enter your new message..."
@@ -2215,7 +2236,7 @@ const EnhancedCalculator = () => {
                                     <textarea
                                       value={store.notes}
                                       onChange={(e) => updateStore(category.id, store.id, 'notes', e.target.value)}
-                                      className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                      className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white resize-y min-h-[2rem] focus:outline-none focus:ring-1 focus:ring-blue-500"
                                       rows={1}
                                       placeholder="Any notes..."
                                     />
@@ -2422,7 +2443,7 @@ const EnhancedCalculator = () => {
                                         <textarea
                                           value={note}
                                           onChange={(e) => updateNote(category.id, noteIndex, e.target.value)}
-                                          className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                          className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white resize-y min-h-[4rem] focus:outline-none focus:ring-1 focus:ring-blue-500"
                                           rows={3}
                                           autoFocus
                                           placeholder="Enter your note..."
@@ -2900,6 +2921,19 @@ const EnhancedCalculator = () => {
                                       className="h-3 w-3 text-purple-500 bg-gray-700 border-gray-600 rounded focus:ring-purple-500 focus:ring-1 disabled:opacity-50"
                                     />
                                     <span className="text-xs text-gray-400">{dasher.crimson ? 'Yes' : 'No'}</span>
+                                  </div>
+
+                                  {/* Red Card Checkbox */}
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-xs text-gray-400 w-20">Red card:</label>
+                                    <input
+                                      type="checkbox"
+                                      checked={dasher.redCard || false}
+                                      onChange={(e) => updateDasher(category.id, dasher.id, 'redCard', e.target.checked)}
+                                      disabled={!isEditing}
+                                      className="h-3 w-3 text-red-500 bg-gray-700 border-gray-600 rounded focus:ring-red-500 focus:ring-1 disabled:opacity-50"
+                                    />
+                                    <span className="text-xs text-gray-400">{dasher.redCard ? 'Yes' : 'No'}</span>
                                   </div>
 
                                   {/* Last Used Timer */}
