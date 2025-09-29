@@ -8,10 +8,11 @@ Dash Bash Utility is a React-based Progressive Web App (PWA) designed for delive
 
 **Core Features:**
 - **Target Calculator**: Calculates optimal quantities to reach target dollar amounts ($99/$120/custom)
-- **Quick Messages**: Customer service templates with drag-and-drop reordering  
+- **Quick Messages**: Customer service templates with drag-and-drop reordering
 - **Address Book**: Store locations with hours tracking and real-time open/closed status
 - **Notes**: Multi-category note-taking with drag-and-drop organization
-- **Dashers**: Driver management with 24-hour countdown timers and inline editing
+- **Dashers**: Driver management with 24-hour countdown timers, inline editing, Red Card tracking
+- **Statistics**: Real-time analytics showing dasher counts and balance breakdowns
 
 ## Commands
 
@@ -107,11 +108,15 @@ EnhancedCalculator (main component)
 ├── Notes Section (right column middle-bottom)
 │   ├── Multi-category with inline renaming
 │   └── Copy buttons for all fields
-└── Dashers Section (right column bottom)
-    ├── 24-hour countdown timers (updates every second)
-    ├── Inline category renaming
-    ├── Drag-and-drop between categories
-    └── Expand/Collapse all buttons (v1.2.0+)
+├── Dashers Section (right column bottom)
+│   ├── 24-hour countdown timers (updates every second)
+│   ├── Inline category renaming
+│   ├── Drag-and-drop between categories
+│   ├── Red Card checkbox tracking
+│   └── Expand/Collapse all buttons (v1.2.0+)
+└── Statistics Section (right column bottom)
+    ├── Dasher counts per category
+    └── Balance breakdowns (active, Crimson, Red Card)
 ```
 
 ## Key Algorithms
@@ -141,12 +146,13 @@ Real-time store hours tracking:
 - Uses `timerTick` counter updating every 1000ms for efficient re-renders
 
 ### Dasher Title Display (`getDasherTitle`)
-Dynamic title generation with color coding (v1.1.5+):
+Dynamic title generation with color coding (v1.4.0+):
 - Name: Purple (default text color)
 - Email: Blue (`text-blue-400`)
 - Crimson indicator: "C" between email and balance (red when active, gray when not)
+- Red Card indicator: "R" after Crimson indicator (red when active, gray when not)
 - Balance: Green if $0 (`text-green-400`), Red otherwise (`text-red-500`)
-- Format: "Name - Email - C - Balance"
+- Format: "Name - Email - C - R - Balance"
 - Returns JSX/React.Fragment with styled spans
 
 ## localStorage Structure
@@ -208,24 +214,24 @@ const [editingNoteCategory, setEditingNoteCategory] = useState(-1);
 ### Version Update Process
 When releasing a new version, update the version number in **4 locations**:
 
-1. **service-worker.js** (Line 3):
+1. **service-worker.js** (Line 2):
    ```javascript
-   const VERSION = '1.2.0'; // Update this version number
+   const CACHE_NAME = 'dashbash-v2'; // Update version in cache name
    ```
 
 2. **index.html - Meta tag** (Line 9):
    ```html
-   <meta name="app-version" content="1.2.0">
+   <meta name="app-version" content="1.4.0">
    ```
 
-3. **index.html - JavaScript constant** (Line 72):
+3. **index.html - JavaScript constant** (Line 48):
    ```javascript
-   const APP_VERSION = '1.2.0'; // Update this with each release
+   const APP_VERSION = '1.4.0'; // Update this with each release
    ```
 
-4. **index.html - App title display** (Line 1744):
+4. **index.html - App title display** (around Line 1808):
    ```html
-   <span className="text-lg text-gray-400">v1.2.0</span>
+   <span className="text-lg text-gray-400">v1.4.0</span>
    ```
 
 ### Cache Busting Implementation
@@ -465,26 +471,35 @@ setTimeout(() => {
 - **Lazy State Init**: Heavy computations only on mount
 - **Event Delegation**: Single handlers for repeated elements
 
-## Recent Updates (v1.2.0 - January 2025)
+## Recent Updates
 
-### Expand/Collapse All Feature
+### v1.4.0 (January 2025)
+- Added Red Card checkbox feature for dashers
+- Red Card indicator "R" in dasher titles (similar to Crimson "C")
+- Statistics section with dasher counts and balance breakdowns
+- Red Card balance tracking in Statistics
+- Vertical resize support for all text areas
+- Real-time analytics for active, Crimson, and Red Card dashers
+- Balance distribution visualization
+
+### v1.3.0 (January 2025)
+- Reordered chevron buttons: collapse (up) on left, expand (down) on right
+- Improved button layout consistency across all sections
+
+### v1.2.0 (January 2025)
 - Added "Expand All" and "Collapse All" buttons for Store Address Book
 - Added "Expand All" and "Collapse All" buttons for Dashers section
 - All collapse states persist in localStorage and JSON export/import
 - Auto-save triggers after bulk operations
 
-### UI Improvements (v1.1.x series)
+### v1.1.x series
 - Color-coded dasher titles (name=purple, email=blue, balance=green/red)
 - Crimson indicator "C" positioned between email and balance
 - Fixed padding consistency to prevent layout jumps (py-0.5)
 - Timer reset with TimerOff icon (orange color)
 - Drag handle isolation to prevent accidental dragging
-
-### State Management Enhancements
 - JSON export version updated to 2.1
 - All UI collapse states included in export/import
-- Auto-save after JSON import
-- Comprehensive localStorage persistence
 
 ## GitHub Pages Deployment
 
@@ -555,7 +570,22 @@ To add new themes:
 4. Add theme toggle functionality in React component
 5. Update documentation with theme details
 
-## Testing Checklist
+## Testing
+
+### Test Files
+The repository includes test HTML files for validating specific features:
+- `test-redcard.html` - Tests Red Card checkbox feature
+- `test-dashers-enhancement.html` - Tests dasher enhancements
+- `test-collapsible-dashers.html` - Tests collapsible UI
+
+### Running Tests
+```bash
+# Open test files directly in browser
+python serve-pwa.py
+# Then navigate to http://localhost:8443/test-redcard.html
+```
+
+### Testing Checklist
 
 When making changes, verify:
 - [ ] All sections have inline editing (no popups)
@@ -564,6 +594,8 @@ When making changes, verify:
 - [ ] Drag-and-drop works within and between categories
 - [ ] localStorage saves/loads correctly
 - [ ] JSON export/import includes all data and collapse states
+- [ ] Red Card checkboxes save and restore properly
+- [ ] Statistics section updates in real-time
 - [ ] PWA installs and works offline
 - [ ] Mobile responsive layout maintained
 - [ ] Focus indicators present for accessibility
@@ -576,5 +608,5 @@ When making changes, verify:
 - [ ] Chevron icons rotate smoothly on expand/collapse
 - [ ] External stylesheet loads with version parameter
 - [ ] CSS variables apply correctly to all components
-- [ ] Theme switching works if implemented
+- [ ] Text areas support vertical resizing
 - [ ] Print styles hide appropriate elements
