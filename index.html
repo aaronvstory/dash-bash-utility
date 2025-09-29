@@ -168,6 +168,10 @@
         const Users = (props) => React.createElement(Icon, { ...props, name: 'users' });
         const TimerOff = (props) => React.createElement(Icon, { ...props, name: 'timer-off' });
         const BarChart3 = (props) => React.createElement(Icon, { ...props, name: 'bar-chart-3' });
+        const Archive = (props) => React.createElement(Icon, { ...props, name: 'archive' });
+        const ArchiveRestore = (props) => React.createElement(Icon, { ...props, name: 'archive-restore' });
+        const UserX = (props) => React.createElement(Icon, { ...props, name: 'user-x' });
+        const UserCheck = (props) => React.createElement(Icon, { ...props, name: 'user-check' });
         
         const EnhancedCalculator = () => {
             const [target, setTarget] = useState('99');
@@ -188,7 +192,8 @@
             const [collapsedCategories, setCollapsedCategories] = useState({});
             const [collapsedStores, setCollapsedStores] = useState({});
             const [collapsedDashers, setCollapsedDashers] = useState({});
-            
+            const [collapsedArchivedDashers, setCollapsedArchivedDashers] = useState({});
+
             // State management
             const [availableExports, setAvailableExports] = useState([]);
             const [importNotification, setImportNotification] = useState('');
@@ -290,6 +295,22 @@
 
             // Dashers state  
             const [isDashersOpen, setIsDashersOpen] = useState(false);
+            const [isArchivedDashersOpen, setIsArchivedDashersOpen] = useState(false);
+            const [archivedDashers, setArchivedDashers] = useState(() => {
+                // Try to load from localStorage first
+                const savedState = localStorage.getItem('dashBashState');
+                if (savedState) {
+                    try {
+                        const state = JSON.parse(savedState);
+                        if (state.archivedDashers) {
+                            return state.archivedDashers;
+                        }
+                    } catch (e) {
+                        console.error('Error loading archivedDashers from localStorage:', e);
+                    }
+                }
+                return [];
+            });
             const [dasherCategories, setDasherCategories] = useState(() => {
                 // Try to load from localStorage first
                 const savedState = localStorage.getItem('dashBashState');
@@ -319,6 +340,9 @@
                             balance: '$50.00',
                             crimson: false,
                             redCard: false,
+                            appealed: false,
+                            appealedAt: null,
+                            deactivated: false,
                             lastUsed: null,
                             notes: 'This is a sample dasher for testing. Feel free to edit or delete!'
                         }] 
@@ -366,6 +390,13 @@
                         setPrices(state.prices || []);
                         setMessages(state.messages || messages);
                         setCategories(state.categories || []);
+                        // Load archived dashers
+                        if (state.archivedDashers) {
+                            setArchivedDashers(state.archivedDashers);
+                        }
+                        if (state.collapsedArchivedDashers) {
+                            setCollapsedArchivedDashers(state.collapsedArchivedDashers);
+                        }
                         // Note: noteCategories and dasherCategories are now loaded via lazy initialization
                     } catch (e) {
                         console.error('Error loading saved state:', e);
@@ -601,11 +632,14 @@
                         categories,
                         noteCategories,
                         dasherCategories,
+                        archivedDashers,
                         collapsedCategories,
                         collapsedStores,
                         collapsedDashers,
+                        collapsedArchivedDashers,
                         collapsedDasherCategories,
                         collapsedNoteCategories,
+                        isArchivedDashersOpen,
                         timestamp: new Date().toISOString()
                     };
                     localStorage.setItem('dashBashState', JSON.stringify(state));
@@ -639,13 +673,16 @@
                         // Don't use defaults if we have saved state
                         if (state.noteCategories) setNoteCategories(state.noteCategories);
                         if (state.dasherCategories) setDasherCategories(state.dasherCategories);
-                        
+                        if (state.archivedDashers) setArchivedDashers(state.archivedDashers);
+
                         // Load collapsed states if they exist
                         if (state.collapsedCategories) setCollapsedCategories(state.collapsedCategories);
                         if (state.collapsedStores) setCollapsedStores(state.collapsedStores);
                         if (state.collapsedDashers) setCollapsedDashers(state.collapsedDashers);
+                        if (state.collapsedArchivedDashers) setCollapsedArchivedDashers(state.collapsedArchivedDashers);
                         if (state.collapsedDasherCategories) setCollapsedDasherCategories(state.collapsedDasherCategories);
                         if (state.collapsedNoteCategories) setCollapsedNoteCategories(state.collapsedNoteCategories);
+                        if (state.isArchivedDashersOpen !== undefined) setIsArchivedDashersOpen(state.isArchivedDashersOpen);
                         
                         setSaveNotification('✅ Data loaded successfully!');
                         setTimeout(() => setSaveNotification(''), 3000);
@@ -669,8 +706,16 @@
                         categories,
                         noteCategories,
                         dasherCategories,
+                        archivedDashers,
+                        collapsedCategories,
+                        collapsedStores,
+                        collapsedDashers,
+                        collapsedArchivedDashers,
+                        collapsedDasherCategories,
+                        collapsedNoteCategories,
+                        isArchivedDashersOpen,
                         exportDate: new Date().toISOString(),
-                        version: '2.0'
+                        version: '2.1'
                     };
                     
                     const dataStr = JSON.stringify(state, null, 2);
@@ -717,6 +762,17 @@
                         // Don't use defaults if we have saved state
                         if (state.noteCategories) setNoteCategories(state.noteCategories);
                         if (state.dasherCategories) setDasherCategories(state.dasherCategories);
+                        if (state.archivedDashers) setArchivedDashers(state.archivedDashers);
+
+                        // Load collapsed states if they exist
+                        if (state.collapsedCategories) setCollapsedCategories(state.collapsedCategories);
+                        if (state.collapsedStores) setCollapsedStores(state.collapsedStores);
+                        if (state.collapsedDashers) setCollapsedDashers(state.collapsedDashers);
+                        if (state.collapsedArchivedDashers) setCollapsedArchivedDashers(state.collapsedArchivedDashers);
+                        if (state.collapsedDasherCategories) setCollapsedDasherCategories(state.collapsedDasherCategories);
+                        if (state.collapsedNoteCategories) setCollapsedNoteCategories(state.collapsedNoteCategories);
+                        if (state.isArchivedDashersOpen !== undefined) setIsArchivedDashersOpen(state.isArchivedDashersOpen);
+
                         setImportNotification(`✅ Imported data from ${file.name}`);
                         setTimeout(() => setImportNotification(''), 3000);
                     } catch (err) {
@@ -1262,6 +1318,9 @@
                     balance: '',
                     crimson: false,
                     redCard: false,
+                    appealed: false,
+                    appealedAt: null,
+                    deactivated: false,
                     lastUsed: null,
                     notes: ''
                 };
@@ -1301,16 +1360,39 @@
                     }
                 }
                 
-                setDasherCategories(dasherCategories.map(cat => 
-                    cat.id === categoryId 
-                        ? {
-                            ...cat,
-                            dashers: cat.dashers.map(dasher => 
-                                dasher.id === dasherId ? { ...dasher, [field]: value } : dasher
-                            )
-                        }
-                        : cat
-                ));
+                // Special handling for appealed field to set/clear timestamp
+                if (field === 'appealed') {
+                    setDasherCategories(dasherCategories.map(cat =>
+                        cat.id === categoryId
+                            ? {
+                                ...cat,
+                                dashers: cat.dashers.map(dasher => {
+                                    if (dasher.id === dasherId) {
+                                        if (value === true) {
+                                            // Set appealedAt to current time when appealed is checked
+                                            return { ...dasher, appealed: value, appealedAt: new Date().toISOString() };
+                                        } else {
+                                            // Clear appealedAt when appealed is unchecked
+                                            return { ...dasher, appealed: value, appealedAt: null };
+                                        }
+                                    }
+                                    return dasher;
+                                })
+                            }
+                            : cat
+                    ));
+                } else {
+                    setDasherCategories(dasherCategories.map(cat =>
+                        cat.id === categoryId
+                            ? {
+                                ...cat,
+                                dashers: cat.dashers.map(dasher =>
+                                    dasher.id === dasherId ? { ...dasher, [field]: value } : dasher
+                                )
+                            }
+                            : cat
+                    ));
+                }
                 
                 // Auto-save
                 setTimeout(() => {
@@ -1319,16 +1401,153 @@
             };
 
             const deleteDasher = (categoryId, dasherId) => {
-                setDasherCategories(dasherCategories.map(cat => 
-                    cat.id === categoryId 
+                setDasherCategories(dasherCategories.map(cat =>
+                    cat.id === categoryId
                         ? { ...cat, dashers: cat.dashers.filter(dasher => dasher.id !== dasherId) }
                         : cat
                 ));
-                
+
                 // Auto-save
                 setTimeout(() => {
                     saveAllToLocalStorage();
                 }, 100);
+            };
+
+            const archiveDasher = (categoryId, dasherId) => {
+                // Find the dasher to archive
+                let dasherToArchive = null;
+                let foundCategory = dasherCategories.find(cat => {
+                    const dasher = cat.dashers.find(d => d.id === dasherId);
+                    if (dasher) {
+                        dasherToArchive = {
+                            ...dasher,
+                            originalCategory: categoryId,
+                            archivedAt: new Date().toISOString()
+                        };
+                        return true;
+                    }
+                    return false;
+                });
+
+                if (dasherToArchive) {
+                    // Add to archived dashers (newest first)
+                    setArchivedDashers([dasherToArchive, ...archivedDashers]);
+
+                    // Remove from current category
+                    setDasherCategories(dasherCategories.map(cat =>
+                        cat.id === categoryId
+                            ? { ...cat, dashers: cat.dashers.filter(d => d.id !== dasherId) }
+                            : cat
+                    ));
+
+                    // Auto-save
+                    setTimeout(() => {
+                        saveAllToLocalStorage();
+                    }, 100);
+                }
+            };
+
+            const deactivateDasher = (categoryId, dasherId) => {
+                // Simply update the deactivated field
+                updateDasher(categoryId, dasherId, 'deactivated', true);
+
+                // Find the dasher and move to Deactivated category within same section
+                const category = dasherCategories.find(cat => cat.id === categoryId);
+                if (category) {
+                    const dasherIndex = category.dashers.findIndex(d => d.id === dasherId);
+                    if (dasherIndex !== -1) {
+                        const dasher = category.dashers[dasherIndex];
+
+                        // Find or create deactivated category
+                        let deactivatedCategory = dasherCategories.find(cat => cat.id === 'deactivated');
+
+                        if (deactivatedCategory) {
+                            // Remove from current category
+                            const newCategories = dasherCategories.map(cat => {
+                                if (cat.id === categoryId) {
+                                    return {
+                                        ...cat,
+                                        dashers: cat.dashers.filter(d => d.id !== dasherId)
+                                    };
+                                } else if (cat.id === 'deactivated') {
+                                    return {
+                                        ...cat,
+                                        dashers: [...cat.dashers, { ...dasher, deactivated: true }]
+                                    };
+                                }
+                                return cat;
+                            });
+                            setDasherCategories(newCategories);
+                        }
+
+                        // Auto-save after deactivation
+                        setTimeout(() => {
+                            saveAllToLocalStorage();
+                        }, 100);
+                    }
+                }
+            };
+
+            const reactivateDasher = (dasherId) => {
+                // Find the deactivated dasher
+                const deactivatedCategory = dasherCategories.find(cat => cat.id === 'deactivated');
+                if (deactivatedCategory) {
+                    const dasher = deactivatedCategory.dashers.find(d => d.id === dasherId);
+                    if (dasher) {
+                        // Move back to main category
+                        const mainCategory = dasherCategories.find(cat => cat.id === 'main');
+                        if (mainCategory) {
+                            const newCategories = dasherCategories.map(cat => {
+                                if (cat.id === 'deactivated') {
+                                    return {
+                                        ...cat,
+                                        dashers: cat.dashers.filter(d => d.id !== dasherId)
+                                    };
+                                } else if (cat.id === 'main') {
+                                    return {
+                                        ...cat,
+                                        dashers: [...cat.dashers, { ...dasher, deactivated: false }]
+                                    };
+                                }
+                                return cat;
+                            });
+                            setDasherCategories(newCategories);
+
+                            // Auto-save
+                            setTimeout(() => {
+                                saveAllToLocalStorage();
+                            }, 100);
+                        }
+                    }
+                }
+            };
+
+            const unarchiveDasher = (dasherId) => {
+                const archivedDasher = archivedDashers.find(d => d.id === dasherId);
+                if (archivedDasher) {
+                    const { originalCategory, archivedAt, ...dasherData } = archivedDasher;
+
+                    // Check if original category still exists
+                    const categoryExists = dasherCategories.some(cat => cat.id === originalCategory);
+                    const targetCategory = categoryExists ? originalCategory : dasherCategories[0]?.id;
+
+                    if (targetCategory) {
+                        // Add back to the category
+                        setDasherCategories(dasherCategories.map(cat =>
+                            cat.id === targetCategory
+                                ? { ...cat, dashers: [...cat.dashers, dasherData] }
+                                : cat
+                        ));
+
+                        // Remove from archived
+                        setArchivedDashers(archivedDashers.filter(d => d.id !== dasherId));
+
+                        // Auto-save
+                        setTimeout(() => {
+                            saveAllToLocalStorage();
+                        }, 100);
+                    }
+                }
             };
 
             const toggleEditDasher = (categoryId, dasherId) => {
@@ -1367,6 +1586,24 @@
                 }, 100);
             };
 
+            const resetAppealedTimer = (categoryId, dasherId) => {
+                // Reset appealedAt without changing appealed status
+                setDasherCategories(dasherCategories.map(cat =>
+                    cat.id === categoryId
+                        ? {
+                            ...cat,
+                            dashers: cat.dashers.map(dasher =>
+                                dasher.id === dasherId ? { ...dasher, appealedAt: null } : dasher
+                            )
+                        }
+                        : cat
+                ));
+                // Auto-save after timer reset
+                setTimeout(() => {
+                    saveAllToLocalStorage();
+                }, 100);
+            };
+
             const toggleDasherCollapse = (categoryId, dasherId) => {
                 const key = categoryId + '-' + dasherId;
                 setCollapsedDashers(prev => ({
@@ -1379,6 +1616,59 @@
                 const key = categoryId + '-' + dasherId;
                 // Default to collapsed (true) if no saved state exists
                 return collapsedDashers[key] !== undefined ? collapsedDashers[key] : true;
+            };
+
+            const calculateAppealedTimeStatus = (appealedAtTime) => {
+                if (!appealedAtTime) return null;
+
+                const appealedAt = new Date(appealedAtTime);
+                const now = new Date();
+                const diffMs = now - appealedAt;
+                const diffHours = diffMs / (1000 * 60 * 60);
+                const diffMinutes = Math.floor((diffMs / (1000 * 60)) % 60);
+                const diffSeconds = Math.floor((diffMs / 1000) % 60);
+                const diffDays = Math.floor(diffHours / 24);
+
+                // Format the date/time details
+                const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                const dayName = days[appealedAt.getDay()];
+                const month = (appealedAt.getMonth() + 1).toString().padStart(2, '0');
+                const date = appealedAt.getDate().toString().padStart(2, '0');
+                const hours = appealedAt.getHours().toString().padStart(2, '0');
+                const minutes = appealedAt.getMinutes().toString().padStart(2, '0');
+                const seconds = appealedAt.getSeconds().toString().padStart(2, '0');
+
+                if (diffDays > 0) {
+                    // Show days and hours if more than 24 hours
+                    const remainingHours = Math.floor(diffHours % 24);
+                    return {
+                        text: `${diffDays}d ${remainingHours}h ago`,
+                        fullDate: `${dayName} ${month}/${date} ${hours}:${minutes}:${seconds}`,
+                        color: 'text-purple-400' // Purple for appealed timer
+                    };
+                } else if (diffHours >= 1) {
+                    // Show hours and minutes
+                    const wholeHours = Math.floor(diffHours);
+                    return {
+                        text: `${wholeHours}h ${diffMinutes}m ago`,
+                        fullDate: `${dayName} ${month}/${date} ${hours}:${minutes}:${seconds}`,
+                        color: 'text-purple-400'
+                    };
+                } else if (diffMinutes >= 1) {
+                    // Show minutes and seconds
+                    return {
+                        text: `${diffMinutes}m ${diffSeconds}s ago`,
+                        fullDate: `${dayName} ${month}/${date} ${hours}:${minutes}:${seconds}`,
+                        color: 'text-purple-400'
+                    };
+                } else {
+                    // Show seconds only
+                    return {
+                        text: `${diffSeconds}s ago`,
+                        fullDate: `${dayName} ${month}/${date} ${hours}:${minutes}:${seconds}`,
+                        color: 'text-purple-400'
+                    };
+                }
             };
 
             const calculateDasherTimeStatus = (lastUsedTime) => {
@@ -1491,6 +1781,34 @@
                     }, React.createElement('span', { className: 'text-xs' }, 'R')));
                 }
 
+                // Appealed Indicator (after Red Card)
+                if (dasher.appealed !== undefined) {
+                    parts.push(React.createElement('span', { key: 'sep-a' }, ' - '));
+                    parts.push(React.createElement('span', {
+                        key: 'appealed',
+                        className: `inline-flex items-center transition-all ${
+                            dasher.appealed
+                                ? 'text-yellow-500'
+                                : 'text-gray-400'
+                        }`,
+                        title: dasher.appealed ? 'Appealed: Yes' : 'Appealed: No'
+                    }, React.createElement('span', { className: 'text-xs' }, 'A')));
+                }
+
+                // Deactivated Indicator (after Appealed)
+                if (dasher.deactivated !== undefined) {
+                    parts.push(React.createElement('span', { key: 'sep-d' }, ' - '));
+                    parts.push(React.createElement('span', {
+                        key: 'deactivated',
+                        className: `inline-flex items-center transition-all ${
+                            dasher.deactivated
+                                ? 'text-orange-500'
+                                : 'text-gray-400'
+                        }`,
+                        title: dasher.deactivated ? 'Deactivated: Yes' : 'Deactivated: No'
+                    }, React.createElement('span', { className: 'text-xs' }, 'D')));
+                }
+
                 // Balance (green if $0, red otherwise)
                 if (dasher.balance) {
                     const balance = dasher.balance.toString().startsWith('$') 
@@ -1579,6 +1897,44 @@
                 setTimeout(() => {
                     saveAllToLocalStorage();
                 }, 100);
+            };
+
+            // Archived Dasher Collapse Functions
+            const toggleArchivedDasherCollapse = (dasherId) => {
+                const newCollapsed = { ...collapsedArchivedDashers };
+                if (newCollapsed[dasherId]) {
+                    delete newCollapsed[dasherId];
+                } else {
+                    newCollapsed[dasherId] = true;
+                }
+                setCollapsedArchivedDashers(newCollapsed);
+
+                // Auto-save
+                setTimeout(() => {
+                    saveAllToLocalStorage();
+                }, 100);
+            };
+
+            const expandAllArchivedDashers = () => {
+                setCollapsedArchivedDashers({});
+                setTimeout(() => {
+                    saveAllToLocalStorage();
+                }, 100);
+            };
+
+            const collapseAllArchivedDashers = () => {
+                const allCollapsed = {};
+                archivedDashers.forEach(dasher => {
+                    allCollapsed[dasher.id] = true;
+                });
+                setCollapsedArchivedDashers(allCollapsed);
+                setTimeout(() => {
+                    saveAllToLocalStorage();
+                }, 100);
+            };
+
+            const isArchivedDasherCollapsed = (dasherId) => {
+                return collapsedArchivedDashers[dasherId] || false;
             };
 
             // Expand/Collapse all for Dashers
@@ -2911,13 +3267,37 @@
                                                                                 <button
                                                                                     onClick={() => toggleEditDasher(category.id, dasher.id)}
                                                                                     className={`p-1 transition-colors ${
-                                                                                        isEditing 
-                                                                                            ? 'text-green-400 hover:text-green-300' 
+                                                                                        isEditing
+                                                                                            ? 'text-green-400 hover:text-green-300'
                                                                                             : 'text-yellow-400 hover:text-yellow-300'
                                                                                     }`}
                                                                                     title={isEditing ? 'Save changes' : 'Edit dasher'}
                                                                                 >
                                                                                     {isEditing ? <Check size={14} /> : <Edit2 size={14} />}
+                                                                                </button>
+                                                                                {category.id === 'deactivated' ? (
+                                                                                    <button
+                                                                                        onClick={() => reactivateDasher(dasher.id)}
+                                                                                        className="text-green-400 hover:text-green-300 p-1"
+                                                                                        title="Reactivate dasher"
+                                                                                    >
+                                                                                        <UserCheck size={14} />
+                                                                                    </button>
+                                                                                ) : (
+                                                                                    <button
+                                                                                        onClick={() => deactivateDasher(category.id, dasher.id)}
+                                                                                        className="text-orange-400 hover:text-orange-300 p-1"
+                                                                                        title="Deactivate dasher"
+                                                                                    >
+                                                                                        <UserX size={14} />
+                                                                                    </button>
+                                                                                )}
+                                                                                <button
+                                                                                    onClick={() => archiveDasher(category.id, dasher.id)}
+                                                                                    className="text-amber-400 hover:text-amber-300 p-1"
+                                                                                    title="Archive dasher"
+                                                                                >
+                                                                                    <Archive size={14} />
                                                                                 </button>
                                                                                 <button
                                                                                     onClick={() => deleteDasher(category.id, dasher.id)}
@@ -3132,6 +3512,48 @@
                                                                                 <span className="text-xs text-gray-400">{dasher.redCard ? 'Yes' : 'No'}</span>
                                                                             </div>
 
+                                                                            {/* Appealed Checkbox */}
+                                                                            <div className="flex items-center gap-2">
+                                                                                <label className="text-xs text-gray-400 w-20">Appealed:</label>
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    checked={dasher.appealed || false}
+                                                                                    onChange={(e) => updateDasher(category.id, dasher.id, 'appealed', e.target.checked)}
+                                                                                    disabled={!isEditing}
+                                                                                    className="h-3 w-3 text-yellow-500 bg-gray-700 border-gray-600 rounded focus:ring-yellow-500 focus:ring-1 disabled:opacity-50"
+                                                                                />
+                                                                                <span className="text-xs text-gray-400">{dasher.appealed ? 'Yes' : 'No'}</span>
+                                                                            </div>
+
+                                                                            {/* Appealed Timer */}
+                                                                            {dasher.appealed && dasher.appealedAt && (
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <label className="text-xs text-gray-400 w-20">Appealed at:</label>
+                                                                                    <div className="flex-1 text-xs">
+                                                                                        {(() => {
+                                                                                            const appealedStatus = calculateAppealedTimeStatus(dasher.appealedAt);
+                                                                                            return appealedStatus ? (
+                                                                                                <span className="flex items-center gap-1">
+                                                                                                    <span className={appealedStatus.color} title={appealedStatus.fullDate}>
+                                                                                                        {appealedStatus.text}
+                                                                                                    </span>
+                                                                                                    <button
+                                                                                                        onClick={() => resetAppealedTimer(category.id, dasher.id)}
+                                                                                                        className="text-purple-400 hover:text-purple-300 p-0.5"
+                                                                                                        title="Reset appealed timer"
+                                                                                                        disabled={!isEditing}
+                                                                                                    >
+                                                                                                        <TimerOff size={12} />
+                                                                                                    </button>
+                                                                                                </span>
+                                                                                            ) : (
+                                                                                                <span className="text-gray-400">Not tracked</span>
+                                                                                            );
+                                                                                        })()}
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+
                                                                             {/* Last Used Timer */}
                                                                             <div className="flex items-center gap-2">
                                                                                 <label className="text-xs text-gray-400 w-20">Last used:</label>
@@ -3205,6 +3627,323 @@
                                             <Plus size={14} />
                                             Add New Category
                                         </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Dashers - Archived Section */}
+                            <div className="bg-gray-800 rounded-lg overflow-hidden">
+                                <button
+                                    onClick={() => setIsArchivedDashersOpen(!isArchivedDashersOpen)}
+                                    className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Archive size={20} className="text-amber-400" />
+                                        <span className="text-lg font-medium">
+                                            Dashers - Archived {archivedDashers.length > 0 && `(${archivedDashers.length})`}
+                                        </span>
+                                        {isArchivedDashersOpen && archivedDashers.length > 0 && (
+                                            <div className="flex items-center gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        collapseAllArchivedDashers();
+                                                    }}
+                                                    className="text-gray-400 hover:text-gray-300 p-0.5"
+                                                    title="Collapse all archived dashers"
+                                                >
+                                                    <ChevronUp size={14} />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        expandAllArchivedDashers();
+                                                    }}
+                                                    className="text-gray-400 hover:text-gray-300 p-0.5"
+                                                    title="Expand all archived dashers"
+                                                >
+                                                    <ChevronDown size={14} />
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                    {isArchivedDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                </button>
+
+                                {isArchivedDashersOpen && (
+                                    <div className="border-t border-gray-700 p-4 space-y-3">
+                                        {archivedDashers.length === 0 ? (
+                                            <p className="text-sm text-gray-400 text-center py-4">No archived dashers</p>
+                                        ) : (
+                                            archivedDashers.map((dasher) => {
+                                                const timeStatus = calculateDasherTimeStatus(dasher.lastUsed);
+                                                const dasherTitle = getDasherTitle(dasher);
+                                                const isCollapsed = isArchivedDasherCollapsed(dasher.id);
+                                                const archivedDate = new Date(dasher.archivedAt);
+                                                const formattedArchiveDate = archivedDate.toLocaleString('en-US', {
+                                                    month: 'short',
+                                                    day: 'numeric',
+                                                    year: 'numeric',
+                                                    hour: 'numeric',
+                                                    minute: '2-digit',
+                                                    hour12: true
+                                                });
+
+                                                return (
+                                                    <div
+                                                        key={dasher.id}
+                                                        className="bg-gray-600/50 rounded-lg overflow-hidden border border-gray-500/30"
+                                                    >
+                                                        {/* Archived Dasher Header */}
+                                                        <div className="flex items-center justify-between p-3">
+                                                            <div className="flex items-center gap-2 flex-1">
+                                                                <button
+                                                                    onClick={() => toggleArchivedDasherCollapse(dasher.id)}
+                                                                    className="flex items-center gap-2 flex-1 text-left"
+                                                                >
+                                                                    {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                                                                    <div className="flex-1">
+                                                                        <h5 className="font-medium text-purple-300 text-sm flex items-center gap-2">
+                                                                            {dasherTitle}
+                                                                            {dasher.lastUsed && (
+                                                                                <button
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        resetDasherLastUsed('archived', dasher.id);
+                                                                                    }}
+                                                                                    className="text-orange-400 hover:text-orange-300 p-0.5"
+                                                                                    title="Reset timer"
+                                                                                    style={{ display: timeStatus.showResetButton ? 'inline-flex' : 'none' }}
+                                                                                >
+                                                                                    <TimerOff size={12} />
+                                                                                </button>
+                                                                            )}
+                                                                        </h5>
+                                                                        <p className="text-xs text-amber-400/70 mt-1">
+                                                                            Archived: {formattedArchiveDate}
+                                                                        </p>
+                                                                    </div>
+                                                                </button>
+                                                            </div>
+                                                            <div className="flex items-center gap-1">
+                                                                <button
+                                                                    onClick={() => unarchiveDasher(dasher.id)}
+                                                                    className="text-green-400 hover:text-green-300 p-1"
+                                                                    title="Restore dasher"
+                                                                >
+                                                                    <ArchiveRestore size={14} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        // Delete archived dasher
+                                                                        setArchivedDashers(archivedDashers.filter(d => d.id !== dasher.id));
+                                                                        setTimeout(() => saveAllToLocalStorage(), 100);
+                                                                    }}
+                                                                    className="text-red-400 hover:text-red-300 p-1"
+                                                                    title="Delete dasher"
+                                                                >
+                                                                    <Trash2 size={14} />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Dasher Details - Expandable */}
+                                                        {!isCollapsed && (
+                                                            <div className="space-y-2 p-3 pt-0 border-t border-gray-600/30">
+                                                            {/* Name */}
+                                                            <div className="flex items-center gap-2">
+                                                                <label className="text-xs text-gray-400 w-20">Name:</label>
+                                                                <div className="flex-1 text-xs text-gray-200">
+                                                                    {dasher.name || <span className="italic text-gray-500">No name</span>}
+                                                                </div>
+                                                                {dasher.name && (
+                                                                    <button
+                                                                        onClick={() => copyToClipboard(dasher.name)}
+                                                                        className="text-blue-400 hover:text-blue-300 p-1"
+                                                                        title="Copy name"
+                                                                    >
+                                                                        <Copy size={12} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Email */}
+                                                            <div className="flex items-center gap-2">
+                                                                <label className="text-xs text-gray-400 w-20">Email:</label>
+                                                                <div className="flex-1 text-xs text-blue-300">
+                                                                    {dasher.email || <span className="italic text-gray-500">No email</span>}
+                                                                </div>
+                                                                {dasher.email && (
+                                                                    <button
+                                                                        onClick={() => copyToClipboard(dasher.email)}
+                                                                        className="text-blue-400 hover:text-blue-300 p-1"
+                                                                        title="Copy email"
+                                                                    >
+                                                                        <Copy size={12} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Email Password */}
+                                                            <div className="flex items-center gap-2">
+                                                                <label className="text-xs text-gray-400 w-20">Email PW:</label>
+                                                                <div className="flex-1 text-xs text-gray-200 font-mono">
+                                                                    {dasher.emailPw || <span className="italic text-gray-500">No password</span>}
+                                                                </div>
+                                                                {dasher.emailPw && (
+                                                                    <button
+                                                                        onClick={() => copyToClipboard(dasher.emailPw)}
+                                                                        className="text-blue-400 hover:text-blue-300 p-1"
+                                                                        title="Copy email password"
+                                                                    >
+                                                                        <Copy size={12} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Dasher Password */}
+                                                            <div className="flex items-center gap-2">
+                                                                <label className="text-xs text-gray-400 w-20">Dasher PW:</label>
+                                                                <div className="flex-1 text-xs text-gray-200 font-mono">
+                                                                    {dasher.dasherPw || <span className="italic text-gray-500">No password</span>}
+                                                                </div>
+                                                                {dasher.dasherPw && (
+                                                                    <button
+                                                                        onClick={() => copyToClipboard(dasher.dasherPw)}
+                                                                        className="text-blue-400 hover:text-blue-300 p-1"
+                                                                        title="Copy dasher password"
+                                                                    >
+                                                                        <Copy size={12} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Phone */}
+                                                            <div className="flex items-center gap-2">
+                                                                <label className="text-xs text-gray-400 w-20">Phone:</label>
+                                                                <div className="flex-1 text-xs text-gray-200">
+                                                                    {dasher.phone || <span className="italic text-gray-500">No phone</span>}
+                                                                </div>
+                                                                {dasher.phone && (
+                                                                    <button
+                                                                        onClick={() => copyToClipboard(dasher.phone)}
+                                                                        className="text-blue-400 hover:text-blue-300 p-1"
+                                                                        title="Copy phone"
+                                                                    >
+                                                                        <Copy size={12} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Balance */}
+                                                            <div className="flex items-center gap-2">
+                                                                <label className="text-xs text-gray-400 w-20">Balance:</label>
+                                                                <div className={`flex-1 text-xs font-medium ${dasher.balance && parseFloat(dasher.balance.replace(/[$,]/g, '')) !== 0 ? 'text-red-500' : 'text-green-400'}`}>
+                                                                    ${dasher.balance || '0.00'}
+                                                                </div>
+                                                                {dasher.balance && (
+                                                                    <button
+                                                                        onClick={() => copyToClipboard(dasher.balance)}
+                                                                        className="text-blue-400 hover:text-blue-300 p-1"
+                                                                        title="Copy balance"
+                                                                    >
+                                                                        <Copy size={12} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Crimson and Red Card Status */}
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="flex items-center gap-2">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={dasher.crimson || false}
+                                                                        readOnly
+                                                                        className="w-3.5 h-3.5 text-red-500 bg-gray-700 border-gray-600 rounded focus:ring-red-500 focus:ring-1"
+                                                                    />
+                                                                    <label className="text-xs text-gray-400">Crimson</label>
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={dasher.redCard || false}
+                                                                        readOnly
+                                                                        className="w-3.5 h-3.5 text-red-600 bg-gray-700 border-gray-600 rounded focus:ring-red-600 focus:ring-1"
+                                                                    />
+                                                                    <label className="text-xs text-gray-400">Red Card</label>
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={dasher.appealed || false}
+                                                                        readOnly
+                                                                        className="w-3.5 h-3.5 text-yellow-500 bg-gray-700 border-gray-600 rounded focus:ring-yellow-500 focus:ring-1"
+                                                                    />
+                                                                    <label className="text-xs text-gray-400">Appealed</label>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Appealed Timer for Archived Dashers */}
+                                                            {dasher.appealed && dasher.appealedAt && (
+                                                                <div className="flex items-center gap-2 mt-1">
+                                                                    <label className="text-xs text-gray-400 w-20">Appealed at:</label>
+                                                                    <div className="flex-1 text-xs">
+                                                                        {(() => {
+                                                                            const appealedStatus = calculateAppealedTimeStatus(dasher.appealedAt);
+                                                                            return appealedStatus ? (
+                                                                                <span className={appealedStatus.color} title={appealedStatus.fullDate}>
+                                                                                    {appealedStatus.text}
+                                                                                </span>
+                                                                            ) : (
+                                                                                <span className="text-gray-400">Not tracked</span>
+                                                                            );
+                                                                        })()}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Last Used Timer */}
+                                                            <div className="flex items-center gap-2">
+                                                                <label className="text-xs text-gray-400 w-20">Last Used:</label>
+                                                                <div className="flex-1">
+                                                                    {dasher.lastUsed ? (
+                                                                        timeStatus.isActive ? (
+                                                                            <span className={`text-xs font-mono ${timeStatus.color}`}>
+                                                                                {timeStatus.display}
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className="text-xs text-gray-500">
+                                                                                {timeStatus.fullDateTime}
+                                                                            </span>
+                                                                        )
+                                                                    ) : (
+                                                                        <span className="italic text-gray-500 text-xs">Timer not started</span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Notes - Expandable */}
+                                                            <div className="flex items-start gap-2">
+                                                                <label className="text-xs text-gray-400 w-20 mt-1">Notes:</label>
+                                                                <div className="flex-1 text-xs text-gray-200 whitespace-pre-wrap">
+                                                                    {dasher.notes || <span className="italic text-gray-500">No notes</span>}
+                                                                </div>
+                                                                {dasher.notes && (
+                                                                    <button
+                                                                        onClick={() => copyToClipboard(dasher.notes)}
+                                                                        className="text-blue-400 hover:text-blue-300 p-1 self-start"
+                                                                        title="Copy notes"
+                                                                    >
+                                                                        <Copy size={12} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })
+                                        )}
                                     </div>
                                 )}
                             </div>
