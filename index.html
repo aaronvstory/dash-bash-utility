@@ -1781,21 +1781,7 @@
                     }, React.createElement('span', { className: 'text-xs' }, 'R')));
                 }
 
-                // Appealed Indicator (after Red Card)
-                if (dasher.appealed !== undefined) {
-                    parts.push(React.createElement('span', { key: 'sep-a' }, ' - '));
-                    parts.push(React.createElement('span', {
-                        key: 'appealed',
-                        className: `inline-flex items-center transition-all ${
-                            dasher.appealed
-                                ? 'text-yellow-500'
-                                : 'text-gray-400'
-                        }`,
-                        title: dasher.appealed ? 'Appealed: Yes' : 'Appealed: No'
-                    }, React.createElement('span', { className: 'text-xs' }, 'A')));
-                }
-
-                // Deactivated Indicator (after Appealed)
+                // Deactivated Indicator (after Red Card)
                 if (dasher.deactivated !== undefined) {
                     parts.push(React.createElement('span', { key: 'sep-d' }, ' - '));
                     parts.push(React.createElement('span', {
@@ -1807,6 +1793,20 @@
                         }`,
                         title: dasher.deactivated ? 'Deactivated: Yes' : 'Deactivated: No'
                     }, React.createElement('span', { className: 'text-xs' }, 'D')));
+                }
+
+                // Appealed Indicator (after Deactivated)
+                if (dasher.appealed !== undefined) {
+                    parts.push(React.createElement('span', { key: 'sep-a' }, ' - '));
+                    parts.push(React.createElement('span', {
+                        key: 'appealed',
+                        className: `inline-flex items-center transition-all ${
+                            dasher.appealed
+                                ? 'text-yellow-500'
+                                : 'text-gray-400'
+                        }`,
+                        title: dasher.appealed ? 'Appealed: Yes' : 'Appealed: No'
+                    }, React.createElement('span', { className: 'text-xs' }, 'A')));
                 }
 
                 // Balance (green if $0, red otherwise)
