@@ -162,6 +162,7 @@
         const Download = (props) => React.createElement(Icon, { ...props, name: 'download' });
         const Upload = (props) => React.createElement(Icon, { ...props, name: 'upload' });
         const RefreshCw = (props) => React.createElement(Icon, { ...props, name: 'refresh-cw' });
+        const CheckSquare = (props) => React.createElement(Icon, { ...props, name: 'check-square' });
         const FolderOpen = (props) => React.createElement(Icon, { ...props, name: 'folder-open' });
         const FileText = (props) => React.createElement(Icon, { ...props, name: 'file-text' });
         const Timer = (props) => React.createElement(Icon, { ...props, name: 'timer' });
@@ -193,6 +194,19 @@
             const [collapsedStores, setCollapsedStores] = useState({});
             const [collapsedDashers, setCollapsedDashers] = useState({});
             const [collapsedArchivedDashers, setCollapsedArchivedDashers] = useState({});
+
+            // Edit Mode and Selection state
+            const [isEditMode, setIsEditMode] = useState(false);
+            const [selectedItems, setSelectedItems] = useState({
+                dashers: new Set(),        // dasher IDs
+                dasherCategories: new Set(), // dasher category IDs
+                notes: new Set(),          // note IDs (categoryId-noteIndex)
+                noteCategories: new Set(), // note category IDs
+                stores: new Set(),         // store IDs
+                storeCategories: new Set(), // store category IDs (address book)
+                messages: new Set(),       // message indices
+                archivedDashers: new Set() // archived dasher IDs
+            });
 
             // State management
             const [availableExports, setAvailableExports] = useState([]);
@@ -737,6 +751,138 @@
                 }
             };
 
+            const exportSelected = () => {
+                try {
+                    const exportData = {
+                        version: '3.0',
+                        exportType: 'selective',
+                        exportDate: new Date().toISOString(),
+
+                        // Include metadata for import handling
+                        metadata: {
+                            sourceCategoryStructure: {
+                                dasherCategories: dasherCategories.map(c => ({ id: c.id, name: c.name })),
+                                noteCategories: noteCategories.map(c => ({ id: c.id, name: c.name })),
+                                storeCategories: categories.map(c => ({ id: c.id, name: c.name }))
+                            }
+                        },
+
+                        // Only include selected data
+                        dashers: [],
+                        archivedDashers: [],
+                        notes: [],
+                        stores: [],
+                        messages: [],
+
+                        // Include full categories if all items selected
+                        fullCategories: {
+                            dasher: [],
+                            note: [],
+                            store: []
+                        }
+                    };
+
+                    // Collect selected dashers
+                    dasherCategories.forEach(cat => {
+                        const categoryDashers = cat.dashers.filter(d => selectedItems.dashers.has(d.id));
+                        if (categoryDashers.length > 0) {
+                            if (categoryDashers.length === cat.dashers.length && selectedItems.dasherCategories.has(cat.id)) {
+                                // Full category selected
+                                exportData.fullCategories.dasher.push({
+                                    ...cat,
+                                    dashers: categoryDashers
+                                });
+                            } else {
+                                // Individual dashers selected
+                                exportData.dashers.push(...categoryDashers.map(d => ({
+                                    ...d,
+                                    sourceCategoryId: cat.id,
+                                    sourceCategoryName: cat.name
+                                })));
+                            }
+                        }
+                    });
+
+                    // Collect selected archived dashers
+                    const selectedArchived = archivedDashers.filter(d => selectedItems.archivedDashers.has(d.id));
+                    exportData.archivedDashers.push(...selectedArchived);
+
+                    // Collect selected notes
+                    noteCategories.forEach(cat => {
+                        const selectedNotes = [];
+                        cat.notes.forEach((note, index) => {
+                            const noteId = `${cat.id}-${index}`;
+                            if (selectedItems.notes.has(noteId)) {
+                                selectedNotes.push(note);
+                            }
+                        });
+
+                        if (selectedNotes.length > 0) {
+                            if (selectedNotes.length === cat.notes.length && selectedItems.noteCategories.has(cat.id)) {
+                                // Full category selected
+                                exportData.fullCategories.note.push({
+                                    ...cat,
+                                    notes: selectedNotes
+                                });
+                            } else {
+                                // Individual notes selected
+                                exportData.notes.push(...selectedNotes.map(n => ({
+                                    text: n,
+                                    sourceCategoryId: cat.id,
+                                    sourceCategoryName: cat.name
+                                })));
+                            }
+                        }
+                    });
+
+                    // Collect selected stores
+                    categories.forEach(cat => {
+                        const categoryStores = cat.stores.filter(s => selectedItems.stores.has(s.id));
+                        if (categoryStores.length > 0) {
+                            if (categoryStores.length === cat.stores.length && selectedItems.storeCategories.has(cat.id)) {
+                                // Full category selected
+                                exportData.fullCategories.store.push({
+                                    ...cat,
+                                    stores: categoryStores
+                                });
+                            } else {
+                                // Individual stores selected
+                                exportData.stores.push(...categoryStores.map(s => ({
+                                    ...s,
+                                    sourceCategoryId: cat.id,
+                                    sourceCategoryName: cat.name
+                                })));
+                            }
+                        }
+                    });
+
+                    // Collect selected messages
+                    const selectedMessages = messages.filter((msg, index) => selectedItems.messages.has(index));
+                    exportData.messages.push(...selectedMessages);
+
+                    // Download the file
+                    const dataStr = JSON.stringify(exportData, null, 2);
+                    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(dataBlob);
+                    link.download = `dashbash-selected-${new Date().toISOString().split('T')[0]}.json`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                    setSaveNotification('✓ Selected items exported successfully!');
+                    setTimeout(() => setSaveNotification(''), 3000);
+
+                    // Clear selections after export
+                    clearAllSelections();
+                    setIsEditMode(false);
+                } catch (error) {
+                    console.error('Export error:', error);
+                    setSaveNotification('⚠️ Export failed!');
+                    setTimeout(() => setSaveNotification(''), 3000);
+                }
+            };
+
             const importFromJSON = (event) => {
                 const file = event.target.files[0];
                 if (!file) return;
@@ -745,37 +891,151 @@
                 reader.onload = (e) => {
                     try {
                         const state = JSON.parse(e.target.result);
-                        
-                        // Load target configuration
-                        const savedTarget = state.target || '99';
-                        const savedPreset = state.targetPreset || (savedTarget === '99' || savedTarget === '120' ? savedTarget : 'custom');
-                        
-                        setTarget(savedTarget);
-                        setTargetPreset(savedPreset);
-                        if (savedPreset === 'custom') {
-                            setCustomTarget(savedTarget);
+
+                        // Check if this is a selective export (v3.0+)
+                        if (state.version === '3.0' && state.exportType === 'selective') {
+                            // Handle selective import
+                            const timestamp = new Date().toLocaleDateString();
+
+                            // Create/update imported categories
+                            let importedDasherCategory = null;
+                            let importedNoteCategory = null;
+                            let importedStoreCategory = null;
+
+                            // Process individual dashers
+                            if (state.dashers && state.dashers.length > 0) {
+                                importedDasherCategory = {
+                                    id: 'imported-' + Date.now(),
+                                    name: 'Imported ' + timestamp,
+                                    dashers: state.dashers.map(dasher => ({
+                                        ...dasher,
+                                        id: dasher.id + '-imp-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+                                        imported: true,
+                                        importDate: new Date().toISOString()
+                                    }))
+                                };
+                            }
+
+                            // Process full dasher categories
+                            if (state.fullCategories && state.fullCategories.dasher && state.fullCategories.dasher.length > 0) {
+                                const importedCategories = state.fullCategories.dasher.map(cat => ({
+                                    ...cat,
+                                    id: cat.id + '-imp-' + Date.now(),
+                                    name: cat.name + ' (Imported)',
+                                    dashers: cat.dashers.map(dasher => ({
+                                        ...dasher,
+                                        id: dasher.id + '-imp-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+                                        imported: true,
+                                        importDate: new Date().toISOString()
+                                    }))
+                                }));
+                                setDasherCategories([...dasherCategories, ...importedCategories]);
+                            } else if (importedDasherCategory) {
+                                setDasherCategories([...dasherCategories, importedDasherCategory]);
+                            }
+
+                            // Process archived dashers
+                            if (state.archivedDashers && state.archivedDashers.length > 0) {
+                                const importedArchived = state.archivedDashers.map(dasher => ({
+                                    ...dasher,
+                                    id: dasher.id + '-imp-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+                                    imported: true,
+                                    importDate: new Date().toISOString()
+                                }));
+                                setArchivedDashers([...archivedDashers, ...importedArchived]);
+                            }
+
+                            // Process individual notes
+                            if (state.notes && state.notes.length > 0) {
+                                importedNoteCategory = {
+                                    id: 'imported-notes-' + Date.now(),
+                                    name: 'Imported Notes ' + timestamp,
+                                    notes: state.notes.map(n => n.text || n)
+                                };
+                            }
+
+                            // Process full note categories
+                            if (state.fullCategories && state.fullCategories.note && state.fullCategories.note.length > 0) {
+                                const importedCategories = state.fullCategories.note.map(cat => ({
+                                    ...cat,
+                                    id: cat.id + '-imp-' + Date.now(),
+                                    name: cat.name + ' (Imported)'
+                                }));
+                                setNoteCategories([...noteCategories, ...importedCategories]);
+                            } else if (importedNoteCategory) {
+                                setNoteCategories([...noteCategories, importedNoteCategory]);
+                            }
+
+                            // Process individual stores
+                            if (state.stores && state.stores.length > 0) {
+                                importedStoreCategory = {
+                                    id: 'imported-stores-' + Date.now(),
+                                    name: 'Imported Stores ' + timestamp,
+                                    stores: state.stores.map(store => ({
+                                        ...store,
+                                        id: store.id + '-imp-' + Date.now()
+                                    }))
+                                };
+                            }
+
+                            // Process full store categories
+                            if (state.fullCategories && state.fullCategories.store && state.fullCategories.store.length > 0) {
+                                const importedCategories = state.fullCategories.store.map(cat => ({
+                                    ...cat,
+                                    id: cat.id + '-imp-' + Date.now(),
+                                    name: cat.name + ' (Imported)',
+                                    stores: cat.stores.map(store => ({
+                                        ...store,
+                                        id: store.id + '-imp-' + Date.now()
+                                    }))
+                                }));
+                                setCategories([...categories, ...importedCategories]);
+                            } else if (importedStoreCategory) {
+                                setCategories([...categories, importedStoreCategory]);
+                            }
+
+                            // Process messages (append to existing)
+                            if (state.messages && state.messages.length > 0) {
+                                setMessages([...messages, ...state.messages]);
+                            }
+
+                            setImportNotification(`✅ Imported selected items into new categories from ${file.name}`);
+                            setTimeout(() => setImportNotification(''), 3000);
+
+                        } else {
+                            // Handle full import (backward compatibility for v2.1 and earlier)
+                            // Load target configuration
+                            const savedTarget = state.target || '99';
+                            const savedPreset = state.targetPreset || (savedTarget === '99' || savedTarget === '120' ? savedTarget : 'custom');
+
+                            setTarget(savedTarget);
+                            setTargetPreset(savedPreset);
+                            if (savedPreset === 'custom') {
+                                setCustomTarget(savedTarget);
+                            }
+
+                            setPrices(state.prices || []);
+                            setMessages(state.messages || []);
+                            setCategories(state.categories || []);
+                            // Don't use defaults if we have saved state
+                            if (state.noteCategories) setNoteCategories(state.noteCategories);
+                            if (state.dasherCategories) setDasherCategories(state.dasherCategories);
+                            if (state.archivedDashers) setArchivedDashers(state.archivedDashers);
+
+                            // Load collapsed states if they exist
+                            if (state.collapsedCategories) setCollapsedCategories(state.collapsedCategories);
+                            if (state.collapsedStores) setCollapsedStores(state.collapsedStores);
+                            if (state.collapsedDashers) setCollapsedDashers(state.collapsedDashers);
+                            if (state.collapsedArchivedDashers) setCollapsedArchivedDashers(state.collapsedArchivedDashers);
+                            if (state.collapsedDasherCategories) setCollapsedDasherCategories(state.collapsedDasherCategories);
+                            if (state.collapsedNoteCategories) setCollapsedNoteCategories(state.collapsedNoteCategories);
+                            if (state.isArchivedDashersOpen !== undefined) setIsArchivedDashersOpen(state.isArchivedDashersOpen);
+
+                            setImportNotification(`✅ Imported data from ${file.name}`);
+                            setTimeout(() => setImportNotification(''), 3000);
                         }
-                        
-                        setPrices(state.prices || []);
-                        setMessages(state.messages || []);
-                        setCategories(state.categories || []);
-                        // Don't use defaults if we have saved state
-                        if (state.noteCategories) setNoteCategories(state.noteCategories);
-                        if (state.dasherCategories) setDasherCategories(state.dasherCategories);
-                        if (state.archivedDashers) setArchivedDashers(state.archivedDashers);
-
-                        // Load collapsed states if they exist
-                        if (state.collapsedCategories) setCollapsedCategories(state.collapsedCategories);
-                        if (state.collapsedStores) setCollapsedStores(state.collapsedStores);
-                        if (state.collapsedDashers) setCollapsedDashers(state.collapsedDashers);
-                        if (state.collapsedArchivedDashers) setCollapsedArchivedDashers(state.collapsedArchivedDashers);
-                        if (state.collapsedDasherCategories) setCollapsedDasherCategories(state.collapsedDasherCategories);
-                        if (state.collapsedNoteCategories) setCollapsedNoteCategories(state.collapsedNoteCategories);
-                        if (state.isArchivedDashersOpen !== undefined) setIsArchivedDashersOpen(state.isArchivedDashersOpen);
-
-                        setImportNotification(`✅ Imported data from ${file.name}`);
-                        setTimeout(() => setImportNotification(''), 3000);
                     } catch (err) {
+                        console.error('Import error:', err);
                         setImportNotification('❌ Failed to import - invalid file format');
                         setTimeout(() => setImportNotification(''), 3000);
                     }
@@ -1897,6 +2157,69 @@
                 setTimeout(() => {
                     saveAllToLocalStorage();
                 }, 100);
+            };
+
+            // Selection Helper Functions for Edit Mode
+            const toggleItemSelection = (type, id) => {
+                setSelectedItems(prev => {
+                    const newSelected = { ...prev };
+                    const set = new Set(newSelected[type]);
+
+                    if (set.has(id)) {
+                        set.delete(id);
+                    } else {
+                        set.add(id);
+                    }
+
+                    newSelected[type] = set;
+                    return newSelected;
+                });
+            };
+
+            const toggleCategorySelection = (type, categoryId, items) => {
+                setSelectedItems(prev => {
+                    const newSelected = { ...prev };
+                    const itemSet = new Set(newSelected[type]);
+                    const categorySet = new Set(newSelected[type + 'Categories']);
+
+                    // Check if all items in category are selected
+                    const allSelected = items.every(item => itemSet.has(item));
+
+                    if (allSelected) {
+                        // Deselect all items in category
+                        items.forEach(item => itemSet.delete(item));
+                        categorySet.delete(categoryId);
+                    } else {
+                        // Select all items in category
+                        items.forEach(item => itemSet.add(item));
+                        categorySet.add(categoryId);
+                    }
+
+                    newSelected[type] = itemSet;
+                    newSelected[type + 'Categories'] = categorySet;
+                    return newSelected;
+                });
+            };
+
+            const clearAllSelections = () => {
+                setSelectedItems({
+                    dashers: new Set(),
+                    dasherCategories: new Set(),
+                    notes: new Set(),
+                    noteCategories: new Set(),
+                    stores: new Set(),
+                    storeCategories: new Set(),
+                    messages: new Set(),
+                    archivedDashers: new Set()
+                });
+            };
+
+            const getSelectionCount = () => {
+                let count = 0;
+                Object.values(selectedItems).forEach(set => {
+                    count += set.size;
+                });
+                return count;
             };
 
             // Archived Dasher Collapse Functions
@@ -3103,6 +3426,20 @@
                                                     {/* Category Header */}
                                                     <div className="flex items-center justify-between p-3 hover:bg-gray-700/60 transition-colors">
                                                         <div className="flex items-center gap-2">
+                                                            {/* Category selection checkbox (only visible in edit mode) */}
+                                                            {isEditMode && (
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={selectedItems.dasherCategories.has(category.id) ||
+                                                                             category.dashers.every(d => selectedItems.dashers.has(d.id))}
+                                                                    onChange={(e) => {
+                                                                        e.stopPropagation();
+                                                                        toggleCategorySelection('dashers', category.id, category.dashers.map(d => d.id));
+                                                                    }}
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                    className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-500 rounded focus:ring-blue-500 focus:ring-2"
+                                                                />
+                                                            )}
                                                             <button
                                                                 onClick={() => toggleDasherCategoryCollapse(category.id)}
                                                                 className="flex items-center gap-2 text-left flex-1"
@@ -3225,7 +3562,20 @@
                                                                         {/* Dasher Header */}
                                                                         <div className="flex items-center justify-between p-3">
                                                                             <div className="flex items-center gap-2 flex-1">
-                                                                                <div 
+                                                                                {/* Checkbox for selection (only visible in edit mode) */}
+                                                                                {isEditMode && (
+                                                                                    <input
+                                                                                        type="checkbox"
+                                                                                        checked={selectedItems.dashers.has(dasher.id)}
+                                                                                        onChange={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            toggleItemSelection('dashers', dasher.id);
+                                                                                        }}
+                                                                                        onClick={(e) => e.stopPropagation()}
+                                                                                        className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-500 rounded focus:ring-blue-500 focus:ring-2"
+                                                                                    />
+                                                                                )}
+                                                                                <div
                                                                                     className={`${isEditing ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 hover:text-gray-300 cursor-move'}`}
                                                                                     aria-label="Drag to reorder"
                                                                                     style={{ pointerEvents: isEditing ? 'none' : 'auto' }}
@@ -3697,6 +4047,19 @@
                                                         {/* Archived Dasher Header */}
                                                         <div className="flex items-center justify-between p-3">
                                                             <div className="flex items-center gap-2 flex-1">
+                                                                {/* Checkbox for selection (only visible in edit mode) */}
+                                                                {isEditMode && (
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={selectedItems.archivedDashers.has(dasher.id)}
+                                                                        onChange={(e) => {
+                                                                            e.stopPropagation();
+                                                                            toggleItemSelection('archivedDashers', dasher.id);
+                                                                        }}
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                        className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-500 rounded focus:ring-blue-500 focus:ring-2"
+                                                                    />
+                                                                )}
                                                                 <button
                                                                     onClick={() => toggleArchivedDasherCollapse(dasher.id)}
                                                                     className="flex items-center gap-2 flex-1 text-left"
@@ -4146,13 +4509,57 @@
                                             {/* Clear All Data */}
                                             <button
                                                 onClick={clearAllData}
-                                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 col-span-2 lg:col-span-1"
+                                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
                                             >
                                                 <Trash2 size={18} />
                                                 <span className="text-sm font-medium">Clear All</span>
                                             </button>
+
+                                            {/* Edit Mode Toggle */}
+                                            <button
+                                                onClick={() => {
+                                                    setIsEditMode(!isEditMode);
+                                                    if (isEditMode) {
+                                                        clearAllSelections();
+                                                    }
+                                                }}
+                                                className={`${isEditMode ? 'bg-orange-600 hover:bg-orange-700' : 'bg-gray-600 hover:bg-gray-700'} text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2 col-span-2 lg:col-span-1`}
+                                            >
+                                                <CheckSquare size={18} />
+                                                <span className="text-sm font-medium">{isEditMode ? 'Exit Edit Mode' : 'Edit Mode'}</span>
+                                            </button>
                                         </div>
-                                        
+
+                                        {/* Selection Toolbar - appears when in edit mode */}
+                                        {isEditMode && (
+                                            <div className="mt-4 p-3 bg-orange-600/20 border border-orange-600/30 rounded-lg">
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <div className="text-sm text-gray-300">
+                                                        <strong>{getSelectionCount()}</strong> items selected
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={clearAllSelections}
+                                                            className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded text-sm transition-colors"
+                                                        >
+                                                            Clear Selection
+                                                        </button>
+                                                        <button
+                                                            onClick={exportSelected}
+                                                            disabled={getSelectionCount() === 0}
+                                                            className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:opacity-50 text-white px-3 py-1 rounded text-sm transition-colors flex items-center gap-1"
+                                                        >
+                                                            <Download size={14} />
+                                                            Export Selected
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div className="text-xs text-gray-400">
+                                                    Select individual items or entire categories to export. Check the boxes next to items you want to include.
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {/* Instructions */}
                                         <div className="mt-4 p-3 bg-gray-700/50 rounded-lg">
                                             <h4 className="text-sm font-medium text-gray-300 mb-2">Instructions:</h4>
@@ -4162,6 +4569,7 @@
                                                 <li>• <strong>Export JSON:</strong> Downloads all data as a JSON file for backup</li>
                                                 <li>• <strong>Import JSON:</strong> Loads data from a previously exported JSON file</li>
                                                 <li>• <strong>Clear All:</strong> Resets everything to default values</li>
+                                                <li>• <strong>Edit Mode:</strong> Select specific items to export and share with others</li>
                                             </ul>
                                         </div>
                                     </div>
