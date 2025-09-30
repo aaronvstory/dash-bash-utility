@@ -1,10 +1,10 @@
 /**
  * Dash Bash Utility - Comprehensive Stylesheet
  * Version: 1.2.0
- * 
+ *
  * This stylesheet is designed for easy theming and maintainability.
  * Update CSS variables in :root to change the entire app's appearance.
- * 
+ *
  * Table of Contents:
  * 1. CSS Variables & Theming
  * 2. Base Styles & Reset
@@ -52,7 +52,7 @@
   --color-warning: #f59e0b;
   --color-error: #ef4444;
   --color-info: #3b82f6;
-  
+
   /* Section Colors */
   --color-calculator: #60a5fa;
   --color-messages: #34d399;
@@ -102,7 +102,7 @@
   /* Typography */
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-  
+
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
@@ -110,7 +110,7 @@
   --text-xl: 1.25rem;
   --text-2xl: 1.5rem;
   --text-3xl: 1.875rem;
-  
+
   --font-normal: 400;
   --font-medium: 500;
   --font-semibold: 600;
@@ -136,12 +136,52 @@
   --z-modal: 40;
   --z-toast: 50;
   --z-tooltip: 60;
+
+  /* Status Colors - Semantic */
+  --status-open: var(--color-success);
+  --status-warning: #fbbf24;
+  --status-urgent: #f97316;
+  --status-closed: #ef4444;
+  --status-elapsed: #10b981;
+
+  /* Indicator Colors - Dasher Flags */
+  --indicator-crimson: #ef4444;
+  --indicator-redcard: #dc2626;
+  --indicator-appealed: #facc15;
+  --indicator-deactivated: #fb923c;
+
+  /* --- Modern Sumi / Sakura Theme Additions (v2 experimental) --- */
+  --jp-bg-root: #0d0f12;
+  --jp-bg-panel: #161a22;
+  --jp-bg-panel-alt: linear-gradient(145deg,#1b2029 0%, #12151b 100%);
+  --jp-glass: rgba(28,34,44,0.55);
+  --jp-ink-soft: #1e2430;
+  --jp-ink-mid: #252c37;
+  --jp-ink-strong: #323b46;
+  --jp-text-hi: #e6e9ef;
+  --jp-text-med: #8a92a3;
+  --jp-text-dim: #616a79;
+  --jp-accent-indigo: #6d7dff;
+  --jp-accent-indigo-soft: #4653c7;
+  --jp-accent-sakura: #f39ac5;
+  --jp-accent-gold: #e7b868;
+  --jp-accent-matcha: #3fbf78;
+  --jp-accent-vermillion: #eb564d;
+  --jp-focus: #f39ac5;
+  --jp-ring: rgba(243,154,197,0.35);
+  --jp-shadow-sm: 0 2px 4px -2px rgba(0,0,0,.4);
+  --jp-shadow-md: 0 6px 18px -6px rgba(0,0,0,.5);
+  --jp-shadow-lg: 0 30px 60px -15px rgba(0,0,0,.55);
+  --jp-radius-sm: 6px;
+  --jp-radius-md: 12px;
+  --jp-radius-lg: 18px;
+  --jp-blur: 18px;
+  --jp-trans-fast: 120ms;
+  --jp-trans-med: 180ms;
+  --jp-trans-slow: 360ms;
 }
 
-/* Dark theme (default) */
-[data-theme="dark"] {
-  /* Already defined above as default */
-}
+/* Dark theme (default) - previously empty ruleset removed to satisfy linter */
 
 /* Light theme (future enhancement) */
 [data-theme="light"] {
@@ -182,6 +222,136 @@ body {
   background-color: var(--bg-primary);
   min-height: 100vh;
 }
+
+/* =============================
+   Experimental Theme Wrapper
+   Add class="theme-jp" to body to enable
+   ============================= */
+.theme-jp {
+  --bg-primary: var(--jp-bg-root);
+  --bg-secondary: var(--jp-bg-panel);
+  --bg-tertiary: var(--jp-ink-soft);
+  --text-primary: var(--jp-text-hi);
+  --text-secondary: var(--jp-text-med);
+  --text-tertiary: var(--jp-text-dim);
+  --border-primary: rgba(255,255,255,0.06);
+  --border-secondary: rgba(255,255,255,0.14);
+  --border-tertiary: rgba(255,255,255,0.22);
+  background: radial-gradient(circle at 25% 15%, #1d2330, #0d0f12 60%);
+  color: var(--jp-text-hi);
+}
+
+.theme-jp .app-shell {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+/* Panels */
+.theme-jp .section,
+.theme-jp .card.jp,
+.theme-jp .panel-soft {
+  background: var(--jp-bg-panel-alt);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--jp-radius-lg);
+  backdrop-filter: blur(var(--jp-blur));
+  position: relative;
+  box-shadow: var(--jp-shadow-sm);
+  transition: background var(--jp-trans-med), border-color var(--jp-trans-med), transform var(--jp-trans-fast);
+}
+
+.theme-jp .section:hover {
+  border-color: var(--border-secondary);
+}
+
+/* Section structural classes (progressive enhancement) */
+.section__header.jp {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding: 1rem 1.1rem;
+  cursor:pointer;
+  user-select:none;
+  transition: background var(--jp-trans-fast);
+}
+.theme-jp .section__header.jp:hover { background: rgba(255,255,255,0.03); }
+.theme-jp .section__body.jp { border-top:1px solid var(--border-primary); padding:1.05rem 1.1rem 1.25rem; animation: fadeIn .35s ease; }
+
+/* Buttons */
+.theme-jp .btn-jp {
+  --btn-bg: #242b35;
+  --btn-bg-hover: #2d3541;
+  --btn-text: var(--jp-text-hi);
+  --btn-border: var(--border-primary);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:.5rem;
+  font-size:.78rem;
+  font-weight:500;
+  letter-spacing:.3px;
+  padding:.6rem .95rem;
+  border:1px solid var(--btn-border);
+  border-radius: var(--jp-radius-md);
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  transition: background var(--jp-trans-fast), border-color var(--jp-trans-fast), color var(--jp-trans-fast), transform var(--jp-trans-fast);
+}
+.theme-jp .btn-jp:hover { background: var(--btn-bg-hover); border-color: var(--border-secondary); }
+.theme-jp .btn-jp:active { transform:scale(.97); }
+.theme-jp .btn-primary-jp { --btn-bg: linear-gradient(145deg,#5662ff,#3943cb); --btn-bg-hover: linear-gradient(145deg,#6873ff,#4550d6); --btn-border: rgba(255,255,255,0.15); }
+.theme-jp .btn-accent-jp { --btn-bg: linear-gradient(120deg,#f39ac5,#e7b868); --btn-bg-hover: linear-gradient(120deg,#ffb3d4,#f4c982); --btn-text:#1a1f27; }
+.theme-jp .btn-danger-jp { --btn-bg:#3a1717; --btn-bg-hover:#4a1d1d; --btn-text:#ffb1b1; --btn-border:#522626; }
+.theme-jp .btn-ghost-jp { --btn-bg:rgba(255,255,255,0.04); --btn-bg-hover:rgba(255,255,255,0.07); }
+.theme-jp .btn-outline-jp { background:transparent; border:1px solid var(--border-primary); }
+
+/* Inputs */
+.theme-jp .input-jp {
+  background:#1e242d;
+  border:1px solid var(--border-primary);
+  color:var(--jp-text-hi);
+  padding:.55rem .75rem;
+  font-size:.78rem;
+  border-radius: var(--jp-radius-md);
+  font-family:inherit;
+  transition: border-color var(--jp-trans-fast), background var(--jp-trans-fast);
+}
+.theme-jp .input-jp:focus { outline:none; border-color: var(--jp-accent-sakura); background:#222a34; box-shadow:0 0 0 3px var(--jp-ring); }
+.theme-jp .input-mono { font-family: 'JetBrains Mono', 'Source Code Pro', monospace; letter-spacing:.5px; }
+
+/* List Rows */
+.theme-jp .row-jp {
+  background:rgba(255,255,255,0.03);
+  border:1px solid var(--border-primary);
+  border-radius: var(--jp-radius-md);
+  padding:.65rem .75rem;
+  transition: background var(--jp-trans-fast), border-color var(--jp-trans-fast), transform var(--jp-trans-fast);
+}
+.theme-jp .row-jp:hover { background:rgba(255,255,255,0.06); border-color:var(--border-secondary); }
+.theme-jp .row-gradient { background:linear-gradient(120deg,rgba(99,110,255,0.12),rgba(243,154,197,0.10)); border:1px solid rgba(255,255,255,0.09); }
+.theme-jp .row-danger { background:rgba(150,40,40,0.12); border-color:rgba(180,60,60,0.35); }
+
+/* Badges */
+.theme-jp .badge-jp { display:inline-flex; align-items:center; font-size:.55rem; text-transform:uppercase; padding:2px 6px 3px; letter-spacing:.8px; border-radius: 999px; font-weight:600; background:rgba(255,255,255,0.08); color:var(--jp-text-dim); border:1px solid rgba(255,255,255,0.08); }
+.theme-jp .badge-accent { background: var(--jp-accent-indigo-soft); color:#fff; }
+.theme-jp .badge-sakura { background: var(--jp-accent-sakura); color:#252a33; }
+.theme-jp .badge-warn { background:#4a3218; color:var(--jp-accent-gold); }
+.theme-jp .badge-danger { background:#492022; color:#ff9c9c; }
+.theme-jp .badge-success { background:#1f3e2c; color:#55d693; }
+
+/* Toasts */
+.theme-jp .toast-jp { background: linear-gradient(135deg,#1d262f,#13191f); border:1px solid var(--border-secondary); padding:.85rem 1rem; border-radius: var(--jp-radius-lg); box-shadow: var(--jp-shadow-md); display:flex; gap:.75rem; font-size:.75rem; animation:toastSlide .4s ease; }
+.theme-jp .toast-success { border-color:#2a5f47; background:linear-gradient(135deg,#1a3c2c,#14231c); color:#7be2b1; }
+.theme-jp .toast-error { border-color:#5f2a32; background:linear-gradient(135deg,#34171b,#221214); color:#ffb4b8; }
+.theme-jp .toast-warn { border-color:#5a4624; background:linear-gradient(135deg,#2e2411,#201a11); color:#f2d59c; }
+@keyframes toastSlide { from { opacity:0; transform:translateY(-6px) scale(.98);} to { opacity:1; transform:translateY(0) scale(1);} }
+
+/* Focus ring refinement */
+.theme-jp :focus-visible { outline:2px solid var(--jp-focus); outline-offset:2px; }
+
+/* Soft appear */
+@keyframes softPop { from { opacity:0; transform:translateY(8px) scale(.985);} to { opacity:1; transform:translateY(0) scale(1);} }
+.theme-jp .section { animation: softPop .45s ease; }
 
 /* ================================================================
    3. TYPOGRAPHY
@@ -459,6 +629,33 @@ p {
   margin-left: var(--spacing-sm);
 }
 
+/* Section Wrapper Components */
+.section {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-tertiary);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: var(--spacing-md);
+}
+
+.section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  cursor: pointer;
+  transition: background var(--transition-base);
+}
+
+.section__header:hover {
+  background: var(--bg-hover);
+}
+
+.section__body {
+  border-top: 1px solid var(--border-tertiary);
+  padding: 1rem;
+}
+
 /* Toast Notifications */
 .toast {
   position: fixed;
@@ -484,6 +681,39 @@ p {
 
 .toast-info {
   border-left: 4px solid var(--color-info);
+}
+
+/* Update Banner Toast */
+.toast-update {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: linear-gradient(90deg, #065f46, #047857);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  z-index: 9999;
+  box-shadow: 0 6px 18px -4px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: fadeIn 0.25s ease-out;
+}
+
+.toast-update__button {
+  background: white;
+  color: #059669;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all var(--transition-fast);
+}
+
+.toast-update__button:hover {
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateY(-1px);
 }
 
 /* Drag & Drop */
@@ -529,6 +759,46 @@ p {
 .copy-btn:hover {
   background: rgba(96, 165, 250, 0.1);
   color: var(--color-primary-300);
+}
+
+/* Badge Components - Dasher Indicators */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.5px;
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
+  transition: all var(--transition-fast);
+}
+
+.badge--active {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.badge--muted {
+  color: var(--text-tertiary);
+  opacity: 0.5;
+}
+
+.badge--crimson {
+  color: var(--indicator-crimson);
+}
+
+.badge--redcard {
+  color: var(--indicator-redcard);
+}
+
+.badge--appealed {
+  color: var(--indicator-appealed);
+}
+
+.badge--deactivated {
+  color: var(--indicator-deactivated);
 }
 
 /* ================================================================
@@ -681,7 +951,7 @@ p {
   .md\:grid-3 { grid-template-columns: repeat(3, 1fr); }
   .md\:flex { display: flex; }
   .md\:hidden { display: none; }
-  
+
   .container {
     padding: 0 var(--spacing-lg);
   }
@@ -691,7 +961,7 @@ p {
   .lg\:grid-4 { grid-template-columns: repeat(4, 1fr); }
   .lg\:flex { display: flex; }
   .lg\:hidden { display: none; }
-  
+
   .container {
     padding: 0 var(--spacing-xl);
   }
@@ -771,23 +1041,23 @@ p {
     background: white;
     color: black;
   }
-  
+
   .no-print,
   .btn,
   .toast,
   .drag-handle {
     display: none !important;
   }
-  
+
   .card {
     break-inside: avoid;
     page-break-inside: avoid;
   }
-  
+
   a {
     text-decoration: underline;
   }
-  
+
   a[href^="http"]:after {
     content: " (" attr(href) ")";
   }
