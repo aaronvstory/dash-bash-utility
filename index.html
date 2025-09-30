@@ -2819,30 +2819,36 @@
                                         <Building2 size={20} className="text-orange-400" />
                                         <span className="text-lg font-medium">Store Address Book ({categories.reduce((total, cat) => total + cat.stores.length, 0)} locations)</span>
                                         {/* Category Expand/Collapse Chevrons */}
-                                        {isAddressBookOpen && categories.length > 0 && (
-                                            <div className="flex items-center gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        collapseAllCategories();
-                                                    }}
-                                                    className="text-orange-400 hover:text-orange-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
-                                                    title="Collapse all categories"
-                                                >
-                                                    <ChevronUp size={16} />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        expandAllCategories();
-                                                    }}
-                                                    className="text-orange-400 hover:text-orange-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
-                                                    title="Expand all categories"
-                                                >
-                                                    <ChevronDown size={16} />
-                                                </button>
-                                            </div>
-                                        )}
+                                        <div
+                                            className="flex items-center gap-1 ml-2"
+                                            onClick={(e) => e.stopPropagation()}
+                                            style={{
+                                                opacity: isAddressBookOpen && categories.length > 0 ? 1 : 0,
+                                                pointerEvents: isAddressBookOpen && categories.length > 0 ? 'auto' : 'none',
+                                                transition: 'opacity 200ms'
+                                            }}
+                                        >
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    collapseAllCategories();
+                                                }}
+                                                className="text-orange-400 hover:text-orange-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
+                                                title="Collapse all categories"
+                                            >
+                                                <ChevronUp size={16} />
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    expandAllCategories();
+                                                }}
+                                                className="text-orange-400 hover:text-orange-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
+                                                title="Expand all categories"
+                                            >
+                                                <ChevronDown size={16} />
+                                            </button>
+                                        </div>
                                     </div>
                                     {isAddressBookOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </button>
@@ -3171,30 +3177,36 @@
                                             Notes ({noteCategories.reduce((total, cat) => total + cat.notes.length, 0)} items)
                                         </span>
                                         {/* Category Expand/Collapse Chevrons */}
-                                        {isNotesOpen && noteCategories.length > 0 && (
-                                            <div className="flex items-center gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        collapseAllNoteCategories();
-                                                    }}
-                                                    className="text-purple-400 hover:text-purple-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
-                                                    title="Collapse all categories"
-                                                >
-                                                    <ChevronUp size={16} />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        expandAllNoteCategories();
-                                                    }}
-                                                    className="text-purple-400 hover:text-purple-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
-                                                    title="Expand all categories"
-                                                >
-                                                    <ChevronDown size={16} />
-                                                </button>
-                                            </div>
-                                        )}
+                                        <div
+                                            className="flex items-center gap-1 ml-2"
+                                            onClick={(e) => e.stopPropagation()}
+                                            style={{
+                                                opacity: isNotesOpen && noteCategories.length > 0 ? 1 : 0,
+                                                pointerEvents: isNotesOpen && noteCategories.length > 0 ? 'auto' : 'none',
+                                                transition: 'opacity 200ms'
+                                            }}
+                                        >
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    collapseAllNoteCategories();
+                                                }}
+                                                className="text-purple-400 hover:text-purple-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
+                                                title="Collapse all categories"
+                                            >
+                                                <ChevronUp size={16} />
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    expandAllNoteCategories();
+                                                }}
+                                                className="text-purple-400 hover:text-purple-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
+                                                title="Expand all categories"
+                                            >
+                                                <ChevronDown size={16} />
+                                            </button>
+                                        </div>
                                     </div>
                                     {isNotesOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </button>
@@ -3387,30 +3399,36 @@
                                             Dashers ({dasherCategories.reduce((total, cat) => total + cat.dashers.length, 0)} total)
                                         </span>
                                         {/* Category Expand/Collapse Chevrons */}
-                                        {isDashersOpen && dasherCategories.length > 0 && (
-                                            <div className="flex items-center gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        collapseAllDasherCategories();
-                                                    }}
-                                                    className="text-indigo-400 hover:text-indigo-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
-                                                    title="Collapse all categories"
-                                                >
-                                                    <ChevronUp size={16} />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        expandAllDasherCategories();
-                                                    }}
-                                                    className="text-indigo-400 hover:text-indigo-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
-                                                    title="Expand all categories"
-                                                >
-                                                    <ChevronDown size={16} />
-                                                </button>
-                                            </div>
-                                        )}
+                                        <div
+                                            className="flex items-center gap-1 ml-2"
+                                            onClick={(e) => e.stopPropagation()}
+                                            style={{
+                                                opacity: isDashersOpen && dasherCategories.length > 0 ? 1 : 0,
+                                                pointerEvents: isDashersOpen && dasherCategories.length > 0 ? 'auto' : 'none',
+                                                transition: 'opacity 200ms'
+                                            }}
+                                        >
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    collapseAllDasherCategories();
+                                                }}
+                                                className="text-indigo-400 hover:text-indigo-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
+                                                title="Collapse all categories"
+                                            >
+                                                <ChevronUp size={16} />
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    expandAllDasherCategories();
+                                                }}
+                                                className="text-indigo-400 hover:text-indigo-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
+                                                title="Expand all categories"
+                                            >
+                                                <ChevronDown size={16} />
+                                            </button>
+                                        </div>
                                     </div>
                                     {isDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </button>
