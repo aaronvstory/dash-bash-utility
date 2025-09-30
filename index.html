@@ -2890,31 +2890,33 @@
                                                         
                                                         <div className="flex items-center gap-1">
                                                             {/* Expand/Collapse all stores in this category */}
-                                                            {category.stores.length > 0 && (
-                                                                <>
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            collapseAllStoresInCategory(category.id);
-                                                                        }}
-                                                                        className="text-amber-400 hover:text-amber-300 p-1"
-                                                                        title="Collapse all stores in this category"
-                                                                    >
-                                                                        <ChevronsUp size={14} />
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            expandAllStoresInCategory(category.id);
-                                                                        }}
-                                                                        className="text-amber-400 hover:text-amber-300 p-1"
-                                                                        title="Expand all stores in this category"
-                                                                    >
-                                                                        <ChevronsDown size={14} />
-                                                                    </button>
-                                                                    <div className="w-px h-4 bg-gray-600 mx-1" />
-                                                                </>
-                                                            )}
+                                                            <>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        collapseAllStoresInCategory(category.id);
+                                                                    }}
+                                                                    className="text-amber-400 hover:text-amber-300 p-1"
+                                                                    title="Collapse all stores in this category"
+                                                                    disabled={category.stores.length === 0}
+                                                                    style={{ opacity: category.stores.length === 0 ? 0.3 : 1 }}
+                                                                >
+                                                                    <ChevronsUp size={14} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        expandAllStoresInCategory(category.id);
+                                                                    }}
+                                                                    className="text-amber-400 hover:text-amber-300 p-1"
+                                                                    title="Expand all stores in this category"
+                                                                    disabled={category.stores.length === 0}
+                                                                    style={{ opacity: category.stores.length === 0 ? 0.3 : 1 }}
+                                                                >
+                                                                    <ChevronsDown size={14} />
+                                                                </button>
+                                                                <div className="w-px h-4 bg-gray-600 mx-1" />
+                                                            </>
                                                             <button
                                                                 onClick={() => addStore(category.id)}
                                                                 className="text-green-400 hover:text-green-300 p-1"
@@ -3467,31 +3469,33 @@
                                                         
                                                         <div className="flex items-center gap-1">
                                                             {/* Expand/Collapse all dashers in this category */}
-                                                            {category.dashers.length > 0 && (
-                                                                <>
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            collapseAllDashersInCategory(category.id);
-                                                                        }}
-                                                                        className="text-indigo-400 hover:text-indigo-300 p-1"
-                                                                        title="Collapse all dashers in this category"
-                                                                    >
-                                                                        <ChevronsUp size={14} />
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            expandAllDashersInCategory(category.id);
-                                                                        }}
-                                                                        className="text-indigo-400 hover:text-indigo-300 p-1"
-                                                                        title="Expand all dashers in this category"
-                                                                    >
-                                                                        <ChevronsDown size={14} />
-                                                                    </button>
-                                                                    <div className="w-px h-4 bg-gray-600 mx-1" />
-                                                                </>
-                                                            )}
+                                                            <>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        collapseAllDashersInCategory(category.id);
+                                                                    }}
+                                                                    className="text-indigo-400 hover:text-indigo-300 p-1"
+                                                                    title="Collapse all dashers in this category"
+                                                                    disabled={category.dashers.length === 0}
+                                                                    style={{ opacity: category.dashers.length === 0 ? 0.3 : 1 }}
+                                                                >
+                                                                    <ChevronsUp size={14} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        expandAllDashersInCategory(category.id);
+                                                                    }}
+                                                                    className="text-indigo-400 hover:text-indigo-300 p-1"
+                                                                    title="Expand all dashers in this category"
+                                                                    disabled={category.dashers.length === 0}
+                                                                    style={{ opacity: category.dashers.length === 0 ? 0.3 : 1 }}
+                                                                >
+                                                                    <ChevronsDown size={14} />
+                                                                </button>
+                                                                <div className="w-px h-4 bg-gray-600 mx-1" />
+                                                            </>
                                                             <button
                                                                 onClick={() => addDasher(category.id)}
                                                                 className="text-green-400 hover:text-green-300 p-1"
