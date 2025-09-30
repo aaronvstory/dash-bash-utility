@@ -21,11 +21,13 @@ Dash Bash Utility is a React-based Progressive Web App (PWA) designed for delive
 # Quick start (Windows)
 serve-pwa.bat
 
-# Python server (all platforms)  
+# Python server (all platforms)
 python serve-pwa.py
 
 # Access at: http://localhost:8443/index.html
 ```
+
+**Note**: This project has NO build process or package dependencies. It's a standalone HTML file that runs directly in the browser using CDN resources for React, Babel, and Tailwind CSS.
 
 ### Testing PWA Features
 ```bash
@@ -35,6 +37,17 @@ python serve-pwa.py
 # Open browser to http://localhost:8443
 # Check DevTools > Application > Service Workers
 # Install via browser prompt or DevTools > Application > Install
+```
+
+### Testing Specific Features
+```bash
+# Start server
+python serve-pwa.py
+
+# Navigate to test files
+http://localhost:8443/test-redcard.html          # Red Card feature
+http://localhost:8443/test-dashers-enhancement.html  # Dasher enhancements
+http://localhost:8443/test-collapsible-dashers.html  # Collapsible UI
 ```
 
 ### Deployment to GitHub Pages
@@ -79,8 +92,28 @@ Single-file React application using functional components and hooks. No build pr
 1. Make changes to `enhanced-calculator-addressbook.tsx` (source component)
 2. **MUST manually update** corresponding code in `index.html` (served file)
 3. The JavaScript in `index.html` is between `<script type="text/babel">` tags
-4. Lucide icons are defined as: `const IconName = (props) => React.createElement(Icon, { ...props, name: 'icon-name' });`
-5. Test locally with `launch.bat` or `python serve-pwa.py` before deploying
+4. Test locally with `python serve-pwa.py` before deploying
+
+### Icon Implementation Pattern
+The app uses Lucide icons via CDN with a custom wrapper pattern:
+
+```javascript
+// In index.html, icons are defined using React.createElement
+const ChevronDown = (props) => React.createElement(lucide.ChevronDown, props);
+const ChevronUp = (props) => React.createElement(lucide.ChevronUp, props);
+const Copy = (props) => React.createElement(lucide.Copy, props);
+// ... etc for all icons
+
+// Usage in JSX
+<ChevronDown size={20} />
+<Copy className="text-blue-400" size={16} />
+```
+
+**When adding new icons:**
+1. Find icon name from [Lucide Icons](https://lucide.dev/icons/)
+2. Add definition: `const IconName = (props) => React.createElement(lucide.IconName, props);`
+3. Use PascalCase for component name
+4. Place definition at top of script block with other icon definitions
 
 ### State Management
 - **Unified State**: Single `dashBashState` key in localStorage containing all app data
@@ -471,6 +504,34 @@ setTimeout(() => {
 - **Lazy State Init**: Heavy computations only on mount
 - **Event Delegation**: Single handlers for repeated elements
 
+## Data Export/Import Format
+
+The application uses a unified JSON format (v2.1) for state export/import:
+
+```json
+{
+  "version": "2.1",
+  "exportDate": "2025-01-15T10:30:00.000Z",
+  "target": "99",
+  "targetPreset": "99",
+  "prices": [...],
+  "messages": [...],
+  "categories": [...],
+  "noteCategories": [...],
+  "dasherCategories": [...],
+  "collapsedCategories": {...},
+  "collapsedStores": {...},
+  "collapsedDashers": {...},
+  "collapsedDasherCategories": {...},
+  "collapsedNoteCategories": {...}
+}
+```
+
+**Import Compatibility:**
+- Supports v1.0 (basic state)
+- Supports v2.0 (with collapse states)
+- Current format v2.1 (includes all features)
+
 ## Recent Updates
 
 ### v1.4.0 (January 2025)
@@ -491,6 +552,7 @@ setTimeout(() => {
 - Added "Expand All" and "Collapse All" buttons for Dashers section
 - All collapse states persist in localStorage and JSON export/import
 - Auto-save triggers after bulk operations
+- External stylesheet (styles.css) with CSS variables for theming
 
 ### v1.1.x series
 - Color-coded dasher titles (name=purple, email=blue, balance=green/red)
@@ -569,6 +631,21 @@ To add new themes:
 3. Test all components with new theme
 4. Add theme toggle functionality in React component
 5. Update documentation with theme details
+
+## Debugging Tips
+
+### Browser DevTools Inspection
+- **localStorage**: DevTools > Application > Storage > Local Storage > `dashBashState`
+- **Service Worker**: DevTools > Application > Service Workers (check registration, version, cache)
+- **Console**: Watch for React warnings, state update logs, auto-save notifications
+- **Network**: Verify CDN resources load (React, Babel, Tailwind, Lucide)
+
+### Common Issues
+1. **State not persisting**: Check localStorage quota, verify `saveAllToLocalStorage()` calls
+2. **Version not updating**: Clear service worker, check cache name in service-worker.js
+3. **Timers not updating**: Verify `timerTick` state updates every 1000ms
+4. **Drag-and-drop not working**: Check `draggedItem` state, verify event handlers
+5. **Copy buttons failing**: Check clipboard permissions, verify navigator.clipboard API
 
 ## Testing
 
