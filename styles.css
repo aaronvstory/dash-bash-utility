@@ -35,17 +35,17 @@
   --color-primary-800: #1e40af;
   --color-primary-900: #1e3a8a;
 
-  /* Color Palette - Gray */
-  --color-gray-50: #f9fafb;
-  --color-gray-100: #f3f4f6;
-  --color-gray-200: #e5e7eb;
-  --color-gray-300: #d1d5db;
-  --color-gray-400: #9ca3af;
-  --color-gray-500: #6b7280;
-  --color-gray-600: #4b5563;
-  --color-gray-700: #374151;
-  --color-gray-800: #1f2937;
-  --color-gray-900: #111827;
+  /* Color Palette - Gray (Warm Slate) */
+  --color-gray-50: #f8fafc;
+  --color-gray-100: #f1f5f9;
+  --color-gray-200: #e2e8f0;
+  --color-gray-300: #cbd5e1;
+  --color-gray-400: #94a3b8;
+  --color-gray-500: #64748b;
+  --color-gray-600: #475569;
+  --color-gray-700: #334155;
+  --color-gray-800: #1e293b;
+  --color-gray-900: #0f172a;
 
   /* Semantic Colors */
   --color-success: #10b981;
@@ -237,9 +237,138 @@ body {
   --border-primary: rgba(255,255,255,0.06);
   --border-secondary: rgba(255,255,255,0.14);
   --border-tertiary: rgba(255,255,255,0.22);
-  background: radial-gradient(circle at 25% 15%, #1d2330, #0d0f12 60%);
+  /* Ultra-dark clean background - no gradients, pure matte black */
+  background: #0a0a0a;
   color: var(--jp-text-hi);
 }
+
+/* --------------------------------------------------------------
+   V2 Panel Overlay (non-destructive) – applies to existing markup
+   without requiring semantic class migration yet. Targets the
+   restored legacy Tailwind structure (.bg-gray-800 rounded-lg ...)
+   -------------------------------------------------------------- */
+.theme-jp .bg-gray-800.rounded-lg.overflow-hidden {
+  /* Clean matte panels - minimal gradient, maximum clarity */
+  background: rgba(24, 26, 28, 0.95);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  position: relative;
+  transition: border-color var(--jp-trans-med), background var(--jp-trans-med), transform var(--jp-trans-fast);
+}
+.theme-jp .bg-gray-800.rounded-lg.overflow-hidden:hover {
+  background: rgba(28, 30, 32, 0.95);
+  border-color: rgba(255,255,255,0.12);
+}
+
+/* Header buttons inside legacy panels */
+.theme-jp .bg-gray-800.rounded-lg.overflow-hidden > button.w-full,
+.theme-jp .bg-gray-800.rounded-lg.overflow-hidden > div > button.w-full {
+  background: rgba(255,255,255,0.02);
+  position: relative;
+  transition: background var(--jp-trans-fast), color var(--jp-trans-fast), border-color var(--jp-trans-fast);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.theme-jp .bg-gray-800.rounded-lg.overflow-hidden > button.w-full:hover,
+.theme-jp .bg-gray-800.rounded-lg.overflow-hidden > div > button.w-full:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+/* Section body area */
+.theme-jp .bg-gray-800.rounded-lg.overflow-hidden .border-t.border-gray-700.p-4,
+.theme-jp .bg-gray-800.rounded-lg.overflow-hidden .border-t.border-gray-700.p-4.space-y-2,
+.theme-jp .bg-gray-800.rounded-lg.overflow-hidden .border-t.border-gray-700.p-4.space-y-3 {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.015) 0%, rgba(255,255,255,0.006) 60%, rgba(255,255,255,0) 100%);
+  border-top: 1px solid rgba(255,255,255,0.07);
+}
+
+/* Soft row surfaces inside bodies */
+.theme-jp .bg-gray-700\/60,
+.theme-jp .bg-gray-700\/40,
+.theme-jp .bg-gray-700\/50,
+.theme-jp .bg-gray-600\/50 {
+  background:
+    linear-gradient(165deg, rgba(255,255,255,0.04), rgba(255,255,255,0) 65%),
+    linear-gradient(120deg, rgba(52,56,62,0.55), rgba(40,42,47,0.48));
+  border-color: rgba(255,255,255,0.10) !important;
+  transition: background var(--jp-trans-fast), border-color var(--jp-trans-fast), transform var(--jp-trans-fast);
+}
+.theme-jp .bg-gray-700\/60:hover,
+.theme-jp .bg-gray-700\/40:hover,
+.theme-jp .bg-gray-700\/50:hover,
+.theme-jp .bg-gray-600\/50:hover {
+  background:
+    linear-gradient(165deg, rgba(255,255,255,0.06), rgba(255,255,255,0.008) 70%),
+    linear-gradient(120deg, rgba(60,66,74,0.62), rgba(46,48,54,0.54));
+  border-color: rgba(255,255,255,0.18) !important;
+}
+
+/* Category header subtle left accent (using ::before) */
+.theme-jp .bg-gray-800.rounded-lg.overflow-hidden > button.w-full .flex.items-center.gap-3::before,
+.theme-jp .bg-gray-800.rounded-lg.overflow-hidden > div > button.w-full .flex.items-center.gap-3::before {
+  content: "";
+  width: 4px;
+  height: 22px;
+  border-radius: 2px;
+  background: linear-gradient(180deg,var(--jp-accent-indigo),var(--jp-accent-sakura));
+  opacity: .55;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 4px 10px -4px rgba(0,0,0,0.7);
+  transform: translateY(1px);
+}
+
+
+/* Primary / destructive button tweak to soften saturation */
+.theme-jp .bg-blue-600, .theme-jp .bg-green-600, .theme-jp .bg-purple-600, .theme-jp .bg-indigo-600, .theme-jp .bg-red-600 {
+  filter: saturate(90%) brightness(0.96);
+}
+.theme-jp .bg-blue-600:hover, .theme-jp .bg-green-600:hover, .theme-jp .bg-purple-600:hover, .theme-jp .bg-indigo-600:hover, .theme-jp .bg-red-600:hover {
+  filter: saturate(100%) brightness(1.03);
+}
+
+/* Inputs (legacy Tailwind inputs) */
+.theme-jp input.bg-gray-700, .theme-jp textarea.bg-gray-700, .theme-jp input.bg-gray-600, .theme-jp textarea.bg-gray-600 {
+  background:#1f252b;
+  border:1px solid rgba(255,255,255,0.12);
+  transition: background var(--jp-trans-fast), border-color var(--jp-trans-fast), box-shadow var(--jp-trans-fast);
+}
+.theme-jp input.bg-gray-700:focus, .theme-jp textarea.bg-gray-700:focus,
+.theme-jp input.bg-gray-600:focus, .theme-jp textarea.bg-gray-600:focus {
+  background:#242c33;
+  border-color: var(--jp-accent-indigo);
+  box-shadow: 0 0 0 3px rgba(109,125,255,0.35);
+  outline: none;
+}
+
+/* Primary / destructive buttons (legacy) */
+.theme-jp .bg-blue-600, .theme-jp .bg-green-600, .theme-jp .bg-purple-600, .theme-jp .bg-indigo-600, .theme-jp .bg-red-600 {
+  position: relative;
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 2px 4px -2px rgba(0,0,0,0.4), 0 3px 10px -4px rgba(0,0,0,0.55);
+  transition: transform var(--jp-trans-fast), box-shadow var(--jp-trans-fast), filter var(--jp-trans-fast);
+}
+.theme-jp .bg-blue-600:hover, .theme-jp .bg-green-600:hover, .theme-jp .bg-purple-600:hover, .theme-jp .bg-indigo-600:hover, .theme-jp .bg-red-600:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+.theme-jp .bg-blue-600:active, .theme-jp .bg-green-600:active, .theme-jp .bg-purple-600:active, .theme-jp .bg-indigo-600:active, .theme-jp .bg-red-600:active {
+  transform: translateY(0);
+  filter: brightness(.95);
+}
+
+/* Subtle divider refinement */
+.theme-jp .w-px.h-4.bg-gray-600 { background: linear-gradient(180deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05)); }
+
+/* Toast overlay (legacy notification classes if any reused) */
+.theme-jp .fixed.top-4.right-4, .theme-jp .fixed.top-20.right-6, .theme-jp .fixed.top-28.right-4 {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.12) !important;
+}
+
+/* Scrollbar refinement in theme */
+.theme-jp ::-webkit-scrollbar-track { background: #1a1d21; }
+.theme-jp ::-webkit-scrollbar-thumb { background: #30363f; border-radius: 6px; }
+.theme-jp ::-webkit-scrollbar-thumb:hover { background: #3a414c; }
 
 .theme-jp .app-shell {
   max-width: 1180px;
@@ -800,6 +929,130 @@ p {
 .badge--deactivated {
   color: var(--indicator-deactivated);
 }
+
+/* Modern concise flag badges (C / RC / AP / D) */
+.flag-badges { display:inline-flex; gap:4px; }
+.flag-badge {
+  --_bg: rgba(255,255,255,0.06);
+  --_border: rgba(255,255,255,0.12);
+  --_text: var(--text-secondary);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:9.5px;
+  font-weight:600;
+  padding:3px 8px 4px;
+  letter-spacing:.6px;
+  line-height:1;
+  border-radius:8px;
+  background: var(--_bg);
+  color: var(--_text);
+  border:1px solid var(--_border);
+  backdrop-filter: blur(3px) saturate(140%);
+  -webkit-backdrop-filter: blur(3px) saturate(140%);
+  text-transform:uppercase;
+  min-width:28px;
+  position:relative;
+  box-shadow:0 1px 2px -1px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,0.05) inset;
+  white-space:nowrap;
+}
+.flag-badges { flex-wrap:wrap; }
+@media (max-width:640px) {
+  .flag-badge { font-size:9px; padding:2px 6px 3px; }
+}
+.flag-badge[data-flag] { opacity:.55; filter:saturate(.4) contrast(.9); }
+.flag-badge[data-flag][data-active="true"] { opacity:1; filter:none; }
+.flag-badge[data-flag="C"][data-active="true"]  { --_text: var(--indicator-crimson); }
+.flag-badge[data-flag="RC"][data-active="true"] { --_text: var(--indicator-redcard); }
+.flag-badge[data-flag="AP"][data-active="true"] { --_text: var(--indicator-appealed); }
+.dasher-card--deactivated .flag-badge[data-flag] { opacity:.8; }
+.dasher-card--deactivated .flag-badge[data-active="true"] { filter:brightness(1.1); }
+.theme-jp .flag-badge { background:linear-gradient(140deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02)); }
+.flag-badge:hover { filter:brightness(1.15); }
+
+/* Deactivated dasher tint - Enhanced for full background coverage */
+.dasher-card--deactivated {
+  background:
+    linear-gradient(135deg, rgba(220,38,38,0.35), rgba(127,29,29,0.25)) !important,
+    linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.00)) !important;
+  border-color: rgba(248,113,113,0.45) !important;
+  box-shadow: 0 0 0 1px rgba(248,113,113,0.28), 0 4px 16px -4px rgba(220,38,38,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+/* Ensure text legibility on deactivated cards */
+.dasher-card--deactivated * {
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+/* Ready dasher tint - Enhanced for full background coverage */
+.dasher-card--ready {
+  background:
+    linear-gradient(135deg, rgba(34,197,94,0.38), rgba(6,95,70,0.28)) !important,
+    linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.00)) !important;
+  border-color: rgba(52,211,153,0.50) !important;
+  box-shadow: 0 0 0 1px rgba(16,185,129,0.35), 0 4px 16px -4px rgba(34,197,94,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+/* Ensure text legibility on ready cards */
+.dasher-card--ready * {
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+/* Appealed dasher tint - Yellow/orange border glow */
+.dasher-card--appealed {
+  background:
+    linear-gradient(135deg, rgba(251,191,36,0.28), rgba(217,119,6,0.20)) !important,
+    linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.00)) !important;
+  border-color: rgba(251,191,36,0.55) !important;
+  box-shadow: 0 0 0 1px rgba(251,191,36,0.35), 0 4px 16px -4px rgba(217,119,6,0.45), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+/* Ensure text legibility on appealed cards */
+.dasher-card--appealed * {
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+/* Currently Using dasher tint - Blue border glow */
+.dasher-card--currently-using {
+  background:
+    linear-gradient(135deg, rgba(59,130,246,0.28), rgba(37,99,235,0.20)) !important,
+    linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.00)) !important;
+  border-color: rgba(96,165,250,0.55) !important;
+  box-shadow: 0 0 0 1px rgba(96,165,250,0.35), 0 4px 16px -4px rgba(59,130,246,0.45), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+/* Ensure text legibility on currently using cards */
+.dasher-card--currently-using * {
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+/* Unified icon button styling (progressive enhance existing p-1 text-* buttons) */
+.icon-btn {
+  --_size: 26px;
+  width: var(--_size);
+  height: var(--_size);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:8px;
+  position:relative;
+  border:1px solid rgba(255,255,255,0.08);
+  background: radial-gradient(circle at 60% 35%, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+  transition: background var(--transition-fast), transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.icon-btn:hover { background: radial-gradient(circle at 50% 40%, rgba(255,255,255,0.12), rgba(255,255,255,0.04)); border-color:rgba(255,255,255,0.16); }
+.icon-btn:active { transform:translateY(1px); }
+.icon-btn svg { width:14px; height:14px; }
+.icon-btn[data-variant="danger"] { box-shadow:0 0 0 1px rgba(239,68,68,0.35); }
+.icon-btn[data-variant="danger"]:hover { box-shadow:0 0 0 1px rgba(239,68,68,0.55); }
+.icon-btn:focus-visible { outline:2px solid var(--jp-focus); outline-offset:2px; }
+
+/* Compact action bar grouping */
+.action-bar { display:inline-flex; gap:4px; align-items:center; }
+.action-bar .divider { width:1px; height:18px; background:linear-gradient(180deg,rgba(255,255,255,0.35),rgba(255,255,255,0.1)); margin:0 2px; }
+
+/* Fallback: if Tailwind overrides margin/padding, re-assert core size */
+.icon-btn.p-1 { padding:0; }
 
 /* ================================================================
    6. ANIMATIONS
