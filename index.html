@@ -2699,10 +2699,10 @@
                             </div>
 
                             {/* Quick Messages Section */}
-                            <div className="bg-gray-800 rounded-lg overflow-hidden">
+                            <div className="section">
                                 <button
                                     onClick={() => setIsMessagesOpen(!isMessagesOpen)}
-                                    className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
+                                    className="section__header jp"
                                 >
                                     <div className="flex items-center gap-3">
                                         <MessageSquare size={20} className="text-green-400" />
@@ -2710,9 +2710,9 @@
                                     </div>
                                     {isMessagesOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </button>
-                                
+
                                 {isMessagesOpen && (
-                                    <div className="border-t border-gray-700 p-4 space-y-2">
+                                    <div className="section__body jp space-y-2">
                                         {messages.map((message, index) => (
                                             <div
                                                 key={index}
@@ -2734,7 +2734,7 @@
                                                             <textarea
                                                                 value={editText}
                                                                 onChange={(e) => setEditText(e.target.value)}
-                                                                className="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-base text-white resize-y min-h-[3rem] focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                className="w-full input-jp resize-y min-h-[3rem]"
                                                                 rows={Math.max(1, editText.split('\n').length)}
                                                                 autoFocus
                                                             />
@@ -2781,7 +2781,7 @@
                                                     <textarea
                                                         value={newMessageText}
                                                         onChange={(e) => setNewMessageText(e.target.value)}
-                                                        className="flex-1 bg-gray-600 border border-gray-500 rounded px-2 py-1 text-base text-white resize-y min-h-[3rem] focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                        className="flex-1 input-jp resize-y min-h-[3rem]"
                                                         rows={2}
                                                         autoFocus
                                                         placeholder="Enter your new message..."
