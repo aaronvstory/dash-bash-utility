@@ -3158,10 +3158,10 @@
                             </div>
 
                             {/* Notes Section */}
-                            <div className="bg-gray-800 rounded-lg overflow-hidden">
+                            <div className="section">
                                 <button
                                     onClick={() => setIsNotesOpen(!isNotesOpen)}
-                                    className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
+                                    className="section__header jp"
                                 >
                                     <div className="flex items-center gap-3">
                                         <FileText size={20} className="text-purple-400" />
@@ -3198,7 +3198,7 @@
                                 </button>
                                 
                                 {isNotesOpen && (
-                                    <div className="border-t border-gray-700 p-4">
+                                    <div className="section__body jp">
                                         <div className="mb-3 text-center">
                                             <p className="text-xs text-gray-400">Organize your notes by category</p>
                                         </div>
@@ -3374,10 +3374,10 @@
                             </div>
 
                             {/* Dashers Section */}
-                            <div className="bg-gray-800 rounded-lg overflow-hidden">
+                            <div className="section">
                                 <button
                                     onClick={() => setIsDashersOpen(!isDashersOpen)}
-                                    className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
+                                    className="section__header jp"
                                 >
                                     <div className="flex items-center gap-3">
                                         <Users size={20} className="text-indigo-400" />
@@ -3414,7 +3414,7 @@
                                 </button>
                                 
                                 {isDashersOpen && (
-                                    <div className="border-t border-gray-700 p-4 space-y-3">
+                                    <div className="section__body jp space-y-3">
                                         {dasherCategories.map((category) => {
                                             const isCategoryCollapsed = collapsedDasherCategories[category.id];
                                             
@@ -4021,7 +4021,7 @@
                                 </button>
 
                                 {isArchivedDashersOpen && (
-                                    <div className="border-t border-gray-700 p-4 space-y-3">
+                                    <div className="section__body jp space-y-3">
                                         {archivedDashers.length === 0 ? (
                                             <p className="text-sm text-gray-400 text-center py-4">No archived dashers</p>
                                         ) : (
@@ -4312,10 +4312,10 @@
                             </div>
 
                             {/* Statistics Section */}
-                            <div className="bg-gray-800 rounded-lg overflow-hidden">
+                            <div className="section">
                                 <button
                                     onClick={() => setIsStatisticsOpen(!isStatisticsOpen)}
-                                    className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
+                                    className="section__header jp"
                                 >
                                     <div className="flex items-center gap-3">
                                         <BarChart3 size={20} className="text-cyan-400" />
@@ -4325,7 +4325,7 @@
                                 </button>
                                 
                                 {isStatisticsOpen && (
-                                    <div className="border-t border-gray-700 p-4 space-y-4">
+                                    <div className="section__body jp space-y-4">
                                         {/* Dasher Count Statistics */}
                                         <div className="bg-gray-700/40 rounded-lg p-3 space-y-2">
                                             <h4 className="text-sm font-medium text-cyan-300 mb-2">Dashers per Category</h4>
@@ -4452,10 +4452,10 @@
                             </div>
 
                             {/* State Management Section */}
-                            <div className="bg-gray-800 rounded-lg overflow-hidden">
+                            <div className="section">
                                 <button
                                     onClick={() => setIsStateManagementOpen(!isStateManagementOpen)}
-                                    className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
+                                    className="section__header jp"
                                 >
                                     <div className="flex items-center gap-3">
                                         <Settings size={20} className="text-purple-400" />
@@ -4465,7 +4465,7 @@
                                 </button>
                                 
                                 {isStateManagementOpen && (
-                                    <div className="border-t border-gray-700 p-4">
+                                    <div className="section__body jp">
                                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                                             {/* Save All Button */}
                                             <button
