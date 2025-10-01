@@ -4477,34 +4477,34 @@
                                                                     </>
                                                                 ) : (
                                                                     <>
-                                                                        <div className="flex items-center justify-between">
-                                                                            <span className="text-gray-400">Name:</span>
-                                                                            <div className="flex items-center gap-1">
-                                                                                <span className="text-purple-300">{dasher.name}</span>
-                                                                                <button onClick={() => copyToClipboard(dasher.name)} className="copy-btn">
-                                                                                    <Copy size={10} />
+                                                                        <div className="flex items-center gap-2">
+                                                                            <label className="text-xs text-gray-400 w-20">Name:</label>
+                                                                            <div className="flex-1 text-xs text-gray-200">{dasher.name}</div>
+                                                                            {dasher.name && (
+                                                                                <button onClick={() => copyToClipboard(dasher.name)} className="text-blue-400 hover:text-blue-300 p-1" title="Copy name">
+                                                                                    <Copy size={12} />
                                                                                 </button>
-                                                                            </div>
+                                                                            )}
                                                                         </div>
-                                                                        <div className="flex items-center justify-between">
-                                                                            <span className="text-gray-400">Email:</span>
-                                                                            <div className="flex items-center gap-1">
-                                                                                <span className="text-blue-300">{dasher.email}</span>
-                                                                                <button onClick={() => copyToClipboard(dasher.email)} className="copy-btn">
-                                                                                    <Copy size={10} />
+                                                                        <div className="flex items-center gap-2">
+                                                                            <label className="text-xs text-gray-400 w-20">Email:</label>
+                                                                            <div className="flex-1 text-xs text-gray-200">{dasher.email}</div>
+                                                                            {dasher.email && (
+                                                                                <button onClick={() => copyToClipboard(dasher.email)} className="text-blue-400 hover:text-blue-300 p-1" title="Copy email">
+                                                                                    <Copy size={12} />
                                                                                 </button>
-                                                                            </div>
+                                                                            )}
                                                                         </div>
-                                                                        <div className="flex items-center justify-between">
-                                                                            <span className="text-gray-400">Balance:</span>
-                                                                            <div className="flex items-center gap-1">
-                                                                                <span className={(Number(dasher.balance) || 0) === 0 ? 'text-green-400' : 'text-red-400'}>
-                                                                                    ${(Number(dasher.balance) || 0).toFixed(2)}
-                                                                                </span>
-                                                                                <button onClick={() => copyToClipboard((Number(dasher.balance) || 0).toString())} className="copy-btn">
-                                                                                    <Copy size={10} />
-                                                                                </button>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <label className="text-xs text-gray-400 w-20">Balance:</label>
+                                                                            <div className="flex-1 text-xs text-gray-200">
+                                                                                ${(Number(dasher.balance) || 0).toFixed(2)}
                                                                             </div>
+                                                                            {dasher.balance && (
+                                                                                <button onClick={() => copyToClipboard((Number(dasher.balance) || 0).toString())} className="text-blue-400 hover:text-blue-300 p-1" title="Copy balance">
+                                                                                    <Copy size={12} />
+                                                                                </button>
+                                                                            )}
                                                                         </div>
                                                                         {dasher.lastUsed && (
                                                                             <div className="flex items-center justify-between">
@@ -4749,9 +4749,35 @@
                                                                     </>
                                                                 ) : (
                                                                     <>
-                                                                        <div className="flex items-center justify-between"><span className="text-gray-400">Name:</span><div className="flex items-center gap-1"><span className="text-purple-300">{dasher.name}</span><button onClick={() => copyToClipboard(dasher.name)} className="copy-btn"><Copy size={10} /></button></div></div>
-                                                                        <div className="flex items-center justify-between"><span className="text-gray-400">Email:</span><div className="flex items-center gap-1"><span className="text-blue-300">{dasher.email}</span><button onClick={() => copyToClipboard(dasher.email)} className="copy-btn"><Copy size={10} /></button></div></div>
-                                                                        <div className="flex items-center justify-between"><span className="text-gray-400">Balance:</span><div className="flex items-center gap-1"><span className={(Number(dasher.balance) || 0) === 0 ? 'text-green-400' : 'text-red-400'}>${(Number(dasher.balance) || 0).toFixed(2)}</span><button onClick={() => copyToClipboard((Number(dasher.balance) || 0).toString())} className="copy-btn"><Copy size={10} /></button></div></div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <label className="text-xs text-gray-400 w-20">Name:</label>
+                                                                            <div className="flex-1 text-xs text-gray-200">{dasher.name}</div>
+                                                                            {dasher.name && (
+                                                                                <button onClick={() => copyToClipboard(dasher.name)} className="text-blue-400 hover:text-blue-300 p-1" title="Copy name">
+                                                                                    <Copy size={12} />
+                                                                                </button>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <label className="text-xs text-gray-400 w-20">Email:</label>
+                                                                            <div className="flex-1 text-xs text-gray-200">{dasher.email}</div>
+                                                                            {dasher.email && (
+                                                                                <button onClick={() => copyToClipboard(dasher.email)} className="text-blue-400 hover:text-blue-300 p-1" title="Copy email">
+                                                                                    <Copy size={12} />
+                                                                                </button>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <label className="text-xs text-gray-400 w-20">Balance:</label>
+                                                                            <div className="flex-1 text-xs text-gray-200">
+                                                                                ${(Number(dasher.balance) || 0).toFixed(2)}
+                                                                            </div>
+                                                                            {dasher.balance && (
+                                                                                <button onClick={() => copyToClipboard((Number(dasher.balance) || 0).toString())} className="text-blue-400 hover:text-blue-300 p-1" title="Copy balance">
+                                                                                    <Copy size={12} />
+                                                                                </button>
+                                                                            )}
+                                                                        </div>
                                                                         {dasher.lastUsed && (<div className="flex items-center justify-between"><span className="text-gray-400">Timer:</span><span className={`font-mono ${timeStatus.color}`}>{timeStatus.display}</span></div>)}
                                                                         {dasher.notes && (<div className="pt-1"><div className="flex items-center justify-between mb-1"><span className="text-gray-400">Notes:</span><button onClick={() => copyToClipboard(dasher.notes)} className="copy-btn"><Copy size={10} /></button></div><p className="text-gray-300 text-xs whitespace-pre-wrap bg-gray-700/30 rounded p-2">{dasher.notes}</p></div>)}
                                                                         <div className="flex items-center gap-3 pt-1">
@@ -4915,9 +4941,35 @@
                                                                     </>
                                                                 ) : (
                                                                     <>
-                                                                        <div className="flex items-center justify-between"><span className="text-gray-400">Name:</span><div className="flex items-center gap-1"><span className="text-purple-300">{dasher.name}</span><button onClick={() => copyToClipboard(dasher.name)} className="copy-btn"><Copy size={10} /></button></div></div>
-                                                                        <div className="flex items-center justify-between"><span className="text-gray-400">Email:</span><div className="flex items-center gap-1"><span className="text-blue-300">{dasher.email}</span><button onClick={() => copyToClipboard(dasher.email)} className="copy-btn"><Copy size={10} /></button></div></div>
-                                                                        <div className="flex items-center justify-between"><span className="text-gray-400">Balance:</span><div className="flex items-center gap-1"><span className={(Number(dasher.balance) || 0) === 0 ? 'text-green-400' : 'text-red-400'}>${(Number(dasher.balance) || 0).toFixed(2)}</span><button onClick={() => copyToClipboard((Number(dasher.balance) || 0).toString())} className="copy-btn"><Copy size={10} /></button></div></div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <label className="text-xs text-gray-400 w-20">Name:</label>
+                                                                            <div className="flex-1 text-xs text-gray-200">{dasher.name}</div>
+                                                                            {dasher.name && (
+                                                                                <button onClick={() => copyToClipboard(dasher.name)} className="text-blue-400 hover:text-blue-300 p-1" title="Copy name">
+                                                                                    <Copy size={12} />
+                                                                                </button>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <label className="text-xs text-gray-400 w-20">Email:</label>
+                                                                            <div className="flex-1 text-xs text-gray-200">{dasher.email}</div>
+                                                                            {dasher.email && (
+                                                                                <button onClick={() => copyToClipboard(dasher.email)} className="text-blue-400 hover:text-blue-300 p-1" title="Copy email">
+                                                                                    <Copy size={12} />
+                                                                                </button>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <label className="text-xs text-gray-400 w-20">Balance:</label>
+                                                                            <div className="flex-1 text-xs text-gray-200">
+                                                                                ${(Number(dasher.balance) || 0).toFixed(2)}
+                                                                            </div>
+                                                                            {dasher.balance && (
+                                                                                <button onClick={() => copyToClipboard((Number(dasher.balance) || 0).toString())} className="text-blue-400 hover:text-blue-300 p-1" title="Copy balance">
+                                                                                    <Copy size={12} />
+                                                                                </button>
+                                                                            )}
+                                                                        </div>
                                                                         {dasher.lastUsed && (<div className="flex items-center justify-between"><span className="text-gray-400">Timer:</span><span className={`font-mono ${timeStatus.color}`}>{timeStatus.display}</span></div>)}
                                                                         {dasher.notes && (<div className="pt-1"><div className="flex items-center justify-between mb-1"><span className="text-gray-400">Notes:</span><button onClick={() => copyToClipboard(dasher.notes)} className="copy-btn"><Copy size={10} /></button></div><p className="text-gray-300 text-xs whitespace-pre-wrap bg-gray-700/30 rounded p-2">{dasher.notes}</p></div>)}
                                                                         <div className="flex items-center gap-3 pt-1">
