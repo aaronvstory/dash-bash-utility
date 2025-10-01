@@ -524,18 +524,22 @@ h6 { font-size: var(--text-sm); }
 }
 
 .gradient-header {
-  /* FIXED: Use visible text color instead of transparent gradient text */
-  color: #e8f0ff !important;
+  /* Subtle gradient with excellent legibility */
+  background: linear-gradient(135deg, #e8f0ff 0%, #c5d0ff 50%, #a5b8ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   font-weight: 700;
   letter-spacing: -0.01em;
-  text-shadow: 0 0 6px rgba(197, 208, 255, 0.3);
-  -webkit-text-fill-color: #e8f0ff !important;
+  text-shadow: none;
 }
 
 .theme-jp .gradient-header {
-  color: #f0f4ff !important;
-  text-shadow: 0 0 8px rgba(210, 218, 255, 0.4);
-  -webkit-text-fill-color: #f0f4ff !important;
+  background: linear-gradient(135deg, #f0f4ff 0%, #d2daff 50%, #b4c5ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
 }
 
 /* Japanese-inspired gradient headings - Subtle & Compact */
