@@ -215,13 +215,15 @@ html {
 }
 
 body {
-  font-family: var(--font-sans);
+  font-family: 'Inter', var(--font-sans) !important;
   font-size: var(--text-base);
   line-height: 1.5;
   color: var(--text-primary);
   background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 50%, #0f1419 100%);
   min-height: 100vh;
   padding: 1.5rem 1rem;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* =============================
@@ -491,6 +493,11 @@ body {
    3. TYPOGRAPHY
    ================================================================ */
 
+/* Smooth text color transitions for polish */
+* {
+  transition: color 0.15s ease;
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-weight: var(--font-bold);
   line-height: 1.2;
@@ -614,18 +621,20 @@ p {
    5. COMPONENTS
    ================================================================ */
 
-/* Cards */
-.card {
-  background: var(--bg-secondary);
+/* Cards with subtle gradients */
+.card, .bg-gray-800 {
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.90));
   border-radius: var(--radius-lg);
   padding: var(--spacing-md);
-  border: 1px solid var(--border-primary);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
   transition: all var(--transition-base);
 }
 
-.card:hover {
-  background: var(--bg-hover);
-  border-color: var(--border-secondary);
+.card:hover, .bg-gray-800:hover {
+  background: linear-gradient(145deg, rgba(40, 51, 69, 0.98), rgba(25, 33, 52, 0.93));
+  border-color: rgba(148, 163, 184, 0.25);
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
 }
 
 /* Buttons */
@@ -1060,37 +1069,75 @@ body.dragging {
 @media (max-width:640px) {
   .flag-badge { font-size:9px; padding:2px 6px 3px; }
 }
-.flag-badge[data-flag] { opacity:0.6; background:#4b5563; color:#9ca3af; }
-.flag-badge[data-flag][data-active="true"] { opacity:1; filter:none; }
-.flag-badge[data-flag="C"][data-active="true"]  { background:#ef4444; color:#ffffff; border-color:#dc2626; }
-.flag-badge[data-flag="RC"][data-active="true"] { background:#f97316; color:#ffffff; border-color:#ea580c; }
-.flag-badge[data-flag="AP"][data-active="true"] { background:#eab308; color:#1f2937; border-color:#ca8a04; }
+.flag-badge[data-flag] {
+  opacity:0.6;
+  background: linear-gradient(135deg, #4b5563, #374151);
+  color:#9ca3af;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.flag-badge[data-flag][data-active="true"] {
+  opacity:1;
+  filter:none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 8px rgba(255, 255, 255, 0.1);
+}
+.flag-badge[data-flag="C"][data-active="true"]  {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color:#ffffff;
+  border-color:#dc2626;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4), 0 0 8px rgba(239, 68, 68, 0.3);
+}
+.flag-badge[data-flag="RC"][data-active="true"] {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color:#ffffff;
+  border-color:#ea580c;
+  box-shadow: 0 2px 4px rgba(249, 115, 22, 0.4), 0 0 8px rgba(249, 115, 22, 0.3);
+}
+.flag-badge[data-flag="AP"][data-active="true"] {
+  background: linear-gradient(135deg, #eab308, #ca8a04);
+  color:#1f2937;
+  border-color:#ca8a04;
+  box-shadow: 0 2px 4px rgba(234, 179, 8, 0.4), 0 0 8px rgba(234, 179, 8, 0.3);
+}
 .dasher-card--deactivated .flag-badge[data-flag] { opacity:.8; }
 .dasher-card--deactivated .flag-badge[data-active="true"] { filter:brightness(1.1); }
 .theme-jp .flag-badge { background:linear-gradient(140deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02)); }
 .flag-badge:hover { filter:brightness(1.15); }
 
-/* Dasher card variants - DISABLED colored backgrounds for uniform appearance */
-/* All cards now have uniform gray background regardless of status */
+/* ================================================================
+   DASHER CARDS - Polished & Unified Design
+   ================================================================ */
 
-/* Deactivated dasher - No colored tint */
-.dasher-card--deactivated {
-  /* Removed colored background - keeping uniform gray */
+/* Base dasher card with subtle gradient and refined shadows */
+.bg-gray-600\/50 {
+  background: linear-gradient(145deg, rgba(75, 85, 99, 0.55), rgba(55, 65, 81, 0.50)) !important;
+  border: 1px solid rgba(156, 163, 175, 0.2) !important;
+  box-shadow:
+    0 2px 8px -2px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
+  transition: all 0.2s ease !important;
 }
 
-/* Ready dasher - No colored tint */
-.dasher-card--ready {
-  /* Removed colored background - keeping uniform gray */
+.bg-gray-600\/50:hover {
+  background: linear-gradient(145deg, rgba(85, 95, 109, 0.58), rgba(65, 75, 91, 0.53)) !important;
+  border-color: rgba(156, 163, 175, 0.3) !important;
+  box-shadow:
+    0 4px 12px -2px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset !important;
+  transform: translateY(-1px);
 }
 
-/* Appealed dasher - No colored tint */
-.dasher-card--appealed {
-  /* Removed colored background - keeping uniform gray */
+/* Unified card header styling */
+.bg-gray-600\/50 > div:first-child {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* Currently Using dasher - No colored tint */
+/* Remove old variant classes (no longer needed) */
+.dasher-card--deactivated,
+.dasher-card--ready,
+.dasher-card--appealed,
 .dasher-card--currently-using {
-  /* Removed colored background - keeping uniform gray */
+  /* Unified styling via bg-gray-600/50 */
 }
 
 /* Unified icon button styling (progressive enhance existing p-1 text-* buttons) */
