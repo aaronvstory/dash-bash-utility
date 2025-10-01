@@ -1,9 +1,16 @@
 /**
  * Dash Bash Utility - Comprehensive Stylesheet
- * Version: 1.2.0
+ * Version: 1.5.2
  *
  * This stylesheet is designed for easy theming and maintainability.
  * Update CSS variables in :root to change the entire app's appearance.
+ *
+ * Changes in 1.5.2:
+ * - Added Japanese-style animated gradients to h1, h2, h3 titles
+ * - Added Japanese-style animated gradients to .section-title elements
+ * - Removed gradients from pills (solid colors for clarity)
+ * - Removed gradients from cards (.bg-gray-800, .bg-gray-600/50)
+ * - Simplified shadows and backgrounds for "simple, lovable, complete" aesthetic
  *
  * Table of Contents:
  * 1. CSS Variables & Theming
@@ -511,6 +518,16 @@ h4 { font-size: var(--text-lg); }
 h5 { font-size: var(--text-base); }
 h6 { font-size: var(--text-sm); }
 
+/* Japanese-style animated gradients for titles */
+h1, h2, h3 {
+  background: linear-gradient(135deg, #e8f0ff 0%, #c5d0ff 30%, #ffd4e5 60%, #a5b8ff 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientShift 8s ease infinite;
+}
+
 /* Japanese-Inspired Animated Gradient Header */
 @keyframes gradientShift {
   0%, 100% {
@@ -621,20 +638,20 @@ p {
    5. COMPONENTS
    ================================================================ */
 
-/* Cards with subtle gradients */
+/* Cards with solid backgrounds (no gradients) */
 .card, .bg-gray-800 {
-  background: linear-gradient(145deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.90));
+  background: rgba(30, 41, 59, 0.95);
   border-radius: var(--radius-lg);
   padding: var(--spacing-md);
   border: 1px solid rgba(148, 163, 184, 0.15);
-  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.3);
   transition: all var(--transition-base);
 }
 
 .card:hover, .bg-gray-800:hover {
-  background: linear-gradient(145deg, rgba(40, 51, 69, 0.98), rgba(25, 33, 52, 0.93));
+  background: rgba(40, 51, 69, 0.98);
   border-color: rgba(148, 163, 184, 0.25);
-  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.4);
 }
 
 /* Buttons */
@@ -831,7 +848,12 @@ p {
 .section-title {
   font-size: var(--text-lg);
   font-weight: var(--font-semibold);
-  color: var(--text-primary);
+  background: linear-gradient(135deg, #e8f0ff 0%, #c5d0ff 30%, #ffd4e5 60%, #a5b8ff 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientShift 8s ease infinite;
 }
 
 .section-count {
@@ -1070,33 +1092,33 @@ body.dragging {
   .flag-badge { font-size:9px; padding:2px 6px 3px; }
 }
 .flag-badge[data-flag] {
-  opacity:0.6;
-  background: linear-gradient(135deg, #4b5563, #374151);
-  color:#9ca3af;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  opacity:0.7;
+  background: #52525b;
+  color:#a1a1aa;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 .flag-badge[data-flag][data-active="true"] {
   opacity:1;
   filter:none;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 8px rgba(255, 255, 255, 0.1);
+  font-weight:700;
 }
 .flag-badge[data-flag="C"][data-active="true"]  {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
+  background: #ef4444;
   color:#ffffff;
   border-color:#dc2626;
-  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4), 0 0 8px rgba(239, 68, 68, 0.3);
+  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.5);
 }
 .flag-badge[data-flag="RC"][data-active="true"] {
-  background: linear-gradient(135deg, #f97316, #ea580c);
+  background: #f97316;
   color:#ffffff;
   border-color:#ea580c;
-  box-shadow: 0 2px 4px rgba(249, 115, 22, 0.4), 0 0 8px rgba(249, 115, 22, 0.3);
+  box-shadow: 0 1px 3px rgba(249, 115, 22, 0.5);
 }
 .flag-badge[data-flag="AP"][data-active="true"] {
-  background: linear-gradient(135deg, #eab308, #ca8a04);
-  color:#1f2937;
-  border-color:#ca8a04;
-  box-shadow: 0 2px 4px rgba(234, 179, 8, 0.4), 0 0 8px rgba(234, 179, 8, 0.3);
+  background: #facc15;
+  color:#18181b;
+  border-color:#eab308;
+  box-shadow: 0 1px 3px rgba(250, 204, 21, 0.5);
 }
 .dasher-card--deactivated .flag-badge[data-flag] { opacity:.8; }
 .dasher-card--deactivated .flag-badge[data-active="true"] { filter:brightness(1.1); }
@@ -1109,26 +1131,22 @@ body.dragging {
 
 /* Base dasher card with subtle gradient and refined shadows */
 .bg-gray-600\/50 {
-  background: linear-gradient(145deg, rgba(75, 85, 99, 0.55), rgba(55, 65, 81, 0.50)) !important;
+  background: rgba(75, 85, 99, 0.55) !important;
   border: 1px solid rgba(156, 163, 175, 0.2) !important;
-  box-shadow:
-    0 2px 8px -2px rgba(0, 0, 0, 0.3),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.3) !important;
   transition: all 0.2s ease !important;
 }
 
 .bg-gray-600\/50:hover {
-  background: linear-gradient(145deg, rgba(85, 95, 109, 0.58), rgba(65, 75, 91, 0.53)) !important;
+  background: rgba(85, 95, 109, 0.58) !important;
   border-color: rgba(156, 163, 175, 0.3) !important;
-  box-shadow:
-    0 4px 12px -2px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.08) inset !important;
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.4) !important;
   transform: translateY(-1px);
 }
 
-/* Unified card header styling */
+/* Unified card header styling - no gradient */
 .bg-gray-600\/50 > div:first-child {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent);
+  background: rgba(255, 255, 255, 0.02);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
