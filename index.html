@@ -32,8 +32,13 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
+    <!-- Google Fonts - Modern Sans-Serif -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
     <!-- External Stylesheets (base + exported refined theme) -->
-    <link rel="stylesheet" href="styles.css?v=1.4.3">
+    <link rel="stylesheet" href="styles.css?v=1.5.0">
     <link rel="stylesheet" href="styles2.css?v=1.4.3" data-layer="refined-theme">
 
     <!-- Tailwind CSS (for backward compatibility during transition) -->
@@ -2216,15 +2221,15 @@
 
                     const parts = [];
 
-                    // Name (purple)
+                    // Name (bright purple)
                     if (dasher.name) {
-                        parts.push(React.createElement('span', { key: 'name', className: 'text-purple-300' }, dasher.name));
+                        parts.push(React.createElement('span', { key: 'name', className: 'text-purple-200' }, dasher.name));
                     }
 
-                    // Email (blue)
+                    // Email (bright blue)
                     if (dasher.email) {
                         if (parts.length > 0) parts.push(React.createElement('span', { key: 'sep1' }, ' - '));
-                        parts.push(React.createElement('span', { key: 'email', className: 'text-blue-400' }, dasher.email));
+                        parts.push(React.createElement('span', { key: 'email', className: 'text-blue-200' }, dasher.email));
                     }
 
                     // If no name or email
@@ -2247,7 +2252,7 @@
                         parts.push(React.createElement('span', { key: 'sep2' }, ' - '));
                         parts.push(React.createElement('span', {
                             key: 'balance',
-                            className: isZero ? 'text-green-400' : 'text-red-500'
+                            className: isZero ? 'text-green-300' : 'text-red-400'
                         }, balance));
                     }
 
@@ -4288,7 +4293,7 @@
                                                         className="bg-gray-600/50 rounded-lg overflow-hidden border border-gray-500/30"
                                                     >
                                                         {/* Dasher Header */}
-                                                        <div className="flex items-center justify-between p-3">
+                                                        <div className="flex items-center justify-between p-4">
                                                             <div className="flex items-center gap-2 flex-1">
                                                                 <button
                                                                     onClick={() => {
@@ -5107,7 +5112,7 @@
                                                         }`}
                                                     >
                                                         {/* Dasher Header */}
-                                                        <div className="flex items-center justify-between p-3">
+                                                        <div className="flex items-center justify-between p-4">
                                                             <div className="flex items-center gap-2 flex-1">
                                                                 {/* Checkbox for selection (only visible in edit mode) */}
                                                                 {isEditMode && (
