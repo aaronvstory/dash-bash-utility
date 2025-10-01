@@ -158,15 +158,15 @@
   --jp-ink-soft: #1e2430;
   --jp-ink-mid: #252c37;
   --jp-ink-strong: #323b46;
-  --jp-text-hi: #e6e9ef;
-  --jp-text-med: #8a92a3;
-  --jp-text-dim: #616a79;
-  --jp-accent-indigo: #6d7dff;
-  --jp-accent-indigo-soft: #4653c7;
-  --jp-accent-sakura: #f39ac5;
-  --jp-accent-gold: #e7b868;
-  --jp-accent-matcha: #3fbf78;
-  --jp-accent-vermillion: #eb564d;
+  --jp-text-hi: #f0f2f6;
+  --jp-text-med: #a8b0c0;
+  --jp-text-dim: #7a8290;
+  --jp-accent-indigo: #8a95ff;
+  --jp-accent-indigo-soft: #6270d8;
+  --jp-accent-sakura: #ffaed0;
+  --jp-accent-gold: #f5ca80;
+  --jp-accent-matcha: #55d890;
+  --jp-accent-vermillion: #ff6f68;
   --jp-focus: #f39ac5;
   --jp-ring: rgba(243,154,197,0.35);
   --jp-shadow-sm: 0 2px 4px -2px rgba(0,0,0,.4);
@@ -359,7 +359,7 @@ body {
 @keyframes softPop { from { opacity:0; transform:translateY(8px) scale(.985);} to { opacity:1; transform:translateY(0) scale(1);} }
 .theme-jp .section { animation: softPop .45s ease; }
 
-/* Japanese-Inspired Animated Gradient Header */
+/* Japanese-Inspired Animated Gradient Header - FIXED FOR LEGIBILITY */
 @keyframes gradientShift {
   0%, 100% {
     background-position: 0% 50%;
@@ -369,45 +369,17 @@ body {
   }
 }
 
-@keyframes gradientGlow {
-  0%, 100% {
-    filter: brightness(1) saturate(1);
-  }
-  50% {
-    filter: brightness(1.15) saturate(1.25);
-  }
-}
-
+/* Simple gradient header - high contrast for better legibility */
 .gradient-header {
-  background: linear-gradient(
-    120deg,
-    #4a90e2 0%,
-    #7b68ee 25%,
-    #f39ac5 50%,
-    #7b68ee 75%,
-    #4a90e2 100%
-  );
-  background-size: 300% 300%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: gradientShift 8s ease-in-out infinite, gradientGlow 4s ease-in-out infinite;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  text-shadow: 0 0 40px rgba(123, 104, 238, 0.3);
+  color: #d8e0ff;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-shadow: 0 0 4px rgba(184, 197, 255, 0.2);
 }
 
 .theme-jp .gradient-header {
-  background: linear-gradient(
-    120deg,
-    var(--jp-accent-indigo) 0%,
-    #8b7bff 20%,
-    var(--jp-accent-sakura) 40%,
-    var(--jp-accent-gold) 60%,
-    #8b7bff 80%,
-    var(--jp-accent-indigo) 100%
-  );
-  background-size: 300% 300%;
+  color: #e8f0ff;
+  text-shadow: 0 0 6px rgba(197, 208, 255, 0.3);
 }
 
 /* ================================================================
@@ -427,34 +399,7 @@ h4 { font-size: var(--text-lg); }
 h5 { font-size: var(--text-base); }
 h6 { font-size: var(--text-sm); }
 
-/* Animated Gradient Header - Japanese Style */
-.gradient-header {
-  background: linear-gradient(
-    90deg,
-    #4facfe 0%,
-    #00f2fe 25%,
-    #43e97b 50%,
-    #38f9d7 75%,
-    #4facfe 100%
-  );
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: gradientShift 8s ease-in-out infinite;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  filter: drop-shadow(0 0 20px rgba(79, 172, 254, 0.5));
-}
-
-@keyframes gradientShift {
-  0%, 100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
+/* Gradient header definition moved to line 373 to avoid duplication */
 
 p {
   margin-bottom: var(--spacing-md);

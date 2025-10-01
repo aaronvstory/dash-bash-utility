@@ -2209,52 +2209,61 @@
             };
 
             const getDasherTitle = (dasher) => {
-                const parts = [];
-
-                // Name (purple - keep default color)
-                if (dasher.name) {
-                    parts.push(React.createElement('span', { key: 'name' }, dasher.name));
-                }
-
-                // Email (blue)
-                if (dasher.email) {
-                    if (parts.length > 0) parts.push(React.createElement('span', { key: 'sep1' }, ' - '));
-                    parts.push(React.createElement('span', { key: 'email', className: 'text-blue-400' }, dasher.email));
-                }
-
-                // If no name or email
-                if (parts.length === 0) {
-                    parts.push(React.createElement('span', { key: 'new' }, 'New Dasher'));
-                }
-
-                // (Legacy inline status indicators removed; unified flag badge row now handles status display.)
-
-                // Balance (green if $0, red otherwise)
-                if (dasher.balance) {
-                    const balance = dasher.balance.toString().startsWith('$')
-                        ? dasher.balance
-                        : `$${dasher.balance}`;
-
-                    // Check if balance is $0
-                    const balanceValue = balance.replace('$', '');
-                    const isZero = parseFloat(balanceValue) === 0;
-
-                    parts.push(React.createElement('span', { key: 'sep2' }, ' - '));
-                    parts.push(React.createElement('span', {
-                        key: 'balance',
-                        className: isZero ? 'text-green-400' : 'text-red-500'
-                    }, balance));
-                }
-
-                // Add last used time if available
-                if (dasher.lastUsed) {
-                    const timeStatus = calculateDasherTimeStatus(dasher.lastUsed);
-                    if (timeStatus) {
-                        parts.push(React.createElement('span', { key: 'time' }, ` (${timeStatus.text})`));
+                try {
+                    if (!dasher) {
+                        return React.createElement('span', { key: 'error' }, 'Invalid Dasher');
                     }
-                }
 
-                return React.createElement(React.Fragment, {}, parts);
+                    const parts = [];
+
+                    // Name (purple - keep default color)
+                    if (dasher.name) {
+                        parts.push(React.createElement('span', { key: 'name' }, dasher.name));
+                    }
+
+                    // Email (blue)
+                    if (dasher.email) {
+                        if (parts.length > 0) parts.push(React.createElement('span', { key: 'sep1' }, ' - '));
+                        parts.push(React.createElement('span', { key: 'email', className: 'text-blue-400' }, dasher.email));
+                    }
+
+                    // If no name or email
+                    if (parts.length === 0) {
+                        parts.push(React.createElement('span', { key: 'new' }, 'New Dasher'));
+                    }
+
+                    // (Legacy inline status indicators removed; unified flag badge row now handles status display.)
+
+                    // Balance (green if $0, red otherwise)
+                    if (dasher.balance) {
+                        const balance = dasher.balance.toString().startsWith('$')
+                            ? dasher.balance
+                            : `$${dasher.balance}`;
+
+                        // Check if balance is $0
+                        const balanceValue = balance.replace('$', '');
+                        const isZero = parseFloat(balanceValue) === 0;
+
+                        parts.push(React.createElement('span', { key: 'sep2' }, ' - '));
+                        parts.push(React.createElement('span', {
+                            key: 'balance',
+                            className: isZero ? 'text-green-400' : 'text-red-500'
+                        }, balance));
+                    }
+
+                    // Add last used time if available
+                    if (dasher.lastUsed) {
+                        const timeStatus = calculateDasherTimeStatus(dasher.lastUsed);
+                        if (timeStatus && timeStatus.text) {
+                            parts.push(React.createElement('span', { key: 'time' }, ` (${timeStatus.text})`));
+                        }
+                    }
+
+                    return React.createElement(React.Fragment, {}, parts);
+                } catch (error) {
+                    console.error('Error in getDasherTitle:', error, dasher);
+                    return React.createElement('span', { key: 'error' }, 'Error displaying dasher');
+                }
             };
 
             // Expand/Collapse all for Address Book
@@ -3620,7 +3629,8 @@
 
                                 {isDashersOpen && (
                                     <div className="border-t border-gray-700 p-4 space-y-3">
-                                        {dasherCategories.map((category) => {
+                                        {dasherCategories && dasherCategories.length > 0 && dasherCategories.map((category) => {
+                                            if (!category || !category.dashers) return null;
                                             const isCategoryCollapsed = collapsedDasherCategories[category.id];
 
                                             return (
@@ -3636,7 +3646,7 @@
                                                                 <input
                                                                     type="checkbox"
                                                                     checked={selectedItems.dasherCategories.has(category.id) ||
-                                                                             category.dashers.every(d => selectedItems.dashers.has(d.id))}
+                                                                             (category.dashers && category.dashers.length > 0 && category.dashers.every(d => selectedItems.dashers.has(d.id)))}
                                                                     onChange={(e) => {
                                                                         e.stopPropagation();
                                                                         toggleCategorySelection('dashers', category.id, category.dashers.map(d => d.id));
@@ -4257,7 +4267,7 @@
                                 </button>
                                 {isReadyDashersOpen && (
                                     <div className="p-4 pt-2 space-y-2">
-                                        {readyDashers.length === 0 ? (
+                                        {!readyDashers || readyDashers.length === 0 ? (
                                             <div className="text-center text-gray-500 py-8 text-sm italic">No ready dashers</div>
                                         ) : (
                                             readyDashers.map((dasher) => {
@@ -4482,10 +4492,10 @@
                                                                         <div className="flex items-center justify-between">
                                                                             <span className="text-gray-400">Balance:</span>
                                                                             <div className="flex items-center gap-1">
-                                                                                <span className={dasher.balance === 0 ? 'text-green-400' : 'text-red-400'}>
-                                                                                    ${dasher.balance.toFixed(2)}
+                                                                                <span className={(Number(dasher.balance) || 0) === 0 ? 'text-green-400' : 'text-red-400'}>
+                                                                                    ${(Number(dasher.balance) || 0).toFixed(2)}
                                                                                 </span>
-                                                                                <button onClick={() => copyToClipboard(dasher.balance.toString())} className="copy-btn">
+                                                                                <button onClick={() => copyToClipboard((Number(dasher.balance) || 0).toString())} className="copy-btn">
                                                                                     <Copy size={10} />
                                                                                 </button>
                                                                             </div>
@@ -4735,7 +4745,7 @@
                                                                     <>
                                                                         <div className="flex items-center justify-between"><span className="text-gray-400">Name:</span><div className="flex items-center gap-1"><span className="text-purple-300">{dasher.name}</span><button onClick={() => copyToClipboard(dasher.name)} className="copy-btn"><Copy size={10} /></button></div></div>
                                                                         <div className="flex items-center justify-between"><span className="text-gray-400">Email:</span><div className="flex items-center gap-1"><span className="text-blue-300">{dasher.email}</span><button onClick={() => copyToClipboard(dasher.email)} className="copy-btn"><Copy size={10} /></button></div></div>
-                                                                        <div className="flex items-center justify-between"><span className="text-gray-400">Balance:</span><div className="flex items-center gap-1"><span className={dasher.balance === 0 ? 'text-green-400' : 'text-red-400'}>${dasher.balance.toFixed(2)}</span><button onClick={() => copyToClipboard(dasher.balance.toString())} className="copy-btn"><Copy size={10} /></button></div></div>
+                                                                        <div className="flex items-center justify-between"><span className="text-gray-400">Balance:</span><div className="flex items-center gap-1"><span className={(Number(dasher.balance) || 0) === 0 ? 'text-green-400' : 'text-red-400'}>${(Number(dasher.balance) || 0).toFixed(2)}</span><button onClick={() => copyToClipboard((Number(dasher.balance) || 0).toString())} className="copy-btn"><Copy size={10} /></button></div></div>
                                                                         {dasher.lastUsed && (<div className="flex items-center justify-between"><span className="text-gray-400">Timer:</span><span className={`font-mono ${timeStatus.color}`}>{timeStatus.display}</span></div>)}
                                                                         {dasher.notes && (<div className="pt-1"><div className="flex items-center justify-between mb-1"><span className="text-gray-400">Notes:</span><button onClick={() => copyToClipboard(dasher.notes)} className="copy-btn"><Copy size={10} /></button></div><p className="text-gray-300 text-xs whitespace-pre-wrap bg-gray-700/30 rounded p-2">{dasher.notes}</p></div>)}
                                                                         <div className="flex items-center gap-3 pt-1">
@@ -4901,7 +4911,7 @@
                                                                     <>
                                                                         <div className="flex items-center justify-between"><span className="text-gray-400">Name:</span><div className="flex items-center gap-1"><span className="text-purple-300">{dasher.name}</span><button onClick={() => copyToClipboard(dasher.name)} className="copy-btn"><Copy size={10} /></button></div></div>
                                                                         <div className="flex items-center justify-between"><span className="text-gray-400">Email:</span><div className="flex items-center gap-1"><span className="text-blue-300">{dasher.email}</span><button onClick={() => copyToClipboard(dasher.email)} className="copy-btn"><Copy size={10} /></button></div></div>
-                                                                        <div className="flex items-center justify-between"><span className="text-gray-400">Balance:</span><div className="flex items-center gap-1"><span className={dasher.balance === 0 ? 'text-green-400' : 'text-red-400'}>${dasher.balance.toFixed(2)}</span><button onClick={() => copyToClipboard(dasher.balance.toString())} className="copy-btn"><Copy size={10} /></button></div></div>
+                                                                        <div className="flex items-center justify-between"><span className="text-gray-400">Balance:</span><div className="flex items-center gap-1"><span className={(Number(dasher.balance) || 0) === 0 ? 'text-green-400' : 'text-red-400'}>${(Number(dasher.balance) || 0).toFixed(2)}</span><button onClick={() => copyToClipboard((Number(dasher.balance) || 0).toString())} className="copy-btn"><Copy size={10} /></button></div></div>
                                                                         {dasher.lastUsed && (<div className="flex items-center justify-between"><span className="text-gray-400">Timer:</span><span className={`font-mono ${timeStatus.color}`}>{timeStatus.display}</span></div>)}
                                                                         {dasher.notes && (<div className="pt-1"><div className="flex items-center justify-between mb-1"><span className="text-gray-400">Notes:</span><button onClick={() => copyToClipboard(dasher.notes)} className="copy-btn"><Copy size={10} /></button></div><p className="text-gray-300 text-xs whitespace-pre-wrap bg-gray-700/30 rounded p-2">{dasher.notes}</p></div>)}
                                                                         <div className="flex items-center gap-3 pt-1">
