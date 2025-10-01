@@ -179,14 +179,22 @@ Real-time store hours tracking:
 - Uses `timerTick` counter updating every 1000ms for efficient re-renders
 
 ### Dasher Title Display (`getDasherTitle`)
-Dynamic title generation with color coding (v1.4.0+):
-- Name: Purple (default text color)
-- Email: Blue (`text-blue-400`)
-- Crimson indicator: "C" between email and balance (red when active, gray when not)
-- Red Card indicator: "R" after Crimson indicator (red when active, gray when not)
-- Balance: Green if $0 (`text-green-400`), Red otherwise (`text-red-500`)
-- Format: "Name - Email - C - R - Balance"
+Dynamic title generation with high-contrast color coding (v1.5.0+):
+- Name: Bright Purple (`text-purple-200`) for excellent visibility
+- Email: Bright Blue (`text-blue-200`) for clear distinction
+- Balance: Bright Green if $0 (`text-green-300`), Bright Red otherwise (`text-red-400`)
+- Format: "Name - Email - Balance"
+- Status indicators shown as separate pill badges (see Flag Badges section)
 - Returns JSX/React.Fragment with styled spans
+
+### Flag Badge System (v1.5.0+)
+Status indicators displayed as modern pill badges with unique colors:
+- **Crimson (C)**: Bright red background (#ef4444) with white text when active
+- **Red Card (RC)**: Bright orange background (#f97316) with white text when active
+- **Appealed (AP)**: Bright yellow background (#eab308) with dark text when active
+- **Inactive state**: Gray background (#4b5563) with 60% opacity for visibility
+- All pills have excellent contrast ratios for accessibility
+- Positioned as inline badges after dasher name/email/balance
 
 ## localStorage Structure
 
@@ -237,9 +245,10 @@ const [editingNoteCategory, setEditingNoteCategory] = useState(-1);
 )}
 ```
 
-### Padding Consistency (v1.1.5+)
+### Padding Consistency
 - Input fields: `px-2 py-0.5` (not `py-1`)
 - Display text: `px-2 py-0.5` (matching padding)
+- Dasher card headers: `p-4` (v1.5.0+, increased from `p-3` for better spacing)
 - Prevents layout jumps when switching between view/edit modes
 
 ## Version Management & Cache Busting
@@ -309,17 +318,19 @@ The application implements several cache-busting strategies to ensure users alwa
 ## Stylesheet Architecture
 
 ### External Stylesheet (styles.css)
-The application now uses a comprehensive external stylesheet (`styles.css`) designed for maintainability and future theming. The stylesheet is version-controlled and loaded with cache-busting parameters.
+The application uses a comprehensive external stylesheet (`styles.css`) designed for maintainability and future theming. The stylesheet is version-controlled and loaded with cache-busting parameters.
 
 **Key Features:**
+- **Modern Typography**: Inter font family (Google Fonts) for professional sans-serif appearance
 - **CSS Variables**: All colors, spacing, typography, and animations defined as variables
+- **High Contrast**: Optimized color palette for excellent legibility (v1.5.0+)
 - **Theming Ready**: Support for dark/light themes via `data-theme` attribute
 - **Component Classes**: Reusable classes for buttons, cards, inputs, and UI patterns
 - **Responsive Utilities**: Mobile-first breakpoints (sm, md, lg, xl)
 - **Accessibility**: Focus styles, screen reader support, reduced motion
 - **Print Styles**: Clean printing with appropriate element hiding
 
-**File Location**: `styles.css?v=1.2.0` (update version on changes)
+**File Location**: `styles.css?v=1.5.0` (update version on changes)
 
 ### CSS Variable System
 The stylesheet uses CSS custom properties for easy theming:
@@ -445,6 +456,44 @@ From `styles.css`, use these classes for consistent UI:
 - `.draggable` - Drag-and-drop items
 - `.copy-btn` - Copy to clipboard buttons
 
+## UI/UX Design Guidelines
+
+### Critical CSS Cascade Rules
+**NEVER override child element colors with parent classes**. This was the root cause of major legibility issues in v1.4.x:
+
+**❌ WRONG - Parent color overrides all children:**
+```html
+<h5 className="text-purple-300">
+  {dasherTitle}  <!-- All child spans become purple-300, losing their individual colors -->
+</h5>
+```
+
+**✅ CORRECT - No parent color, children define their own:**
+```html
+<h5 className="font-medium text-sm">
+  {dasherTitle}  <!-- Child spans maintain their individual colors -->
+</h5>
+```
+
+### High Contrast Color Requirements
+For dark backgrounds, use the BRIGHTEST versions of Tailwind colors:
+- **Names/Labels**: `text-purple-200`, `text-blue-200` (NOT -300 or -400)
+- **Balances/Values**: `text-red-400`, `text-green-300` (NOT -500 or darker)
+- **Pills/Badges**: Solid bright backgrounds (#ef4444, #f97316) with white/dark text
+- **Inactive States**: Visible gray (#4b5563) with reduced opacity (60-80%)
+
+### Typography Best Practices
+- **Font Family**: Inter (Google Fonts) for modern sans-serif appearance
+- **Line Height**: Adequate spacing for readability
+- **Letter Spacing**: Slight tracking for better legibility at small sizes
+- **Font Weights**: Use 400 (normal), 500 (medium), 600 (semibold) strategically
+
+### Spacing Consistency
+- **Card Headers**: `p-4` (adequate breathing room)
+- **Form Inputs**: `px-2 py-0.5` (compact but functional)
+- **Between Sections**: `space-y-4` (consistent vertical rhythm)
+- **Inline Elements**: `gap-2` or `gap-3` (appropriate for context)
+
 ## Development Patterns
 
 ### Adding New Sections
@@ -533,6 +582,20 @@ The application uses a unified JSON format (v2.1) for state export/import:
 - Current format v2.1 (includes all features)
 
 ## Recent Updates
+
+### v1.5.0 (January 2025)
+- **Modern Typography**: Added Inter font family via Google Fonts for professional appearance
+- **High Contrast Colors**: Dramatically improved text legibility
+  - Name: `text-purple-200` (brighter purple)
+  - Email: `text-blue-200` (brighter blue)
+  - Balance: `text-green-300` (zero) / `text-red-400` (non-zero)
+- **Unique Pill Colors**: Distinct active state colors for excellent visibility
+  - Crimson: Bright red (#ef4444) with white text
+  - Red Card: Bright orange (#f97316) with white text
+  - Appealed: Bright yellow (#eab308) with dark text
+  - Inactive: Visible gray (#4b5563) with 60% opacity
+- **Improved Spacing**: Increased padding in dasher card headers (p-3 → p-4)
+- **Card Consistency**: All sections now use identical card styling
 
 ### v1.4.0 (January 2025)
 - Added Red Card checkbox feature for dashers

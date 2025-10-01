@@ -32,17 +32,17 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
+    <!-- Tailwind CSS (MUST load first to allow custom styles to override) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
     <!-- Google Fonts - Modern Sans-Serif -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- External Stylesheets (base + exported refined theme) -->
-    <link rel="stylesheet" href="styles.css?v=1.5.0">
+    <!-- External Stylesheets (MUST load after Tailwind to override defaults) -->
+    <link rel="stylesheet" href="styles.css?v=1.5.1">
     <link rel="stylesheet" href="styles2.css?v=1.4.3" data-layer="refined-theme">
-
-    <!-- Tailwind CSS (for backward compatibility during transition) -->
-    <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
