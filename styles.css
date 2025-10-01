@@ -1057,7 +1057,7 @@ body.dragging {
 @media (max-width:640px) {
   .flag-badge { font-size:9px; padding:2px 6px 3px; }
 }
-.flag-badge[data-flag] { opacity:.55; filter:saturate(.4) contrast(.9); }
+.flag-badge[data-flag] { opacity:.35; filter:grayscale(0.7) saturate(.3) brightness(.7); }
 .flag-badge[data-flag][data-active="true"] { opacity:1; filter:none; }
 .flag-badge[data-flag="C"][data-active="true"]  { --_text: var(--indicator-crimson); }
 .flag-badge[data-flag="RC"][data-active="true"] { --_text: var(--indicator-redcard); }
