@@ -219,8 +219,9 @@ body {
   font-size: var(--text-base);
   line-height: 1.5;
   color: var(--text-primary);
-  background-color: var(--bg-primary);
+  background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 50%, #0f1419 100%);
   min-height: 100vh;
+  padding: 1.5rem 1rem;
 }
 
 /* =============================
@@ -237,9 +238,13 @@ body {
   --border-primary: rgba(255,255,255,0.06);
   --border-secondary: rgba(255,255,255,0.14);
   --border-tertiary: rgba(255,255,255,0.22);
-  /* Ultra-dark clean background - no gradients, pure matte black */
-  background: #0a0a0a;
+  /* Beautiful gradient background with subtle purple and pink glows */
+  background:
+    radial-gradient(ellipse 800px 600px at 20% 10%, rgba(123, 104, 238, 0.15), transparent),
+    radial-gradient(ellipse 600px 800px at 80% 90%, rgba(243, 154, 197, 0.12), transparent),
+    radial-gradient(circle at 50% 50%, #1a1f2e, #0d0f12);
   color: var(--jp-text-hi);
+  min-height: 100vh;
 }
 
 /* --------------------------------------------------------------
@@ -498,6 +503,70 @@ h3 { font-size: var(--text-xl); }
 h4 { font-size: var(--text-lg); }
 h5 { font-size: var(--text-base); }
 h6 { font-size: var(--text-sm); }
+
+/* Japanese-Inspired Animated Gradient Header */
+@keyframes gradientShift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes gradientGlow {
+  0%, 100% {
+    filter: brightness(1) saturate(1);
+  }
+  50% {
+    filter: brightness(1.15) saturate(1.25);
+  }
+}
+
+.gradient-header {
+  /* FIXED: Use visible text color instead of transparent gradient text */
+  color: #e8f0ff !important;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-shadow: 0 0 6px rgba(197, 208, 255, 0.3);
+  -webkit-text-fill-color: #e8f0ff !important;
+}
+
+.theme-jp .gradient-header {
+  color: #f0f4ff !important;
+  text-shadow: 0 0 8px rgba(210, 218, 255, 0.4);
+  -webkit-text-fill-color: #f0f4ff !important;
+}
+
+/* Japanese-inspired gradient headings - Subtle & Compact */
+.theme-jp h1 {
+  background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
+  letter-spacing: -0.02em;
+}
+
+.theme-jp h2, .theme-jp h3, .theme-jp h4 {
+  background: linear-gradient(120deg, rgba(255,255,255,0.95) 0%, rgba(200,200,255,0.85) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+/* Main app title - Enhanced Japanese style */
+.theme-jp .text-lg.text-gray-400 {
+  background: linear-gradient(135deg, #d4a5ff 0%, #a8c5ff 50%, #ffd4e5 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 300;
+  opacity: 0.9;
+}
 
 p {
   margin-bottom: var(--spacing-md);
@@ -758,20 +827,20 @@ p {
   margin-left: var(--spacing-sm);
 }
 
-/* Section Wrapper Components */
+/* Section Wrapper Components - Compact Styling */
 .section {
   background: var(--bg-secondary);
   border: 1px solid var(--border-tertiary);
   border-radius: 12px;
   overflow: hidden;
-  margin-bottom: var(--spacing-md);
+  margin-bottom: 0.75rem;
 }
 
 .section__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   cursor: pointer;
   transition: background var(--transition-base);
 }
@@ -782,7 +851,25 @@ p {
 
 .section__body {
   border-top: 1px solid var(--border-tertiary);
-  padding: 1rem;
+  padding: 0.75rem 1rem;
+}
+
+/* Compact spacing for all sections */
+.theme-jp .space-y-4 > * + * {
+  margin-top: 0.75rem !important;
+}
+
+.theme-jp .bg-gray-800 {
+  background: rgba(20, 24, 32, 0.8);
+  backdrop-filter: blur(10px);
+}
+
+.theme-jp .p-4 {
+  padding: 0.75rem !important;
+}
+
+.theme-jp .p-3 {
+  padding: 0.6rem !important;
 }
 
 /* Toast Notifications */
@@ -855,8 +942,14 @@ p {
   cursor: grabbing;
 }
 
-.dragging {
+/* FIX: Only fade the element actually being dragged */
+.draggable.dragging {
   opacity: 0.5;
+}
+
+/* Safety: prevent accidental global dimming */
+body.dragging {
+  opacity: 1 !important;
 }
 
 .drag-over {
@@ -973,7 +1066,7 @@ p {
 /* Deactivated dasher tint - Enhanced for full background coverage */
 .dasher-card--deactivated {
   background:
-    linear-gradient(135deg, rgba(220,38,38,0.35), rgba(127,29,29,0.25)) !important,
+    linear-gradient(135deg, rgba(220,38,38,0.35), rgba(127,29,29,0.25)),
     linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.00)) !important;
   border-color: rgba(248,113,113,0.45) !important;
   box-shadow: 0 0 0 1px rgba(248,113,113,0.28), 0 4px 16px -4px rgba(220,38,38,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
@@ -987,7 +1080,7 @@ p {
 /* Ready dasher tint - Enhanced for full background coverage */
 .dasher-card--ready {
   background:
-    linear-gradient(135deg, rgba(34,197,94,0.38), rgba(6,95,70,0.28)) !important,
+    linear-gradient(135deg, rgba(34,197,94,0.38), rgba(6,95,70,0.28)),
     linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.00)) !important;
   border-color: rgba(52,211,153,0.50) !important;
   box-shadow: 0 0 0 1px rgba(16,185,129,0.35), 0 4px 16px -4px rgba(34,197,94,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
@@ -1001,7 +1094,7 @@ p {
 /* Appealed dasher tint - Yellow/orange border glow */
 .dasher-card--appealed {
   background:
-    linear-gradient(135deg, rgba(251,191,36,0.28), rgba(217,119,6,0.20)) !important,
+    linear-gradient(135deg, rgba(251,191,36,0.28), rgba(217,119,6,0.20)),
     linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.00)) !important;
   border-color: rgba(251,191,36,0.55) !important;
   box-shadow: 0 0 0 1px rgba(251,191,36,0.35), 0 4px 16px -4px rgba(217,119,6,0.45), inset 0 1px 0 rgba(255,255,255,0.1);
@@ -1015,7 +1108,7 @@ p {
 /* Currently Using dasher tint - Blue border glow */
 .dasher-card--currently-using {
   background:
-    linear-gradient(135deg, rgba(59,130,246,0.28), rgba(37,99,235,0.20)) !important,
+    linear-gradient(135deg, rgba(59,130,246,0.28), rgba(37,99,235,0.20)),
     linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.00)) !important;
   border-color: rgba(96,165,250,0.55) !important;
   box-shadow: 0 0 0 1px rgba(96,165,250,0.35), 0 4px 16px -4px rgba(59,130,246,0.45), inset 0 1px 0 rgba(255,255,255,0.1);
@@ -1053,6 +1146,28 @@ p {
 
 /* Fallback: if Tailwind overrides margin/padding, re-assert core size */
 .icon-btn.p-1 { padding:0; }
+
+/* Japanese-style section headings - Minimal & Compact */
+.theme-jp .text-lg.font-medium,
+.theme-jp .text-xl.font-medium,
+.theme-jp .font-medium {
+  background: linear-gradient(120deg, rgba(255,255,255,0.92) 0%, rgba(220,210,255,0.78) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 400;
+  letter-spacing: 0.015em;
+}
+
+/* Section icons - Subtle gradient glow */
+.theme-jp .text-blue-400,
+.theme-jp .text-green-400,
+.theme-jp .text-purple-400,
+.theme-jp .text-amber-400,
+.theme-jp .text-red-400 {
+  filter: drop-shadow(0 0 8px currentColor) brightness(1.1);
+  opacity: 0.9;
+}
 
 /* ================================================================
    6. ANIMATIONS
