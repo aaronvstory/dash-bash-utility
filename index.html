@@ -4285,7 +4285,7 @@
                                                 return (
                                                     <div
                                                         key={dasher.id}
-                                                        className="bg-gray-600/50 rounded-lg overflow-hidden border border-gray-500/30 dasher-card--ready"
+                                                        className="bg-gray-600/50 rounded-lg overflow-hidden border border-gray-500/30"
                                                     >
                                                         {/* Dasher Header */}
                                                         <div className="flex items-center justify-between p-3">
@@ -4613,7 +4613,7 @@
                                                 return (
                                                     <div
                                                         key={dasher.id}
-                                                        className="bg-gray-600/50 rounded-lg overflow-hidden border border-gray-500/30 dasher-card--currently-using"
+                                                        className="bg-gray-600/50 rounded-lg overflow-hidden border border-gray-500/30"
                                                     >
                                                         <div className="flex items-center justify-between p-3">
                                                             <div className="flex items-center gap-2 flex-1">
@@ -4853,7 +4853,7 @@
                                                 const isEditing = editingDasher.dasherId === dasher.id;
 
                                                 return (
-                                                    <div key={dasher.id} className="bg-gray-600/50 rounded-lg overflow-hidden border border-gray-500/30 dasher-card--appealed">
+                                                    <div key={dasher.id} className="bg-gray-600/50 rounded-lg overflow-hidden border border-gray-500/30">
                                                         <div className="flex items-center justify-between p-3">
                                                             <div className="flex items-center gap-2 flex-1">
                                                                 <button onClick={() => { setCollapsedDashers({...collapsedDashers, [dasher.id]: !isCollapsed}); setTimeout(saveAllToLocalStorage, 100); }} className="flex items-center gap-2 flex-1 text-left">
