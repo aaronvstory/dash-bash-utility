@@ -4397,6 +4397,35 @@
                                                                     </button>
                                                                     <button
                                                                         onClick={() => {
+                                                                            if (isEditing) {
+                                                                                // Save changes
+                                                                                const updated = readyDashers.map(d => d.id === dasher.id ? {...d, ...editingDasher} : d);
+                                                                                setReadyDashers(updated);
+                                                                                setEditingDasher({categoryId: null, dasherId: null, name: '', email: '', balance: 0, notes: ''});
+                                                                                setTimeout(saveAllToLocalStorage, 100);
+                                                                            } else {
+                                                                                // Enter edit mode
+                                                                                setEditingDasher({
+                                                                                    categoryId: 'ready',
+                                                                                    dasherId: dasher.id,
+                                                                                    name: dasher.name,
+                                                                                    email: dasher.email,
+                                                                                    balance: dasher.balance,
+                                                                                    notes: dasher.notes || ''
+                                                                                });
+                                                                            }
+                                                                        }}
+                                                                        className={`icon-btn transition-colors ${
+                                                                            isEditing
+                                                                                ? 'text-green-400 hover:text-green-300'
+                                                                                : 'text-yellow-400 hover:text-yellow-300'
+                                                                        }`}
+                                                                        title={isEditing ? 'Save' : 'Edit'}
+                                                                    >
+                                                                        {isEditing ? <Check size={14} /> : <Edit2 size={14} />}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => {
                                                                             const updated = readyDashers.filter(d => d.id !== dasher.id);
                                                                             setReadyDashers(updated);
                                                                             const moved = {...dasher, deactivated: true, deactivatedAt: new Date().toISOString()};
@@ -4463,17 +4492,6 @@
                                                                             placeholder="Notes"
                                                                             rows={2}
                                                                         />
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                const updated = readyDashers.map(d => d.id === dasher.id ? {...d, ...editingDasher} : d);
-                                                                                setReadyDashers(updated);
-                                                                                setEditingDasher({categoryId: null, dasherId: null, name: '', email: '', balance: 0, notes: ''});
-                                                                                setTimeout(saveAllToLocalStorage, 100);
-                                                                            }}
-                                                                            className="w-full bg-green-600 hover:bg-green-700 text-white rounded px-3 py-1.5 text-sm flex items-center justify-center gap-2"
-                                                                        >
-                                                                            <Check size={14} /> Save Changes
-                                                                        </button>
                                                                     </>
                                                                 ) : (
                                                                     <>
@@ -4555,21 +4573,6 @@
                                                                                 <span className="text-xs">Red Card</span>
                                                                             </label>
                                                                         </div>
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                setEditingDasher({
-                                                                                    categoryId: 'ready',
-                                                                                    dasherId: dasher.id,
-                                                                                    name: dasher.name,
-                                                                                    email: dasher.email,
-                                                                                    balance: dasher.balance,
-                                                                                    notes: dasher.notes || ''
-                                                                                });
-                                                                            }}
-                                                                            className="w-full bg-yellow-600 hover:bg-yellow-700 text-white rounded px-3 py-1.5 text-sm flex items-center justify-center gap-2 mt-2"
-                                                                        >
-                                                                            <Edit2 size={14} /> Edit Dasher
-                                                                        </button>
                                                                     </>
                                                                 )}
                                                             </div>
@@ -4705,6 +4708,35 @@
                                                                     </button>
                                                                     <button
                                                                         onClick={() => {
+                                                                            if (isEditing) {
+                                                                                // Save changes
+                                                                                const updated = currentlyUsingDashers.map(d => d.id === dasher.id ? {...d, ...editingDasher} : d);
+                                                                                setCurrentlyUsingDashers(updated);
+                                                                                setEditingDasher({categoryId: null, dasherId: null, name: '', email: '', balance: 0, notes: ''});
+                                                                                setTimeout(saveAllToLocalStorage, 100);
+                                                                            } else {
+                                                                                // Enter edit mode
+                                                                                setEditingDasher({
+                                                                                    categoryId: 'currently-using',
+                                                                                    dasherId: dasher.id,
+                                                                                    name: dasher.name,
+                                                                                    email: dasher.email,
+                                                                                    balance: dasher.balance,
+                                                                                    notes: dasher.notes || ''
+                                                                                });
+                                                                            }
+                                                                        }}
+                                                                        className={`icon-btn transition-colors ${
+                                                                            isEditing
+                                                                                ? 'text-green-400 hover:text-green-300'
+                                                                                : 'text-yellow-400 hover:text-yellow-300'
+                                                                        }`}
+                                                                        title={isEditing ? 'Save' : 'Edit'}
+                                                                    >
+                                                                        {isEditing ? <Check size={14} /> : <Edit2 size={14} />}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => {
                                                                             const updated = currentlyUsingDashers.filter(d => d.id !== dasher.id);
                                                                             setCurrentlyUsingDashers(updated);
                                                                             const moved = {...dasher, deactivated: true, deactivatedAt: new Date().toISOString()};
@@ -4745,7 +4777,6 @@
                                                                         <input type="email" value={editingDasher.email} onChange={(e) => setEditingDasher({...editingDasher, email: e.target.value})} className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm" placeholder="Email" />
                                                                         <input type="number" step="0.01" value={editingDasher.balance} onChange={(e) => setEditingDasher({...editingDasher, balance: parseFloat(e.target.value) || 0})} className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm" placeholder="Balance" />
                                                                         <textarea value={editingDasher.notes} onChange={(e) => setEditingDasher({...editingDasher, notes: e.target.value})} className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm resize-y" placeholder="Notes" rows={2} />
-                                                                        <button onClick={() => { const updated = currentlyUsingDashers.map(d => d.id === dasher.id ? {...d, ...editingDasher} : d); setCurrentlyUsingDashers(updated); setEditingDasher({categoryId: null, dasherId: null, name: '', email: '', balance: 0, notes: ''}); setTimeout(saveAllToLocalStorage, 100); }} className="w-full bg-green-600 hover:bg-green-700 text-white rounded px-3 py-1.5 text-sm flex items-center justify-center gap-2"><Check size={14} /> Save Changes</button>
                                                                     </>
                                                                 ) : (
                                                                     <>
@@ -4784,7 +4815,6 @@
                                                                             <label className="flex items-center gap-1.5 cursor-pointer text-red-400 hover:text-red-300"><input type="checkbox" checked={dasher.crimson || false} onChange={(e) => { const updated = currentlyUsingDashers.map(d => d.id === dasher.id ? {...d, crimson: e.target.checked, crimsonAt: e.target.checked ? new Date().toISOString() : null} : d); setCurrentlyUsingDashers(updated); setTimeout(saveAllToLocalStorage, 100); }} className="w-3.5 h-3.5" /><span className="text-xs">Crimson</span></label>
                                                                             <label className="flex items-center gap-1.5 cursor-pointer text-red-400 hover:text-red-300"><input type="checkbox" checked={dasher.redCard || false} onChange={(e) => { const updated = currentlyUsingDashers.map(d => d.id === dasher.id ? {...d, redCard: e.target.checked, redCardAt: e.target.checked ? new Date().toISOString() : null} : d); setCurrentlyUsingDashers(updated); setTimeout(saveAllToLocalStorage, 100); }} className="w-3.5 h-3.5" /><span className="text-xs">Red Card</span></label>
                                                                         </div>
-                                                                        <button onClick={() => { setEditingDasher({ categoryId: 'currently-using', dasherId: dasher.id, name: dasher.name, email: dasher.email, balance: dasher.balance, notes: dasher.notes || '' }); }} className="w-full bg-yellow-600 hover:bg-yellow-700 text-white rounded px-3 py-1.5 text-sm flex items-center justify-center gap-2 mt-2"><Edit2 size={14} /> Edit Dasher</button>
                                                                     </>
                                                                 )}
                                                             </div>
@@ -4898,6 +4928,35 @@
                                                                     </button>
                                                                     <button
                                                                         onClick={() => {
+                                                                            if (isEditing) {
+                                                                                // Save changes
+                                                                                const updated = appealedDashers.map(d => d.id === dasher.id ? {...d, ...editingDasher} : d);
+                                                                                setAppealedDashers(updated);
+                                                                                setEditingDasher({categoryId: null, dasherId: null, name: '', email: '', balance: 0, notes: ''});
+                                                                                setTimeout(saveAllToLocalStorage, 100);
+                                                                            } else {
+                                                                                // Enter edit mode
+                                                                                setEditingDasher({
+                                                                                    categoryId: 'appealed',
+                                                                                    dasherId: dasher.id,
+                                                                                    name: dasher.name,
+                                                                                    email: dasher.email,
+                                                                                    balance: dasher.balance,
+                                                                                    notes: dasher.notes || ''
+                                                                                });
+                                                                            }
+                                                                        }}
+                                                                        className={`icon-btn transition-colors ${
+                                                                            isEditing
+                                                                                ? 'text-green-400 hover:text-green-300'
+                                                                                : 'text-yellow-400 hover:text-yellow-300'
+                                                                        }`}
+                                                                        title={isEditing ? 'Save' : 'Edit'}
+                                                                    >
+                                                                        {isEditing ? <Check size={14} /> : <Edit2 size={14} />}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => {
                                                                             const updated = appealedDashers.filter(d => d.id !== dasher.id);
                                                                             setAppealedDashers(updated);
                                                                             const moved = {...dasher, deactivated: true, deactivatedAt: new Date().toISOString()};
@@ -4937,7 +4996,6 @@
                                                                         <input type="email" value={editingDasher.email} onChange={(e) => setEditingDasher({...editingDasher, email: e.target.value})} className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm" placeholder="Email" />
                                                                         <input type="number" step="0.01" value={editingDasher.balance} onChange={(e) => setEditingDasher({...editingDasher, balance: parseFloat(e.target.value) || 0})} className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm" placeholder="Balance" />
                                                                         <textarea value={editingDasher.notes} onChange={(e) => setEditingDasher({...editingDasher, notes: e.target.value})} className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm resize-y" placeholder="Notes" rows={2} />
-                                                                        <button onClick={() => { const updated = appealedDashers.map(d => d.id === dasher.id ? {...d, ...editingDasher} : d); setAppealedDashers(updated); setEditingDasher({categoryId: null, dasherId: null, name: '', email: '', balance: 0, notes: ''}); setTimeout(saveAllToLocalStorage, 100); }} className="w-full bg-green-600 hover:bg-green-700 text-white rounded px-3 py-1.5 text-sm flex items-center justify-center gap-2"><Check size={14} /> Save Changes</button>
                                                                     </>
                                                                 ) : (
                                                                     <>
@@ -4976,7 +5034,6 @@
                                                                             <label className="flex items-center gap-1.5 cursor-pointer text-red-400 hover:text-red-300"><input type="checkbox" checked={dasher.crimson || false} onChange={(e) => { const updated = appealedDashers.map(d => d.id === dasher.id ? {...d, crimson: e.target.checked, crimsonAt: e.target.checked ? new Date().toISOString() : null} : d); setAppealedDashers(updated); setTimeout(saveAllToLocalStorage, 100); }} className="w-3.5 h-3.5" /><span className="text-xs">Crimson</span></label>
                                                                             <label className="flex items-center gap-1.5 cursor-pointer text-red-400 hover:text-red-300"><input type="checkbox" checked={dasher.redCard || false} onChange={(e) => { const updated = appealedDashers.map(d => d.id === dasher.id ? {...d, redCard: e.target.checked, redCardAt: e.target.checked ? new Date().toISOString() : null} : d); setAppealedDashers(updated); setTimeout(saveAllToLocalStorage, 100); }} className="w-3.5 h-3.5" /><span className="text-xs">Red Card</span></label>
                                                                         </div>
-                                                                        <button onClick={() => { setEditingDasher({ categoryId: 'appealed', dasherId: dasher.id, name: dasher.name, email: dasher.email, balance: dasher.balance, notes: dasher.notes || '' }); }} className="w-full bg-yellow-600 hover:bg-yellow-700 text-white rounded px-3 py-1.5 text-sm flex items-center justify-center gap-2 mt-2"><Edit2 size={14} /> Edit Dasher</button>
                                                                     </>
                                                                 )}
                                                             </div>
