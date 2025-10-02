@@ -48,3 +48,19 @@ archives/
 
 # YoYo AI version control directory
 .yoyo/
+
+# Claude Code configuration
+.claude/
+
+# MCP server files
+.playwright-mcp/
+.serena/
+
+# VS Code workspace files
+*.code-workspace
+
+# Backup files
+*.broken-*
+
+# User exports in root (should be in exports/ folder)
+dashbash-export-*.json
