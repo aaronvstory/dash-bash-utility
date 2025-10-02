@@ -1,9 +1,16 @@
 /**
  * Dash Bash Utility - Comprehensive Stylesheet
- * Version: 1.5.2
+ * Version: 1.5.3
  *
  * This stylesheet is designed for easy theming and maintainability.
  * Update CSS variables in :root to change the entire app's appearance.
+ *
+ * Changes in 1.5.3:
+ * - Fixed banner title legibility with high-luminosity animated gradient
+ * - Enhanced dasher name/email/balance distinction with proper color preservation
+ * - Muted pill badge colors to fit dark theme (black text on all active states)
+ * - Improved pill centering and padding for better alignment
+ * - Made balance text extra bold and legible
  *
  * Changes in 1.5.2:
  * - Added Japanese-style animated gradients to h1, h2, h3 titles
@@ -1102,24 +1109,6 @@ body.dragging {
   filter:none;
   font-weight:700;
 }
-.flag-badge[data-flag="C"][data-active="true"]  {
-  background: #ef4444;
-  color:#ffffff;
-  border-color:#dc2626;
-  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.5);
-}
-.flag-badge[data-flag="RC"][data-active="true"] {
-  background: #f97316;
-  color:#ffffff;
-  border-color:#ea580c;
-  box-shadow: 0 1px 3px rgba(249, 115, 22, 0.5);
-}
-.flag-badge[data-flag="AP"][data-active="true"] {
-  background: #facc15;
-  color:#18181b;
-  border-color:#eab308;
-  box-shadow: 0 1px 3px rgba(250, 204, 21, 0.5);
-}
 .dasher-card--deactivated .flag-badge[data-flag] { opacity:.8; }
 .dasher-card--deactivated .flag-badge[data-active="true"] { filter:brightness(1.1); }
 .theme-jp .flag-badge { background:linear-gradient(140deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02)); }
@@ -1496,4 +1485,191 @@ body.dragging {
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--color-gray-600) var(--bg-tertiary);
+}
+
+/* ================================================================
+   LEGIBILITY FIXES: Banner Title & Pill Badges (v2)
+   ================================================================ */
+
+/* Fix 1: Beautiful animated Japanese gradient title with legibility */
+h1, h2, h3 {
+  /* High-luminosity animated gradient for readability */
+  background: linear-gradient(
+    135deg,
+    #ffffff 0%,
+    #e8f0ff 15%,
+    #d8e0ff 30%,
+    #ffeef5 45%,
+    #e0d0ff 60%,
+    #f0e8ff 75%,
+    #ffffff 100%
+  );
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientShift 12s ease infinite;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  /* Strong shadow for backup legibility */
+  text-shadow:
+    0 2px 4px rgba(255,255,255,0.3),
+    0 0 12px rgba(255,255,255,0.2);
+  position: relative;
+}
+
+/* Slower, smoother gradient animation */
+@keyframes gradientShift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Fix 2: Dasher name/email/balance distinction */
+/* Let Tailwind color classes work properly - DO NOT override with gradient effects */
+.text-purple-200,
+.text-blue-200,
+.text-green-300,
+.text-red-400 {
+  /* Ensure these colors are NOT affected by parent gradient styles */
+  -webkit-text-fill-color: currentColor !important;
+  background: none !important;
+  background-clip: initial !important;
+  -webkit-background-clip: initial !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  font-weight: 500;
+}
+
+/* Make balance extra bold and legible */
+.text-green-300,
+.text-red-400 {
+  font-weight: 700 !important;
+  letter-spacing: 0.03em;
+}
+
+/* === MUTED FLAG PILL PALETTE v1.7.0 ===
+   Active states use distinct muted hues per spec.
+   Inactive remain legible (neutral slate). */
+.flag-badge {
+  transition: background-color .18s, color .18s, border-color .18s;
+}
+.flag-badge[data-active="false"] {
+  background: rgba(120,125,135,0.18);
+  color: #9ca3af;
+  border-color: rgba(140,145,155,0.3);
+  opacity: .75;
+}
+.flag-badge[data-flag="C"][data-active="true"] {
+  background:#b31936;        /* muted crimson */
+  color:#0f0f0f;              /* near black text */
+  border-color:#7a1025;
+  box-shadow:0 1px 2px rgba(179,25,54,.35);
+}
+.flag-badge[data-flag="RC"][data-active="true"] {
+  background:#0d0d0f;         /* black background */
+  color:#d64747;              /* red text */
+  border-color:#2a2a2f;
+  box-shadow:0 1px 2px rgba(214,71,71,.35);
+}
+.flag-badge[data-flag="AP"][data-active="true"] {
+  background:#d26d05;         /* muted orange */
+  color:#101010;              /* dark text */
+  border-color:#a45404;
+  box-shadow:0 1px 2px rgba(210,109,5,.35);
+}
+
+/* High-contrast hover (optional) */
+.flag-badge[data-active="true"]:hover {
+  filter:brightness(1.07);
+}
+
+/* === Gradient Hero (GH Pages) v1.7.0 === */
+.app-hero {
+  position: relative;
+  margin: 0 0 1.25rem 0;
+  padding: 18px 20px 22px;
+  border-radius: 10px;
+  overflow: hidden;
+  isolation: isolate;
+  box-shadow: 0 2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.05) inset;
+}
+
+.app-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(110deg,#f4d2af 0%, #d2baff 32%, #98a6ff 62%, #7485ff 85%, #5d6dff 100%);
+  /* Gentle texture / noise (data URI tiny PNG) */
+  background-blend-mode: overlay;
+  opacity: .92;
+}
+
+.app-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 25% 15%, rgba(255,255,255,.35), transparent 55%),
+    radial-gradient(circle at 80% 70%, rgba(255,255,255,.18), transparent 65%),
+    linear-gradient(to bottom, rgba(0,0,40,.15), rgba(0,0,0,.55));
+  mix-blend-mode: normal;
+  pointer-events: none;
+}
+
+.hero-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .4rem;
+  text-align: center;
+}
+
+.hero-title {
+  font-size: clamp(1.9rem, 4.1vw, 2.75rem);
+  font-weight: 700;
+  line-height: 1.05;
+  color: #fff;
+  letter-spacing: .5px;
+  text-shadow:
+    0 2px 4px rgba(0,0,0,.55),
+    0 0 0 1px rgba(0,0,0,.25);
+}
+
+.hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  font-size: .8rem;
+  font-weight: 500;
+  color: rgba(255,255,255,.85);
+  text-shadow: 0 1px 2px rgba(0,0,0,.55);
+}
+
+.hero-meta .badge {
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: rgba(0,0,0,.35);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  border: 1px solid rgba(255,255,255,.15);
+  font-weight: 600;
+  font-size: .72rem;
+  letter-spacing: .5px;
+}
+
+@media (prefers-contrast: more) {
+  .app-hero::after { background: linear-gradient(to bottom, rgba(0,0,0,.55), rgba(0,0,0,.65)); }
+  .hero-title { text-shadow: 0 0 0 transparent; }
+  .hero-meta { text-shadow: none; }
+}
+
+/* Fallback (no backdrop support) */
+@supports not ((backdrop-filter: blur(4px)) or (-webkit-backdrop-filter: blur(4px))) {
+  .hero-meta .badge { background: rgba(0,0,0,.55); }
 }

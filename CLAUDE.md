@@ -213,7 +213,8 @@ Status indicators displayed as modern pill badges with unique colors:
   "collapsedDashers": {...},        // Individual dasher collapse states  
   "collapsedDasherCategories": {...}, // Dasher category collapse states
   "collapsedNoteCategories": {...},   // Note category collapse states
-  "timestamp": "2025-01-01T00:00:00.000Z"
+  "timestamp": "2025-01-01T00:00:00.000Z",
+  "schemaVersion": 3           // Schema version for data migration (v1.6.2+)
 }
 ```
 
@@ -266,14 +267,14 @@ When releasing a new version, update the version number in **4 locations**:
    <meta name="app-version" content="1.4.0">
    ```
 
-3. **index.html - JavaScript constant** (Line 48):
+3. **index.html - JavaScript constant** (Line 54):
    ```javascript
-   const APP_VERSION = '1.4.0'; // Update this with each release
+   const APP_VERSION = '1.6.2'; // Update this with each release
    ```
 
-4. **index.html - App title display** (around Line 1808):
+4. **index.html - State Management section** (around Line 7325):
    ```html
-   <span className="text-lg text-gray-400">v1.4.0</span>
+   <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.6.2</span></span>
    ```
 
 ### Cache Busting Implementation
@@ -582,6 +583,19 @@ The application uses a unified JSON format (v2.1) for state export/import:
 - Current format v2.1 (includes all features)
 
 ## Recent Updates
+
+### v1.6.2 (January 2025) - Phase 8: Accessibility & Performance
+- **Accessibility Enhancements (WCAG AA Compliance)**:
+  - Comprehensive aria-labels added to all icon-only buttons (Copy, Timer, Edit/Save, Cash Out, Delete)
+  - Toast notifications enhanced with `role="status"`, `aria-live="polite"`, `aria-atomic="true"`
+  - All collapsible sections with `aria-expanded` attribute for screen reader announcements
+- **Performance Optimization**:
+  - Added `useCallback` and `useMemo` to React imports (foundation for future memoization)
+  - Prepared infrastructure for extracting and memoizing `getDasherTitle` and `renderDasherDetails`
+- **Data Integrity**:
+  - Schema versioning system (`schemaVersion: 3`) with migration logic
+  - Balance input validation with clamping (-1,000,000 to 1,000,000 range)
+  - Console logging for migration tracking and debugging
 
 ### v1.5.0 (January 2025)
 - **Modern Typography**: Added Inter font family via Google Fonts for professional appearance
