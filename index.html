@@ -1002,6 +1002,8 @@
                         if (state.readyDashers) setReadyDashers(state.readyDashers);
                         if (state.currentlyUsingDashers) setCurrentlyUsingDashers(state.currentlyUsingDashers);
                         if (state.appealedDashers) setAppealedDashers(state.appealedDashers);
+                        if (state.lockedDashers) setLockedDashers(state.lockedDashers);
+                        if (state.appliedPendingDashers) setAppliedPendingDashers(state.appliedPendingDashers);
 
                         // Load collapsed states if they exist
                         if (state.collapsedCategories) setCollapsedCategories(state.collapsedCategories);
@@ -1009,6 +1011,8 @@
                         if (state.collapsedDashers) setCollapsedDashers(state.collapsedDashers);
                         if (state.collapsedArchivedDashers) setCollapsedArchivedDashers(state.collapsedArchivedDashers);
                         if (state.collapsedDeactivatedDashers) setCollapsedDeactivatedDashers(state.collapsedDeactivatedDashers);
+                        if (state.collapsedLockedDashers) setCollapsedLockedDashers(state.collapsedLockedDashers);
+                        if (state.collapsedAppliedPendingDashers) setCollapsedAppliedPendingDashers(state.collapsedAppliedPendingDashers);
                         if (state.collapsedDasherCategories) setCollapsedDasherCategories(state.collapsedDasherCategories);
                         if (state.collapsedNoteCategories) setCollapsedNoteCategories(state.collapsedNoteCategories);
                         if (state.isArchivedDashersOpen !== undefined) setIsArchivedDashersOpen(state.isArchivedDashersOpen);
@@ -5258,7 +5262,7 @@
                                                                                 )}
                                                                             </div>
 
-                                                                            {renderCashOutHistory(dasher)}
+                                                                            {renderCashOutHistory(dasher, isEditing)}
                                                                             </div>
                                                                         )}
                                                                     </div>
