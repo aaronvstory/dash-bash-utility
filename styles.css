@@ -1,9 +1,16 @@
 /**
  * Dash Bash Utility - Comprehensive Stylesheet
- * Version: 1.5.2
+ * Version: 1.5.3
  *
  * This stylesheet is designed for easy theming and maintainability.
  * Update CSS variables in :root to change the entire app's appearance.
+ *
+ * Changes in 1.5.3:
+ * - Fixed banner title legibility with high-luminosity animated gradient
+ * - Enhanced dasher name/email/balance distinction with proper color preservation
+ * - Muted pill badge colors to fit dark theme (black text on all active states)
+ * - Improved pill centering and padding for better alignment
+ * - Made balance text extra bold and legible
  *
  * Changes in 1.5.2:
  * - Added Japanese-style animated gradients to h1, h2, h3 titles
@@ -1496,4 +1503,156 @@ body.dragging {
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--color-gray-600) var(--bg-tertiary);
+}
+
+/* ================================================================
+   LEGIBILITY FIXES: Banner Title & Pill Badges (v2)
+   ================================================================ */
+
+/* Fix 1: Beautiful animated Japanese gradient title with legibility */
+h1, h2, h3 {
+  /* High-luminosity animated gradient for readability */
+  background: linear-gradient(
+    135deg,
+    #ffffff 0%,
+    #e8f0ff 15%,
+    #d8e0ff 30%,
+    #ffeef5 45%,
+    #e0d0ff 60%,
+    #f0e8ff 75%,
+    #ffffff 100%
+  );
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientShift 12s ease infinite;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  /* Strong shadow for backup legibility */
+  text-shadow:
+    0 2px 4px rgba(255,255,255,0.3),
+    0 0 12px rgba(255,255,255,0.2);
+  position: relative;
+}
+
+/* Slower, smoother gradient animation */
+@keyframes gradientShift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Fix 2: Dasher name/email/balance distinction */
+/* Let Tailwind color classes work properly - DO NOT override with gradient effects */
+.text-purple-200,
+.text-blue-200,
+.text-green-300,
+.text-red-400 {
+  /* Ensure these colors are NOT affected by parent gradient styles */
+  -webkit-text-fill-color: currentColor !important;
+  background: none !important;
+  background-clip: initial !important;
+  -webkit-background-clip: initial !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  font-weight: 500;
+}
+
+/* Make balance extra bold and legible */
+.text-green-300,
+.text-red-400 {
+  font-weight: 700 !important;
+  letter-spacing: 0.03em;
+}
+
+/* Fix 3: Muted, centered pill badges with black text */
+.flag-badge {
+  /* Muted dark backgrounds that fit the theme */
+  --_bg: rgba(82, 82, 91, 0.5);
+  --_border: rgba(255,255,255,0.10);
+  --_text: #a1a1aa;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 4px 10px 5px;
+  letter-spacing: 0.5px;
+  line-height: 1;
+  border-radius: 8px;
+  background: var(--_bg);
+  color: var(--_text);
+  border: 1px solid var(--_border);
+  text-transform: uppercase;
+  min-width: 32px;
+
+  /* Centering and alignment */
+  vertical-align: middle;
+  text-align: center;
+
+  /* Subtle shadow */
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+
+  /* Prevent gradient inheritance */
+  -webkit-text-fill-color: currentColor !important;
+  background-clip: initial !important;
+  -webkit-background-clip: initial !important;
+}
+
+/* Inactive state - more visible gray */
+.flag-badge[data-flag]:not([data-active="true"]) {
+  opacity: 0.65;
+  background: rgba(82, 82, 91, 0.4);
+  color: #a1a1aa;
+}
+
+/* Active states - MUTED colors with BLACK text */
+.flag-badge[data-active="true"] {
+  opacity: 1;
+  font-weight: 800;
+  color: #18181b !important; /* Black text for ALL active pills */
+}
+
+/* Crimson - Muted dark red */
+.flag-badge[data-flag="C"][data-active="true"] {
+  background: #dc2626;
+  border-color: #b91c1c;
+  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.3);
+}
+
+/* Red Card - Muted dark orange */
+.flag-badge[data-flag="RC"][data-active="true"] {
+  background: #ea580c;
+  border-color: #c2410c;
+  box-shadow: 0 1px 3px rgba(234, 88, 12, 0.3);
+}
+
+/* Appealed - Softer yellow (already has black text) */
+.flag-badge[data-flag="AP"][data-active="true"] {
+  background: #facc15;
+  border-color: #eab308;
+  box-shadow: 0 1px 3px rgba(250, 204, 21, 0.3);
+}
+
+/* Legacy badge classes - apply same muted style */
+.badge--crimson {
+  background: #dc2626 !important;
+  color: #18181b !important;
+  border-color: #b91c1c;
+}
+
+.badge--redcard {
+  background: #ea580c !important;
+  color: #18181b !important;
+  border-color: #c2410c;
+}
+
+.badge--appealed {
+  background: #facc15 !important;
+  color: #18181b !important;
+  border-color: #eab308;
 }
