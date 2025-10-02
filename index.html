@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dash Bash Utility</title>
 
-    <!-- Version 1.6.2 - Update this version with each release -->
-    <meta name="app-version" content="1.6.2">
+    <!-- Version 1.7.0 - Update this version with each release -->
+    <meta name="app-version" content="1.7.0">
 
     <!-- Cache Control Headers -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -52,8 +52,8 @@
 
     <!-- Service Worker Registration with Version Check -->
     <script>
-    console.log('%cDash Bash Utility build 1.6.2 (Phase 8 - Accessibility & Performance) loaded','background:#222;color:#f39ac5;padding:4px 8px;border-radius:4px');
-    const APP_VERSION = '1.6.2'; // Update this with each release
+    console.log('%cDash Bash Utility build 1.7.0 (Phase 9 - Global Mgmt & Fixes) loaded','background:#222;color:#f39ac5;padding:4px 8px;border-radius:4px');
+    const APP_VERSION = '1.7.0'; // Update this with each release
         // Log active stylesheets for debugging theme cascade
         window.addEventListener('load', () => {
             const sheets = [...document.styleSheets].map(s => s.href && s.href.split('/').pop());
@@ -223,7 +223,14 @@
             // Edit Mode and Selection state
             const [isEditMode, setIsEditMode] = useState(false);
             const [showNonZeroOnly, setShowNonZeroOnly] = useState(false); // Balance filter toggle
-            const [dasherSort, setDasherSort] = useState({ key: 'none', dir: 'desc' }); // key: none|balance|lastUsed
+            const [dasherSort, setDasherSort] = useState({ key: 'none', dir: 'desc' }); // key: none|balance|lastUsed|alphabetical
+            // Global Dashers Management controls
+            const [globalQuery, setGlobalQuery] = useState('');
+            const globalQueryDebouncedRef = useRef('');
+            useEffect(() => {
+                const h = setTimeout(() => { globalQueryDebouncedRef.current = globalQuery; }, 150);
+                return () => clearTimeout(h);
+            }, [globalQuery]);
             const [selectedItems, setSelectedItems] = useState({
                 dashers: new Set(),        // dasher IDs
                 dasherCategories: new Set(), // dasher category IDs
@@ -800,7 +807,7 @@
                         showNonZeroOnly,
                         dasherSort,
                         timestamp: new Date().toISOString(),
-                        schemaVersion: 3 // Schema version for data migration
+                        schemaVersion: 4 // Schema version for data migration
                     };
                     localStorage.setItem('dashBashState', JSON.stringify(state));
                     setSaveNotification('✅ Saved automatically');
@@ -836,7 +843,37 @@
                                 console.log('Migrating from legacy schema to v3');
                             }
                         }
-                        
+
+                        // v4 migration: lift reserved bucket categories into top-level arrays
+                        if (currentVersion < 4) {
+                            try {
+                                const reservedIds = new Set(['ready','currently-using','appealed','applied-pending','locked','deactivated','archived']);
+                                if (Array.isArray(state.dasherCategories)) {
+                                    const remaining = [];
+                                    state.dasherCategories.forEach(cat => {
+                                        if (reservedIds.has(cat.id)) {
+                                            const dashers = Array.isArray(cat.dashers) ? cat.dashers : [];
+                                            if (cat.id === 'ready') state.readyDashers = (state.readyDashers || []).concat(dashers);
+                                            else if (cat.id === 'currently-using') state.currentlyUsingDashers = (state.currentlyUsingDashers || []).concat(dashers);
+                                            else if (cat.id === 'appealed') state.appealedDashers = (state.appealedDashers || []).concat(dashers);
+                                            else if (cat.id === 'applied-pending') state.appliedPendingDashers = (state.appliedPendingDashers || []).concat(dashers);
+                                            else if (cat.id === 'locked') state.lockedDashers = (state.lockedDashers || []).concat(dashers);
+                                            else if (cat.id === 'deactivated') state.deactivatedDashers = (state.deactivatedDashers || []).concat(dashers);
+                                            else if (cat.id === 'archived') state.archivedDashers = (state.archivedDashers || []).concat(dashers);
+                                        } else {
+                                            remaining.push(cat);
+                                        }
+                                    });
+                                    state.dasherCategories = remaining;
+                                }
+                                state.schemaVersion = 4;
+                                localStorage.setItem('dashBashState', JSON.stringify(state));
+                                console.log('[Migration] Upgraded to schema v4');
+                            } catch (err) {
+                                console.warn('Schema v4 migration failed', err);
+                            }
+                        }
+
                         migrateLegacyDashers(state);
 
                         // Load target configuration
@@ -7326,7 +7363,7 @@
                                 >
                                     <div className="flex items-center gap-3">
                                         <Settings size={20} className="text-purple-400" />
-                                        <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.6.2</span></span>
+                                        <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.7.0</span></span>
                                     </div>
                                     {isStateManagementOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </button>
