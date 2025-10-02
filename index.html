@@ -770,6 +770,111 @@
                 return '';
             };
 
+            // Cash-out history helpers
+            const updateHistoryEntry = (dasherId, idx, patch) => {
+                setDasherCategories(cats => cats.map(cat => ({
+                    ...cat,
+                    dashers: cat.dashers.map(d => {
+                        if (d.id !== dasherId) return d;
+                        if (!Array.isArray(d.cashOutHistory)) return d;
+                        const next = [...d.cashOutHistory];
+                        next[idx] = { ...next[idx], ...patch };
+                        return { ...d, cashOutHistory: next };
+                    })
+                })));
+                // Top-level buckets
+                const topSetters = [
+                    [readyDashers, setReadyDashers],
+                    [currentlyUsingDashers, setCurrentlyUsingDashers],
+                    [appealedDashers, setAppealedDashers],
+                    [appliedPendingDashers, setAppliedPendingDashers],
+                    [lockedDashers, setLockedDashers],
+                    [deactivatedDashers, setDeactivatedDashers],
+                    [archivedDashers, setArchivedDashers]
+                ];
+                topSetters.forEach(([list, setter]) => {
+                    setter(prev => prev.map(d => {
+                        if (d.id !== dasherId) return d;
+                        if (!Array.isArray(d.cashOutHistory)) return d;
+                        const next = [...d.cashOutHistory];
+                        if (idx >= 0 && idx < next.length) {
+                            next[idx] = { ...next[idx], ...patch };
+                        }
+                        return { ...d, cashOutHistory: next };
+                    }));
+                });
+                requestPersist();
+            };
+
+            const deleteHistoryEntry = (dasherId, idx) => {
+                const adjust = (d) => {
+                    if (d.id !== dasherId || !Array.isArray(d.cashOutHistory)) return d;
+                    const next = d.cashOutHistory.filter((_, i) => i !== idx);
+                    if (d.lastCashOutRef && d.lastCashOutRef.index === idx) {
+                        return { ...d, cashOutHistory: next, lastCashOutRef: null };
+                    }
+                    return { ...d, cashOutHistory: next };
+                };
+                setDasherCategories(cats => cats.map(cat => ({ ...cat, dashers: cat.dashers.map(adjust) })));
+                [setReadyDashers,setCurrentlyUsingDashers,setAppealedDashers,setAppliedPendingDashers,setLockedDashers,setDeactivatedDashers,setArchivedDashers]
+                    .forEach(setter => setter(prev => prev.map(adjust)));
+                requestPersist();
+            };
+
+            const addCustomCashOut = (dasherId, entry, adjustBalance) => {
+                const base = {
+                    id: crypto.randomUUID(),
+                    amount: entry.amount,
+                    method: entry.method || 'custom',
+                    notes: entry.notes || '',
+                    at: entry.at || new Date().toISOString()
+                };
+                const apply = (d) => {
+                    if (d.id !== dasherId) return d;
+                    const history = Array.isArray(d.cashOutHistory) ? [...d.cashOutHistory, base] : [base];
+                    let balance = d.balance;
+                    if (adjustBalance) {
+                        const numeric = parseFloat(entry.amount);
+                        if (!isNaN(numeric) && numeric > 0) {
+                            const cur = parseBalanceValue(balance || '0');
+                            const updated = Math.max(0, cur - numeric);
+                            balance = updated.toString();
+                        }
+                    }
+                    return {
+                        ...d,
+                        balance,
+                        cashOutHistory: history,
+                        lastCashOutRef: adjustBalance ? { id: base.id, index: history.length - 1 } : d.lastCashOutRef || null
+                    };
+                };
+                setDasherCategories(cats => cats.map(cat => ({ ...cat, dashers: cat.dashers.map(apply) })));
+                [setReadyDashers,setCurrentlyUsingDashers,setAppealedDashers,setAppliedPendingDashers,setLockedDashers,setDeactivatedDashers,setArchivedDashers]
+                    .forEach(setter => setter(prev => prev.map(apply)));
+                requestPersist();
+            };
+
+            // Enter-to-save
+            const commitDasherEdit = () => {
+                if (!editingDasher || !editingDasher.dasherId) return;
+                requestPersist();
+            };
+
+            const handleEditableKeyDown = (e, isTextarea=false) => {
+                if (isTextarea) {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                        e.preventDefault();
+                        commitDasherEdit();
+                    }
+                    return;
+                }
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    commitDasherEdit();
+                    e.target.blur();
+                }
+            };
+
             // State Management Functions
             const saveAllToLocalStorage = () => {
                 try {
@@ -929,6 +1034,8 @@
             const exportToJSON = () => {
                 try {
                     const state = {
+                        appVersion: '1.7.0',
+                        schemaVersion: 4,
                         target,
                         targetPreset,
                         prices,
@@ -1440,6 +1547,43 @@
                 return Math.max(-1000000, Math.min(1000000, n));
             };
 
+            // Global filter/sort helper (replaces useFilteredSortedDashers)
+            function filterAndSortDashers(list) {
+                const q = (globalQueryDebouncedRef.current || '').trim().toLowerCase();
+                let filtered = list;
+                if (q) {
+                    filtered = filtered.filter(d =>
+                        (d.name || '').toLowerCase().includes(q) ||
+                        (d.email || '').toLowerCase().includes(q) ||
+                        (d.phone || '').toLowerCase().includes(q)
+                    );
+                }
+                if (showNonZeroOnly) {
+                    filtered = filtered.filter(d => parseBalanceValue(d.balance) !== 0);
+                }
+                if (dasherSort.key !== 'none') {
+                    const dir = dasherSort.dir === 'asc' ? 1 : -1;
+                    filtered = [...filtered].sort((a,b)=>{
+                        if (dasherSort.key === 'balance') {
+                            const av = parseBalanceValue(a.balance), bv = parseBalanceValue(b.balance);
+                            return av === bv ? 0 : (av > bv ? dir : -dir);
+                        }
+                        if (dasherSort.key === 'lastUsed') {
+                            const av = a.lastUsed ? new Date(a.lastUsed).getTime() : 0;
+                            const bv = b.lastUsed ? new Date(b.lastUsed).getTime() : 0;
+                            return av === bv ? 0 : (av > bv ? dir : -dir);
+                        }
+                        if (dasherSort.key === 'alphabetical') {
+                            const av = (a.name||'').toLowerCase();
+                            const bv = (b.name||'').toLowerCase();
+                            return av === bv ? 0 : (av > bv ? dir : -dir);
+                        }
+                        return 0;
+                    });
+                }
+                return filtered;
+            }
+
             // Date/time formatting helper
             const formatDateTime = (iso) => {
                 try {
@@ -1449,27 +1593,159 @@
                 }
             };
 
-            const renderCashOutHistory = (dasher) => {
-                if (!dasher || !Array.isArray(dasher.cashOutHistory) || dasher.cashOutHistory.length === 0) {
-                    return null;
+            const renderCashOutHistory = (dasher, isEditing) => {
+                if (!dasher) return null;
+
+                if (isEditing) {
+                    return React.createElement('div', { className: 'space-y-2 mt-2' }, [
+                        React.createElement('div',{key:'histLabel',className:'text-xs uppercase tracking-wide text-gray-400'},'Cash‑Out History'),
+                        (dasher.cashOutHistory && dasher.cashOutHistory.length > 0) ?
+                            React.createElement('div',{key:'histList',className:'space-y-1'},
+                                dasher.cashOutHistory.map((h,i)=>
+                                    React.createElement('div',{
+                                        key:h.id||i,
+                                        className:'flex items-center gap-2 text-[11px] bg-gray-800/60 px-2 py-1 rounded border border-gray-700'
+                                    },[
+                                        React.createElement('input',{
+                                            key:'amt',
+                                            type:'number',
+                                            min:0,
+                                            step:'0.01',
+                                            value:h.amount,
+                                            onChange:e=>updateHistoryEntry(dasher.id,i,{amount:e.target.value}),
+                                            onKeyDown:(e)=>handleEditableKeyDown(e,false),
+                                            onBlur:commitDasherEdit,
+                                            className:'w-20 bg-gray-900 border border-gray-600 rounded px-1 py-0.5 text-xs'
+                                        }),
+                                        React.createElement('input',{
+                                            key:'method',
+                                            type:'text',
+                                            value:h.method||'',
+                                            onChange:e=>updateHistoryEntry(dasher.id,i,{method:e.target.value}),
+                                            onKeyDown:(e)=>handleEditableKeyDown(e,false),
+                                            onBlur:commitDasherEdit,
+                                            className:'w-28 bg-gray-900 border border-gray-600 rounded px-1 py-0.5 text-xs'
+                                        }),
+                                        React.createElement('input',{
+                                            key:'ts',
+                                            type:'datetime-local',
+                                            value: (()=> {
+                                                try {
+                                                    return h.at ? new Date(h.at).toISOString().slice(0,16) : '';
+                                                } catch { return '';}
+                                            })(),
+                                            onChange:e=>{
+                                                const iso = e.target.value ? new Date(e.target.value).toISOString() : h.at;
+                                                updateHistoryEntry(dasher.id,i,{at:iso});
+                                            },
+                                            onKeyDown:(e)=>handleEditableKeyDown(e,false),
+                                            onBlur:commitDasherEdit,
+                                            className:'bg-gray-900 border border-gray-600 rounded px-1 py-0.5 text-xs'
+                                        }),
+                                        React.createElement('input',{
+                                            key:'notes',
+                                            type:'text',
+                                            placeholder:'notes',
+                                            value:h.notes||'',
+                                            onChange:e=>updateHistoryEntry(dasher.id,i,{notes:e.target.value}),
+                                            onKeyDown:(e)=>handleEditableKeyDown(e,false),
+                                            onBlur:commitDasherEdit,
+                                            className:'flex-1 bg-gray-900 border border-gray-600 rounded px-1 py-0.5 text-xs min-w-0'
+                                        }),
+                                        React.createElement('button',{
+                                            key:'del',
+                                            onClick:()=>deleteHistoryEntry(dasher.id,i),
+                                            className:'text-red-300 hover:text-red-200 px-1',
+                                            title:'Delete entry'
+                                        }, '✕')
+                                    ])
+                                )
+                            )
+                            :
+                            React.createElement('div',{key:'emptyHist',className:'text-xs text-gray-500 italic'},'No history'),
+                        React.createElement('div',{key:'addRow',className:'flex flex-wrap items-end gap-2 pt-2 border-t border-gray-700 mt-2'},[
+                            React.createElement('div',{key:'a1',className:'flex flex-col'},[
+                                React.createElement('label',{className:'text-[10px] text-gray-400'},'Amount'),
+                                React.createElement('input',{
+                                    type:'number',min:0,step:'0.01',
+                                    value: (draftDasher._addCashOutAmount || ''),
+                                    onChange:e=>setDraftDasher(d=>({...d,_addCashOutAmount:e.target.value})),
+                                    onKeyDown:(e)=>handleEditableKeyDown(e,false),
+                                    onBlur:commitDasherEdit,
+                                    className:'w-24 bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs'
+                                })
+                            ]),
+                            React.createElement('div',{key:'a2',className:'flex flex-col'},[
+                                React.createElement('label',{className:'text-[10px] text-gray-400'},'Method'),
+                                React.createElement('input',{
+                                    type:'text',
+                                    value: (draftDasher._addCashOutMethod || ''),
+                                    onChange:e=>setDraftDasher(d=>({...d,_addCashOutMethod:e.target.value})),
+                                    onKeyDown:(e)=>handleEditableKeyDown(e,false),
+                                    onBlur:commitDasherEdit,
+                                    className:'w-28 bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs'
+                                })
+                            ]),
+                            React.createElement('div',{key:'a3',className:'flex flex-col flex-1 min-w-[140px]'},[
+                                React.createElement('label',{className:'text-[10px] text-gray-400'},'Notes'),
+                                React.createElement('input',{
+                                    type:'text',
+                                    value: (draftDasher._addCashOutNotes || ''),
+                                    onChange:e=>setDraftDasher(d=>({...d,_addCashOutNotes:e.target.value})),
+                                    onKeyDown:(e)=>handleEditableKeyDown(e,false),
+                                    onBlur:commitDasherEdit,
+                                    className:'bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs w-full'
+                                })
+                            ]),
+                            React.createElement('label',{key:'adj',className:'flex items-center gap-1 text-[11px] text-gray-300 mb-1'},[
+                                React.createElement('input',{
+                                    type:'checkbox',
+                                    checked: !!draftDasher._addCashOutAdjust,
+                                    onChange:e=>setDraftDasher(d=>({...d,_addCashOutAdjust:e.target.checked}))
+                                }),
+                                'Adjust balance'
+                            ]),
+                            React.createElement('button',{
+                                key:'addBtn',
+                                disabled: !draftDasher._addCashOutAmount || parseFloat(draftDasher._addCashOutAmount) <= 0,
+                                onClick:()=>{
+                                    const amt = parseFloat(draftDasher._addCashOutAmount);
+                                    if(isNaN(amt) || amt <= 0) return;
+                                    addCustomCashOut(
+                                        dasher.id,
+                                        {
+                                            amount: amt.toFixed(2),
+                                            method: draftDasher._addCashOutMethod || 'custom',
+                                            notes: draftDasher._addCashOutNotes || ''
+                                        },
+                                        !!draftDasher._addCashOutAdjust
+                                    );
+                                    setDraftDasher(d=>({
+                                        ...d,
+                                        _addCashOutAmount:'',
+                                        _addCashOutMethod:'',
+                                        _addCashOutNotes:'',
+                                        _addCashOutAdjust:false
+                                    }));
+                                },
+                                className:'px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-xs text-white disabled:opacity-40 disabled:cursor-not-allowed'
+                            },'Add')
+                        ])
+                    ]);
                 }
 
-                return (
-                    <div className="mt-2">
-                        <div className="text-xs text-gray-400 mb-1">Cash Out History:</div>
-                        <div className="space-y-0.5 max-h-32 overflow-auto pr-1">
-                            {dasher.cashOutHistory.map((entry, index) => (
-                                <div
-                                    key={index}
-                                    className="text-[10px] text-gray-300 flex justify-between border-b border-gray-600/30 pb-0.5"
-                                >
-                                    <span>{`$${entry.amount.toFixed(2)}`}{entry.method && entry.method !== 'auto' && <span className="text-gray-500"> ({entry.method})</span>}</span>
-                                    <span className="text-gray-500">{formatDateTime(entry.at)}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                );
+                // READ-ONLY MODE
+                if (!dasher.cashOutHistory || dasher.cashOutHistory.length === 0) {
+                    return React.createElement('div', { className: 'mt-2' },
+                        React.createElement('div', { className: 'text-[11px] text-gray-500 italic' }, 'No cash‑outs')
+                    );
+                }
+
+                return React.createElement('div', { className: 'mt-2' }, [
+                    React.createElement('div', { key: 'label', className: 'text-[11px] text-gray-400' },
+                        `${dasher.cashOutHistory.length} cash‑out${dasher.cashOutHistory.length>1?'s':''}`
+                    )
+                ]);
             };
 
             const migrateLegacyDashers = (stateObj) => {
@@ -1712,30 +1988,7 @@
                 });
             };
 
-            // Unified filter/sort helper for all dasher sections
-            const useFilteredSortedDashers = (list, { showNonZeroOnly, sortCfg, parseBalanceValue }) => {
-                let filtered = showNonZeroOnly ? list.filter(d => parseBalanceValue(d.balance) !== 0) : list;
-                if (sortCfg.key !== 'none') {
-                    const dir = sortCfg.dir === 'asc' ? 1 : -1;
-                    filtered = [...filtered].sort((a,b)=>{
-                        if (sortCfg.key === 'balance') {
-                            const av = parseBalanceValue(a.balance), bv = parseBalanceValue(b.balance);
-                            if (av === bv) return 0; return av > bv ? dir : -dir;
-                        }
-                        if (sortCfg.key === 'lastUsed') {
-                            const av = a.lastUsed ? new Date(a.lastUsed).getTime() : 0;
-                            const bv = b.lastUsed ? new Date(b.lastUsed).getTime() : 0;
-                            if (av === bv) return 0; return av > bv ? dir : -dir;
-                        }
-                        if (sortCfg.key === 'alphabetical') {
-                            const av = (a.name||'').toLowerCase(), bv = (b.name||'').toLowerCase();
-                            if (av === bv) return 0; return av > bv ? dir : -dir;
-                        }
-                        return 0;
-                    });
-                }
-                return filtered;
-            };
+            // useFilteredSortedDashers removed in v1.7.0 - replaced by filterAndSortDashers
 
             // Stable count display helper (fixed width to prevent header jumping)
             const renderStableCount = (visible, total) => (
@@ -1745,45 +1998,31 @@
             );
 
             // Helper to add aria-label to buttons with title
+            // Aggregate all dashers into a flat list for global filtering counters
+            const allDashersFlat = useMemo(() => [
+                ...dasherCategories.flatMap(c => c.dashers || []),
+                ...readyDashers,
+                ...currentlyUsingDashers,
+                ...appealedDashers,
+                ...appliedPendingDashers,
+                ...lockedDashers,
+                ...deactivatedDashers,
+                ...archivedDashers
+            ], [
+                dasherCategories,
+                readyDashers,
+                currentlyUsingDashers,
+                appealedDashers,
+                appliedPendingDashers,
+                lockedDashers,
+                deactivatedDashers,
+                archivedDashers
+            ]);
+
             const withAria = (title) => ({ 'aria-label': title, title });
 
             // Unified DasherFilterBar component for consistent filtering across all sections
-            const DasherFilterBar = ({ showNonZeroOnly, setShowNonZeroOnly, dasherSort, setDasherSort, persist }) => (
-                React.createElement('div', { className: 'flex items-center gap-2' },
-                    React.createElement('div', { className: 'flex border border-gray-600 rounded overflow-hidden text-[11px]' },
-                        React.createElement('button', {
-                            onClick: (e) => { e.stopPropagation(); if(showNonZeroOnly){setShowNonZeroOnly(false); persist();}},
-                            className: `px-2 py-1 ${!showNonZeroOnly?'bg-gray-700 text-gray-100':'text-gray-400 hover:text-gray-200'}`
-                        }, 'All'),
-                        React.createElement('button', {
-                            onClick: (e) => { e.stopPropagation(); if(!showNonZeroOnly){setShowNonZeroOnly(true); persist();}},
-                            className: `px-2 py-1 ${showNonZeroOnly?'bg-gray-700 text-gray-100':'text-gray-400 hover:text-gray-200'}`
-                        }, 'Non‑Zero')
-                    ),
-                    React.createElement('div', { className: 'flex items-center gap-1 text-[11px]' },
-                        React.createElement('select', {
-                            value: dasherSort.key,
-                            onChange: (e) => { setDasherSort(prev=>({...prev,key:e.target.value})); persist(); },
-                            onClick: (e) => e.stopPropagation(),
-                            className: 'bg-gray-700 border border-gray-600 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-400 text-gray-200'
-                        },
-                            React.createElement('option', { value: 'none' }, 'Sort: None'),
-                            React.createElement('option', { value: 'alphabetical' }, 'Alphabetical'),
-                            React.createElement('option', { value: 'balance' }, 'Balance'),
-                            React.createElement('option', { value: 'lastUsed' }, 'Last Used')
-                        ),
-                        React.createElement('button', {
-                            onClick: (e) => { e.stopPropagation(); if(dasherSort.key!=='none'){ setDasherSort(prev=>({...prev,dir:prev.dir==='asc'?'desc':'asc'})); persist();}},
-                            disabled: dasherSort.key==='none',
-                            className: `px-1.5 py-1 rounded border border-gray-600 ${dasherSort.key==='none'?'text-gray-500 bg-gray-700/40':'text-gray-200 bg-gray-700 hover:bg-gray-600'} text-[11px]`
-                        }, dasherSort.dir==='asc'?'↑':'↓'),
-                        (showNonZeroOnly || dasherSort.key!=='none') && React.createElement('button', {
-                            onClick: (e) => { e.stopPropagation(); setShowNonZeroOnly(false); setDasherSort({key:'none',dir:'desc'}); persist(); },
-                            className: 'px-2 py-1 rounded text-[11px] bg-gray-600/60 hover:bg-gray-500 text-gray-100 border border-gray-500/60'
-                        }, 'Clear')
-                    )
-                )
-            );
+            // DasherFilterBar removed in v1.7.0 - replaced by global control bar
 
             const formatTime = (timeStr) => {
                 if (!timeStr || timeStr.length !== 4) return '';
@@ -1808,35 +2047,24 @@
                 }
 
                 const diffMs = todayClose - now;
-                const diffMinutes = Math.floor(diffMs / (1000 * 60));
+                const diffMinutes = Math.floor(diffMs / 60000);
                 const diffHours = Math.floor(diffMinutes / 60);
                 const remainingMinutes = diffMinutes % 60;
 
-                // Check if store is closed (assuming 6am opening time)
-                const todayOpen = new Date(now);
-                todayOpen.setHours(6, 0, 0, 0);
+                let color = 'text-green-400';
+                if (diffHours < 1) color = 'text-yellow-400';
+                if (diffMinutes < 30) color = 'text-red-400';
 
-                if (now < todayOpen || (diffMs < 0 && Math.abs(diffMinutes) > 12 * 60)) {
-                    return { status: 'closed', text: 'Closed', color: 'text-red-400' };
-                }
-
-                if (diffMinutes < 0) {
-                    return { status: 'closed', text: 'Closed', color: 'text-red-400' };
-                }
-
-                let color = 'text-green-400'; // More than 2 hours
-                if (diffMinutes < 120) color = 'text-yellow-400'; // Less than 2 hours
-                if (diffMinutes < 60) color = 'text-red-400'; // Less than 1 hour
-
-                const timeText = diffHours > 0
-                    ? `${diffHours}h ${remainingMinutes}m left`
-                    : `${diffMinutes}m left`;
+                const timeText =
+                    diffHours > 0
+                        ? `${diffHours}h ${remainingMinutes}m left`
+                        : `${remainingMinutes}m left`;
 
                 return {
-                    status: 'open',
+                    status: diffMs > 0 ? 'open' : 'closed',
                     text: timeText,
                     color,
-                    formatted: formatTime(closeTimeStr)
+                    formatted: `${closeHours.toString().padStart(2,'0')}:${closeMinutes.toString().padStart(2,'0')}`
                 };
             };
 
@@ -2627,28 +2855,6 @@
                         }
                     }
 
-                    // Add previousCategory tooltip badge
-                    if (dasher.previousCategory) {
-                        const prevName = categoryLabelMap[dasher.previousCategory] || dasher.previousCategory;
-                        const rel = formatRelativeTime(dasher.previousCategoryAt);
-                        parts.push(React.createElement('span', { key: 'sep-prev' }, ' '));
-                        parts.push(
-                            React.createElement('span', {
-                                key: 'prevTip',
-                                className: 'inline-block relative group align-middle'
-                            }, [
-                                React.createElement('span', {
-                                    key: 'badge',
-                                    className: 'px-1.5 py-0.5 text-[10px] rounded bg-gray-700/70 border border-gray-500/40 text-gray-300 cursor-default hover:bg-gray-600/80 transition-colors'
-                                }, 'ℹ'),
-                                React.createElement('span', {
-                                    key: 'tooltip',
-                                    className: 'pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute z-50 -left-1/2 mt-1 w-max max-w-[180px] px-2 py-1 rounded bg-gray-900/95 border border-gray-600/60 text-[10px] text-gray-200 shadow-lg'
-                                }, `Prev: ${prevName}${rel ? ` • ${rel}` : ''}`)
-                            ])
-                        );
-                    }
-
                     return React.createElement(React.Fragment, {}, parts);
                 } catch (error) {
                     console.error('Error in getDasherTitle:', error, dasher);
@@ -2855,122 +3061,95 @@
                 return clone;
             };
 
-            const extractFromSource = (srcKey, id) => {
+            // Atomic movement logic - v1.7.0 (replaces async moveDasherUnified)
+            const extractDasherFromAnyBucket = (dasherId) => {
                 let found = null;
-                if (srcKey === 'archived') {
-                    found = archivedDashers.find(d => d.id === id);
-                    if (found) setArchivedDashers(prev => prev.filter(d => d.id !== id));
-                    return found;
-                }
-                if (srcKey === 'ready') {
-                    found = readyDashers.find(d => d.id === id);
-                    if (found) setReadyDashers(prev => prev.filter(d => d.id !== id));
-                    return found;
-                }
-                if (srcKey === 'currently-using') {
-                    found = currentlyUsingDashers.find(d => d.id === id);
-                    if (found) setCurrentlyUsingDashers(prev => prev.filter(d => d.id !== id));
-                    return found;
-                }
-                if (srcKey === 'appealed') {
-                    found = appealedDashers.find(d => d.id === id);
-                    if (found) setAppealedDashers(prev => prev.filter(d => d.id !== id));
-                    return found;
-                }
-                if (srcKey === 'deactivated') {
-                    found = deactivatedDashers.find(d => d.id === id);
-                    if (found) setDeactivatedDashers(prev => prev.filter(d => d.id !== id));
-                    return found;
-                }
-                if (srcKey === 'locked') {
-                    found = lockedDashers.find(d => d.id === id);
-                    if (found) setLockedDashers(prev => prev.filter(d => d.id !== id));
-                    return found;
-                }
-                if (srcKey === 'applied-pending') {
-                    found = appliedPendingDashers.find(d => d.id === id);
-                    if (found) setAppliedPendingDashers(prev => prev.filter(d => d.id !== id));
-                    return found;
-                }
-                // main or any other category inside dasherCategories
-                setDasherCategories(prev => {
+
+                const pull = (listGetter, listSetter) => {
+                    let changed = false;
                     let captured = null;
-                    const updated = prev.map(c => {
-                        if (c.id === 'main') {
-                            const exists = c.dashers.find(d => d.id === id);
-                            if (exists) {
-                                captured = exists;
-                                return { ...c, dashers: c.dashers.filter(d => d.id !== id) };
+                    listSetter(prev => {
+                        const next = prev.filter(d => {
+                            if (!captured && d.id === dasherId) {
+                                captured = d;
+                                changed = true;
+                                return false;
                             }
-                        }
-                        return c;
+                            return true;
+                        });
+                        if (captured) found = captured;
+                        return changed ? next : prev;
                     });
-                    if (captured) found = captured;
-                    return updated;
-                });
+                };
+
+                // Top-level arrays
+                pull(readyDashers, setReadyDashers);
+                pull(currentlyUsingDashers, setCurrentlyUsingDashers);
+                pull(appealedDashers, setAppealedDashers);
+                pull(appliedPendingDashers, setAppliedPendingDashers);
+                pull(lockedDashers, setLockedDashers);
+                pull(deactivatedDashers, setDeactivatedDashers);
+                pull(archivedDashers, setArchivedDashers);
+
+                // Main / custom categories
+                if (!found) {
+                    setDasherCategories(prev => {
+                        return prev.map(cat => {
+                            if (!Array.isArray(cat.dashers) || cat.dashers.length === 0) return cat;
+                            const idx = cat.dashers.findIndex(d => d.id === dasherId);
+                            if (idx === -1) return cat;
+                            const clone = { ...cat, dashers: [...cat.dashers] };
+                            found = clone.dashers.splice(idx, 1)[0];
+                            return clone;
+                        });
+                    });
+                }
                 return found;
             };
 
-            const insertIntoDest = (destKey, rawDasher) => {
-                if (!rawDasher) return;
-                const base = sanitizeDasherFlags(rawDasher);
+            const insertDasherIntoBucket = (dasher, destKey) => {
+                if (!dasher) return;
+                // Preserve originalCategory on first departure from main
+                if (!dasher.originalCategory) dasher.originalCategory = 'main';
 
-                const stamp = (obj, flag, atField) =>
-                    ({ ...obj, [flag]: true, [atField]: new Date().toISOString() });
+                const base = sanitizeDasherFlags(dasher);
+                const stamp = (flag, atField) => ({ ...base, [flag]: true, [atField]: new Date().toISOString() });
 
                 if (destKey === 'main') {
-                    setDasherCategories(prev => prev.map(c =>
-                        c.id === 'main'
-                            ? { ...c, dashers: [...c.dashers, base] }
-                            : c
+                    setDasherCategories(prev => prev.map(c => c.id === 'main'
+                        ? { ...c, dashers: [...c.dashers, base] }
+                        : c
                     ));
-                    return;
-                }
-                if (destKey === 'ready') {
-                    setReadyDashers(prev => [stamp(base, 'ready', 'readyAt'), ...prev]);
-                    return;
-                }
-                if (destKey === 'currently-using') {
-                    setCurrentlyUsingDashers(prev => [stamp(base, 'currentlyUsing', 'currentlyUsingAt'), ...prev]);
-                    return;
-                }
-                if (destKey === 'appealed') {
-                    setAppealedDashers(prev => [stamp(base, 'appealed', 'appealedAt'), ...prev]);
-                    return;
-                }
-                if (destKey === 'deactivated') {
-                    setDeactivatedDashers(prev => [stamp(base, 'deactivated', 'deactivatedAt'), ...prev]);
-                    return;
-                }
-                if (destKey === 'archived') {
+                } else if (destKey === 'ready') {
+                    setReadyDashers(prev => [stamp('ready', 'readyAt'), ...prev]);
+                } else if (destKey === 'currently-using') {
+                    setCurrentlyUsingDashers(prev => [stamp('currentlyUsing', 'currentlyUsingAt'), ...prev]);
+                } else if (destKey === 'appealed') {
+                    setAppealedDashers(prev => [stamp('appealed', 'appealedAt'), ...prev]);
+                } else if (destKey === 'applied-pending') {
+                    setAppliedPendingDashers(prev => [stamp('appliedPending', 'appliedPendingAt'), ...prev]);
+                } else if (destKey === 'locked') {
+                    setLockedDashers(prev => [stamp('locked', 'lockedAt'), ...prev]);
+                } else if (destKey === 'deactivated') {
+                    setDeactivatedDashers(prev => [stamp('deactivated', 'deactivatedAt'), ...prev]);
+                } else if (destKey === 'archived') {
                     setArchivedDashers(prev => [{
                         ...base,
                         archived: true,
-                        archivedAt: new Date().toISOString(),
-                        originalCategory: base.originalCategory || 'main'
+                        archivedAt: new Date().toISOString()
                     }, ...prev]);
-                    return;
-                }
-                if (destKey === 'locked') {
-                    setLockedDashers(prev => [stamp(base, 'locked', 'lockedAt'), ...prev]);
-                    return;
-                }
-                if (destKey === 'applied-pending') {
-                    setAppliedPendingDashers(prev => [stamp(base, 'appliedPending', 'appliedPendingAt'), ...prev]);
                 }
             };
 
-            const moveDasherUnified = (fromKey, toKey, dasherId) => {
+            const moveDasher = (fromKey, toKey, dasherId) => {
                 if (fromKey === toKey) return;
-                const pulled = extractFromSource(fromKey, dasherId);
+                const pulled = extractDasherFromAnyBucket(dasherId);
                 if (pulled) {
                     pulled.previousCategory = fromKey;
                     pulled.previousCategoryAt = new Date().toISOString();
-                }
-                setTimeout(() => {
-                    insertIntoDest(toKey, pulled);
+                    insertDasherIntoBucket(pulled, toKey);
                     requestPersist();
-                }, 0);
+                }
             };
 
             const bulkMoveSelectedDashers = (destinationKey) => {
@@ -2998,7 +3177,7 @@
 
                 jobs.forEach(job => {
                     if (job.from !== destinationKey) {
-                        moveDasherUnified(job.from, destinationKey, job.id);
+                        moveDasher(job.from, destinationKey, job.id);
                     }
                 });
 
@@ -3023,7 +3202,7 @@
                     order.filter(o => o.key !== currentKey).map(o =>
                         React.createElement('button', {
                             key: o.key,
-                            onClick: () => moveDasherUnified(currentKey, o.key, dasherId),
+                            onClick: () => moveDasher(currentKey, o.key, dasherId),
                             className: `icon-btn ${o.color} hover:opacity-80`,
                             title: o.title,
                             'aria-label': o.title
@@ -3438,18 +3617,20 @@
                         </div>
                     )}
 
-                    <div className="max-w-[1240px] mx-auto">
-                        {/* Header with time - Compact Japanese Style */}
-                        <div className="text-center mb-3">
-                            <h1 className="text-3xl md:text-4xl font-bold gradient-header mb-0.5">
-                                Dash Bash Utility
-                            </h1>
-                            <div className="flex items-center justify-center gap-1.5 text-gray-500 text-xs">
-                                <Clock size={12} />
-                                <span className="opacity-70">
-                                    {currentTime.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })} • {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                                <span className="opacity-50">• v1.6.1</span>
+                    <div className="max-w-[1600px] xl:max-w-[1720px] mx-auto">
+                        {/* Gradient Hero Header - v1.7.0 */}
+                        <div className="app-hero" role="banner" aria-label="Dash Bash Utility header">
+                            <div className="hero-inner">
+                                <h1 className="hero-title">Dash Bash Utility</h1>
+                                <div className="hero-meta">
+                                    <span className="badge">
+                                        {currentTime.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
+                                        &nbsp;•&nbsp;
+                                        {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                    <span className="badge" aria-label="Application version">v{APP_VERSION}</span>
+                                    <span className="badge" aria-label="Schema version">schema 4</span>
+                                </div>
                             </div>
                         </div>
 
@@ -4372,11 +4553,82 @@
                                 )}
                             </div>
 
-                            {/* ========== DELIVERY MANAGEMENT SECTION ========== */}
+                            {/* ========== DASHERS MANAGEMENT (GLOBAL CONTROLS) ========== */}
                             <div className="flex items-center gap-3 my-8">
                                 <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-700 to-transparent opacity-50"></div>
-                                <span className="text-xs uppercase tracking-wider text-gray-500 font-medium">Delivery Management</span>
+                                <span className="text-xs uppercase tracking-wider text-gray-500 font-medium">Dashers Management</span>
                                 <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-700 to-transparent opacity-50"></div>
+                            </div>
+
+                            {/* Global Controls Bar */}
+                            <div className="mt-2 bg-gray-900/40 border border-gray-700 rounded-lg p-4 space-y-3">
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <div className="flex items-center gap-1 border border-gray-600 rounded overflow-hidden text-[11px]" aria-label="Balance filter">
+                                        <button
+                                            onClick={() => { if (showNonZeroOnly) { setShowNonZeroOnly(false); requestPersist(); } }}
+                                            className={`px-2 py-1 ${!showNonZeroOnly ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
+                                        >All</button>
+                                        <button
+                                            onClick={() => { if (!showNonZeroOnly) { setShowNonZeroOnly(true); requestPersist(); } }}
+                                            className={`px-2 py-1 ${showNonZeroOnly ? 'bg-gray-700 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}
+                                        >Non‑Zero</button>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        <select
+                                            value={dasherSort.key}
+                                            onChange={(e) => { setDasherSort(prev => ({ ...prev, key: e.target.value })); requestPersist(); }}
+                                            className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-[11px] focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                                            aria-label="Sort dashers"
+                                        >
+                                            <option value="none">Sort: None</option>
+                                            <option value="alphabetical">Alphabetical</option>
+                                            <option value="balance">Balance</option>
+                                            <option value="lastUsed">Last Used</option>
+                                        </select>
+                                        <button
+                                            onClick={() => { if (dasherSort.key !== 'none') { setDasherSort(prev => ({ ...prev, dir: prev.dir === 'asc' ? 'desc' : 'asc' })); requestPersist(); } }}
+                                            disabled={dasherSort.key === 'none'}
+                                            className={`px-2 py-1 rounded border border-gray-600 text-[11px] ${dasherSort.key === 'none' ? 'text-gray-500 bg-gray-700/40' : 'text-gray-200 bg-gray-700 hover:bg-gray-600'}`}
+                                            aria-label="Toggle sort direction"
+                                        >{dasherSort.dir === 'asc' ? '↑' : '↓'}</button>
+                                        {(showNonZeroOnly || dasherSort.key !== 'none' || (globalQuery && globalQuery.trim())) && (
+                                            <button
+                                                onClick={() => { setShowNonZeroOnly(false); setDasherSort({ key: 'none', dir: 'desc' }); setGlobalQuery(''); requestPersist(); }}
+                                                className="px-2 py-1 rounded text-[11px] bg-gray-600/60 hover:bg-gray-500 text-gray-100 border border-gray-500/60"
+                                            >Clear</button>
+                                        )}
+                                    </div>
+
+                                    <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                                        <input
+                                            type="text"
+                                            value={globalQuery}
+                                            onChange={(e) => setGlobalQuery(e.target.value)}
+                                            placeholder="Search name / email / phone"
+                                            className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                                            aria-label="Search dashers"
+                                        />
+                                        <div className="text-[11px] text-gray-400 font-mono" aria-label="Matches count">
+                                            {filterAndSortDashers(allDashersFlat).length} / {allDashersFlat.length}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            onClick={() => { setIsDashersOpen(true); setIsReadyDashersOpen(true); setIsCurrentlyUsingDashersOpen(true); setIsAppealedDashersOpen(true); setIsAppliedPendingDashersOpen(true); setIsLockedDashersOpen(true); setIsDeactivatedDashersOpen(true); setIsArchivedDashersOpen(true); }}
+                                            className="px-3 py-1.5 text-[11px] rounded bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-200"
+                                            aria-label="Expand all dasher sections"
+                                        >Expand All</button>
+                                        <button
+                                            onClick={() => { setIsDashersOpen(false); setIsReadyDashersOpen(false); setIsCurrentlyUsingDashersOpen(false); setIsAppealedDashersOpen(false); setIsAppliedPendingDashersOpen(false); setIsLockedDashersOpen(false); setIsDeactivatedDashersOpen(false); setIsArchivedDashersOpen(false); }}
+                                            className="px-3 py-1.5 text-[11px] rounded bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-200"
+                                            aria-label="Collapse all dasher sections"
+                                        >Collapse All</button>
+                                    </div>
+
+                                    <span className="sr-only" aria-live="polite">{globalQuery && globalQuery.trim() ? 'Filtering dashers' : 'Showing all dashers'}</span>
+                                </div>
                             </div>
 
                             {/* Dashers Section */}
@@ -4388,10 +4640,7 @@
                                     <div className="flex items-center gap-3">
                                         <Users size={20} className="text-indigo-400" />
                                         {(() => {
-                                            const list = useFilteredSortedDashers(
-                                                dasherCategories.flatMap(c=>c.dashers),
-                                                { showNonZeroOnly, sortCfg: dasherSort, parseBalanceValue }
-                                            );
+                                            const list = filterAndSortDashers(dasherCategories.flatMap(c=>c.dashers));
                                             const total = dasherCategories.flatMap(c=>c.dashers).length;
                                             return (
                                                 <span className="text-lg font-medium flex items-center gap-2">
@@ -4399,15 +4648,7 @@
                                                 </span>
                                             );
                                         })()}
-                                        <div onClick={(e)=>e.stopPropagation()} className="ml-4">
-                                            <DasherFilterBar
-                                                showNonZeroOnly={showNonZeroOnly}
-                                                setShowNonZeroOnly={setShowNonZeroOnly}
-                                                dasherSort={dasherSort}
-                                                setDasherSort={setDasherSort}
-                                                persist={requestPersist}
-                                            />
-                                        </div>
+                                        {/* per-section filter bar removed in favor of global controls */}
                                         {/* Category Expand/Collapse Chevrons */}
                                         <div
                                             className="flex items-center gap-1 ml-2"
@@ -4635,8 +4876,8 @@
                                                                                     className="flex items-center gap-2 flex-1 text-left"
                                                                                 >
                                                                                     {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-                                                                                    <div className="flex-1">
-                                                                                        <h5 className="font-medium text-sm flex items-center gap-2">
+                                                                                    <div className="flex-1 min-w-0">
+                                                                                        <h5 className="font-medium text-sm flex items-center gap-2 truncate">
                                                                                             {dasherTitle}
                                                                                             {/* Status Badges */}
                                                                                             <span className="flag-badges" aria-label="Dasher status flags (Crimson, Red Card, Appealed)">
@@ -5057,22 +5298,13 @@
                                     <div className="flex items-center gap-3">
                                         <CircleCheck size={20} className="text-green-400" />
                                         {(() => {
-                                            const list = useFilteredSortedDashers(readyDashers, { showNonZeroOnly, sortCfg: dasherSort, parseBalanceValue });
+                                            const list = filterAndSortDashers(readyDashers);
                                             return (
                                                 <span className="text-lg font-medium flex items-center gap-2">
                                                     Ready {renderStableCount(list.length, readyDashers.length)}
                                                 </span>
                                             );
                                         })()}
-                                        <div onClick={(e)=>e.stopPropagation()} className="ml-4">
-                                            <DasherFilterBar
-                                                showNonZeroOnly={showNonZeroOnly}
-                                                setShowNonZeroOnly={setShowNonZeroOnly}
-                                                dasherSort={dasherSort}
-                                                setDasherSort={setDasherSort}
-                                                persist={requestPersist}
-                                            />
-                                        </div>
                                     </div>
                                     {isReadyDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </button>
@@ -5133,8 +5365,8 @@
                                                                     className="flex items-center gap-2 flex-1 text-left"
                                                                 >
                                                                     {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-                                                                    <div className="flex-1">
-                                                                        <h5 className="font-medium text-sm flex items-center gap-2">
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <h5 className="font-medium text-sm flex items-center gap-2 truncate">
                                                                             {dasherTitle}
                                                                             {/* Status Badges */}
                                                                             <span className="flag-badges" aria-label="Dasher status flags">
@@ -5241,6 +5473,8 @@
                                                                             type="text"
                                                                             value={editingDasher.name}
                                                                             onChange={(e) => setEditingDasher({...editingDasher, name: e.target.value})}
+                                                                            onKeyDown={(e)=>handleEditableKeyDown(e,false)}
+                                                                            onBlur={commitDasherEdit}
                                                                             className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm"
                                                                             placeholder="Name"
                                                                         />
@@ -5248,6 +5482,8 @@
                                                                             type="email"
                                                                             value={editingDasher.email}
                                                                             onChange={(e) => setEditingDasher({...editingDasher, email: e.target.value})}
+                                                                            onKeyDown={(e)=>handleEditableKeyDown(e,false)}
+                                                                            onBlur={commitDasherEdit}
                                                                             className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm"
                                                                             placeholder="Email"
                                                                         />
@@ -5256,12 +5492,16 @@
                                                                             step="0.01"
                                                                             value={editingDasher.balance}
                                                                             onChange={(e) => setEditingDasher({...editingDasher, balance: parseFloat(e.target.value) || 0})}
+                                                                            onKeyDown={(e)=>handleEditableKeyDown(e,false)}
+                                                                            onBlur={commitDasherEdit}
                                                                             className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm"
                                                                             placeholder="Balance"
                                                                         />
                                                                         <textarea
                                                                             value={editingDasher.notes}
                                                                             onChange={(e) => setEditingDasher({...editingDasher, notes: e.target.value})}
+                                                                            onKeyDown={(e)=>handleEditableKeyDown(e,true)}
+                                                                            onBlur={commitDasherEdit}
                                                                             className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm resize-y"
                                                                             placeholder="Notes"
                                                                             rows={2}
@@ -5409,7 +5649,7 @@
                                                                             </div>
                                                                         )}
 
-                                                                        {renderCashOutHistory(dasher)}
+                                                                        {renderCashOutHistory(dasher, isEditing)}
                                                                     </>
                                                                 )}
                                                             </div>
@@ -5432,22 +5672,13 @@
                                     <div className="flex items-center gap-3">
                                         <Activity size={20} className="text-blue-400" />
                                         {(() => {
-                                            const list = useFilteredSortedDashers(currentlyUsingDashers, { showNonZeroOnly, sortCfg: dasherSort, parseBalanceValue });
+                                            const list = filterAndSortDashers(currentlyUsingDashers);
                                             return (
                                                 <span className="text-lg font-medium flex items-center gap-2">
                                                     Using {renderStableCount(list.length, currentlyUsingDashers.length)}
                                                 </span>
                                             );
                                         })()}
-                                        <div onClick={(e)=>e.stopPropagation()} className="ml-4">
-                                            <DasherFilterBar
-                                                showNonZeroOnly={showNonZeroOnly}
-                                                setShowNonZeroOnly={setShowNonZeroOnly}
-                                                dasherSort={dasherSort}
-                                                setDasherSort={setDasherSort}
-                                                persist={requestPersist}
-                                            />
-                                        </div>
                                     </div>
                                     {isCurrentlyUsingDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </button>
@@ -5507,8 +5738,8 @@
                                                                     className="flex items-center gap-2 flex-1 text-left"
                                                                 >
                                                                     {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-                                                                    <div className="flex-1">
-                                                                        <h5 className="font-medium text-sm flex items-center gap-2">
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <h5 className="font-medium text-sm flex items-center gap-2 truncate">
                                                                             {dasherTitle}
                                                                             <span className="flag-badges">
                                                                                 <span className="flag-badge" data-flag="C" data-active={dasher.crimson ? 'true' : 'false'}>CRIMSON</span>
@@ -5659,7 +5890,7 @@
                                                                         {dasher.lastUsed && (<div className="flex items-center justify-between"><span className="text-gray-400">Timer:</span><span className={`font-mono ${timeStatus.color}`}>{timeStatus.display}</span></div>)}
                                                                         {dasher.notes && (<div className="pt-1"><div className="flex items-center justify-between mb-1"><span className="text-gray-400">Notes:</span><button onClick={() => copyToClipboard(dasher.notes)} className="copy-btn"><Copy size={10} /></button></div><p className="text-gray-300 text-xs whitespace-pre-wrap bg-gray-700/30 rounded p-2">{dasher.notes}</p></div>)}
 
-                                                                        {renderCashOutHistory(dasher)}
+                                                                        {renderCashOutHistory(dasher, isEditing)}
 
                                                                         {/* Crimson Checkbox */}
                                                                         <div className="flex items-center gap-2">
@@ -5730,22 +5961,13 @@
                                     <div className="flex items-center gap-3">
                                         <CircleCheck size={20} className="text-amber-400" />
                                         {(() => {
-                                            const list = useFilteredSortedDashers(appealedDashers, { showNonZeroOnly, sortCfg: dasherSort, parseBalanceValue });
+                                            const list = filterAndSortDashers(appealedDashers);
                                             return (
                                                 <span className="text-lg font-medium flex items-center gap-2">
                                                     Appealed {renderStableCount(list.length, appealedDashers.length)}
                                                 </span>
                                             );
                                         })()}
-                                        <div onClick={(e)=>e.stopPropagation()} className="ml-4">
-                                            <DasherFilterBar
-                                                showNonZeroOnly={showNonZeroOnly}
-                                                setShowNonZeroOnly={setShowNonZeroOnly}
-                                                dasherSort={dasherSort}
-                                                setDasherSort={setDasherSort}
-                                                persist={requestPersist}
-                                            />
-                                        </div>
                                     </div>
                                     {isAppealedDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </button>
@@ -5796,8 +6018,8 @@
                                                                 )}
                                                                 <button onClick={() => { setCollapsedDashers({...collapsedDashers, [dasher.id]: !isCollapsed}); requestPersist(); }} className="flex items-center gap-2 flex-1 text-left">
                                                                     {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-                                                                    <div className="flex-1">
-                                                                        <h5 className="font-medium text-sm flex items-center gap-2">
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <h5 className="font-medium text-sm flex items-center gap-2 truncate">
                                                                             {dasherTitle}
                                                                             <span className="flag-badges">
                                                                                 <span className="flag-badge" data-flag="C" data-active={dasher.crimson ? 'true' : 'false'}>CRIMSON</span>
@@ -5997,7 +6219,7 @@
                                                                         {dasher.lastUsed && (<div className="flex items-center justify-between"><span className="text-gray-400">Timer:</span><span className={`font-mono ${timeStatus.color}`}>{timeStatus.display}</span></div>)}
                                                                         {dasher.notes && (<div className="pt-1"><div className="flex items-center justify-between mb-1"><span className="text-gray-400">Notes:</span><button onClick={() => copyToClipboard(dasher.notes)} className="copy-btn"><Copy size={10} /></button></div><p className="text-gray-300 text-xs whitespace-pre-wrap bg-gray-700/30 rounded p-2">{dasher.notes}</p></div>)}
 
-                                                                        {renderCashOutHistory(dasher)}
+                                                                        {renderCashOutHistory(dasher, isEditing)}
                                                                     </>
                                                                 )}
                                                             </div>
@@ -6020,28 +6242,19 @@
                                     <div className="flex items-center gap-3">
                                         <Clock size={20} className="text-purple-300" />
                                         {(() => {
-                                            const list = useFilteredSortedDashers(appliedPendingDashers, { showNonZeroOnly, sortCfg: dasherSort, parseBalanceValue });
+                                            const list = filterAndSortDashers(appliedPendingDashers);
                                             return React.createElement('span', { className: 'text-lg font-medium flex items-center gap-2' },
                                                 'Applied Pending ',
                                                 renderStableCount(list.length, appliedPendingDashers.length)
                                             );
                                         })()}
-                                        <div onClick={(e) => e.stopPropagation()} className="ml-4">
-                                            {React.createElement(DasherFilterBar, {
-                                                showNonZeroOnly,
-                                                setShowNonZeroOnly,
-                                                dasherSort,
-                                                setDasherSort,
-                                                persist: requestPersist
-                                            })}
-                                        </div>
                                     </div>
                                     {isAppliedPendingDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </button>
                                 {isAppliedPendingDashersOpen && (
                                     <div className="p-4 pt-2 space-y-2">
                                         {(() => {
-                                            const filtered = useFilteredSortedDashers(appliedPendingDashers, { showNonZeroOnly, sortCfg: dasherSort, parseBalanceValue });
+                                            const filtered = filterAndSortDashers(appliedPendingDashers);
                                             if (filtered.length === 0) return <div className="text-center text-gray-500 py-6 text-sm italic">No applied pending dashers</div>;
                                             return filtered.map(dasher => {
                                                 const isCollapsed = collapsedDashers[dasher.id] || false;
@@ -6115,7 +6328,7 @@
                                                                     <label className="text-xs text-gray-400 w-20">Email:</label>
                                                                     <div className="flex-1 text-xs text-gray-200">{dasher.email || <span className="italic text-gray-500">No email</span>}</div>
                                                                 </div>
-                                                                {renderCashOutHistory(dasher)}
+                                                                {renderCashOutHistory(dasher, false)}
                                                             </div>
                                                         )}
                                                     </div>
@@ -6135,28 +6348,19 @@
                                     <div className="flex items-center gap-3">
                                         <Lock size={20} className="text-gray-400" />
                                         {(() => {
-                                            const list = useFilteredSortedDashers(lockedDashers, { showNonZeroOnly, sortCfg: dasherSort, parseBalanceValue });
+                                            const list = filterAndSortDashers(lockedDashers);
                                             return React.createElement('span', { className: 'text-lg font-medium flex items-center gap-2' },
                                                 'Locked ',
                                                 renderStableCount(list.length, lockedDashers.length)
                                             );
                                         })()}
-                                        <div onClick={(e) => e.stopPropagation()} className="ml-4">
-                                            {React.createElement(DasherFilterBar, {
-                                                showNonZeroOnly,
-                                                setShowNonZeroOnly,
-                                                dasherSort,
-                                                setDasherSort,
-                                                persist: requestPersist
-                                            })}
-                                        </div>
                                     </div>
                                     {isLockedDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </button>
                                 {isLockedDashersOpen && (
                                     <div className="p-4 pt-2 space-y-2">
                                         {(() => {
-                                            const filtered = useFilteredSortedDashers(lockedDashers, { showNonZeroOnly, sortCfg: dasherSort, parseBalanceValue });
+                                            const filtered = filterAndSortDashers(lockedDashers);
                                             if (filtered.length === 0) return <div className="text-center text-gray-500 py-6 text-sm italic">No locked dashers</div>;
                                             return filtered.map(dasher => {
                                                 const isCollapsed = collapsedDashers[dasher.id] || false;
@@ -6230,7 +6434,7 @@
                                                                     <label className="text-xs text-gray-400 w-20">Email:</label>
                                                                     <div className="flex-1 text-xs text-gray-200">{dasher.email || <span className="italic text-gray-500">No email</span>}</div>
                                                                 </div>
-                                                                {renderCashOutHistory(dasher)}
+                                                                {renderCashOutHistory(dasher, false)}
                                                             </div>
                                                         )}
                                                     </div>
@@ -6250,22 +6454,13 @@
                                     <div className="flex items-center gap-3">
                                         <UserX size={20} className="text-red-400" />
                                         {(() => {
-                                            const list = useFilteredSortedDashers(deactivatedDashers, { showNonZeroOnly, sortCfg: dasherSort, parseBalanceValue });
+                                            const list = filterAndSortDashers(deactivatedDashers);
                                             return (
                                                 <span className="text-lg font-medium flex items-center gap-2">
                                                     Deactivated {renderStableCount(list.length, deactivatedDashers.length)}
                                                 </span>
                                             );
                                         })()}
-                                        <div onClick={(e)=>e.stopPropagation()} className="ml-4">
-                                            <DasherFilterBar
-                                                showNonZeroOnly={showNonZeroOnly}
-                                                setShowNonZeroOnly={setShowNonZeroOnly}
-                                                dasherSort={dasherSort}
-                                                setDasherSort={setDasherSort}
-                                                persist={requestPersist}
-                                            />
-                                        </div>
                                         {isDeactivatedDashersOpen && deactivatedDashers.length > 0 && (
                                             <div className="flex items-center gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
                                                 <button
@@ -6354,8 +6549,8 @@
                                                                     className="flex items-center gap-2 flex-1 text-left"
                                                                 >
                                                                     {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-                                                                    <div className="flex-1">
-                                                                        <h5 className="font-medium text-sm flex items-center gap-2">
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <h5 className="font-medium text-sm flex items-center gap-2 truncate">
                                                                             {dasherTitle}
                                                                             {/* Status Badges */}
                                                                             <span className="flag-badges" aria-label="Dasher status flags (Crimson, Red Card, Appealed)">
@@ -6718,7 +6913,7 @@
                                                                 )}
                                                             </div>
 
-                                                            {renderCashOutHistory(dasher)}
+                                                            {renderCashOutHistory(dasher, isEditing)}
                                                             </div>
                                                         )}
                                                     </div>
@@ -6737,22 +6932,13 @@
                                     <div className="flex items-center gap-3">
                                         <Archive size={20} className="text-amber-400" />
                                         {(() => {
-                                            const list = useFilteredSortedDashers(archivedDashers, { showNonZeroOnly, sortCfg: dasherSort, parseBalanceValue });
+                                            const list = filterAndSortDashers(archivedDashers);
                                             return (
                                                 <span className="text-lg font-medium flex items-center gap-2">
                                                     Archived {renderStableCount(list.length, archivedDashers.length)}
                                                 </span>
                                             );
                                         })()}
-                                        <div onClick={(e)=>e.stopPropagation()} className="ml-4">
-                                            <DasherFilterBar
-                                                showNonZeroOnly={showNonZeroOnly}
-                                                setShowNonZeroOnly={setShowNonZeroOnly}
-                                                dasherSort={dasherSort}
-                                                setDasherSort={setDasherSort}
-                                                persist={requestPersist}
-                                            />
-                                        </div>
                                         {isArchivedDashersOpen && archivedDashers.length > 0 && (
                                             <div className="flex items-center gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
                                                 <button
@@ -6837,8 +7023,8 @@
                                                                     className="flex items-center gap-2 flex-1 text-left"
                                                                 >
                                                                     {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-                                                                    <div className="flex-1">
-                                                                        <h5 className="font-medium text-sm flex items-center gap-2">
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <h5 className="font-medium text-sm flex items-center gap-2 truncate">
                                                                             {dasherTitle}
                                                                             {dasher.lastUsed && (
                                                                                 <button
@@ -7095,7 +7281,7 @@
                                                                 )}
                                                             </div>
 
-                                                            {renderCashOutHistory(dasher)}
+                                                            {renderCashOutHistory(dasher, false)}
                                                             </div>
                                                         )}
                                                     </div>

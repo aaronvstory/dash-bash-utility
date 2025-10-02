@@ -1109,24 +1109,6 @@ body.dragging {
   filter:none;
   font-weight:700;
 }
-.flag-badge[data-flag="C"][data-active="true"]  {
-  background: #ef4444;
-  color:#ffffff;
-  border-color:#dc2626;
-  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.5);
-}
-.flag-badge[data-flag="RC"][data-active="true"] {
-  background: #f97316;
-  color:#ffffff;
-  border-color:#ea580c;
-  box-shadow: 0 1px 3px rgba(249, 115, 22, 0.5);
-}
-.flag-badge[data-flag="AP"][data-active="true"] {
-  background: #facc15;
-  color:#18181b;
-  border-color:#eab308;
-  box-shadow: 0 1px 3px rgba(250, 204, 21, 0.5);
-}
 .dasher-card--deactivated .flag-badge[data-flag] { opacity:.8; }
 .dasher-card--deactivated .flag-badge[data-active="true"] { filter:brightness(1.1); }
 .theme-jp .flag-badge { background:linear-gradient(140deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02)); }
@@ -1568,91 +1550,126 @@ h1, h2, h3 {
   letter-spacing: 0.03em;
 }
 
-/* Fix 3: Muted, centered pill badges with black text */
+/* === MUTED FLAG PILL PALETTE v1.7.0 ===
+   Active states use distinct muted hues per spec.
+   Inactive remain legible (neutral slate). */
 .flag-badge {
-  /* Muted dark backgrounds that fit the theme */
-  --_bg: rgba(82, 82, 91, 0.5);
-  --_border: rgba(255,255,255,0.10);
-  --_text: #a1a1aa;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 9.5px;
-  font-weight: 700;
-  padding: 4px 10px 5px;
-  letter-spacing: 0.5px;
-  line-height: 1;
-  border-radius: 8px;
-  background: var(--_bg);
-  color: var(--_text);
-  border: 1px solid var(--_border);
-  text-transform: uppercase;
-  min-width: 32px;
-
-  /* Centering and alignment */
-  vertical-align: middle;
-  text-align: center;
-
-  /* Subtle shadow */
-  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
-
-  /* Prevent gradient inheritance */
-  -webkit-text-fill-color: currentColor !important;
-  background-clip: initial !important;
-  -webkit-background-clip: initial !important;
+  transition: background-color .18s, color .18s, border-color .18s;
 }
-
-/* Inactive state - more visible gray */
-.flag-badge[data-flag]:not([data-active="true"]) {
-  opacity: 0.65;
-  background: rgba(82, 82, 91, 0.4);
-  color: #a1a1aa;
+.flag-badge[data-active="false"] {
+  background: rgba(120,125,135,0.18);
+  color: #9ca3af;
+  border-color: rgba(140,145,155,0.3);
+  opacity: .75;
 }
-
-/* Active states - MUTED colors with BLACK text */
-.flag-badge[data-active="true"] {
-  opacity: 1;
-  font-weight: 800;
-  color: #18181b !important; /* Black text for ALL active pills */
-}
-
-/* Crimson - Muted dark red */
 .flag-badge[data-flag="C"][data-active="true"] {
-  background: #dc2626;
-  border-color: #b91c1c;
-  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.3);
+  background:#b31936;        /* muted crimson */
+  color:#0f0f0f;              /* near black text */
+  border-color:#7a1025;
+  box-shadow:0 1px 2px rgba(179,25,54,.35);
 }
-
-/* Red Card - Muted dark orange */
 .flag-badge[data-flag="RC"][data-active="true"] {
-  background: #ea580c;
-  border-color: #c2410c;
-  box-shadow: 0 1px 3px rgba(234, 88, 12, 0.3);
+  background:#0d0d0f;         /* black background */
+  color:#d64747;              /* red text */
+  border-color:#2a2a2f;
+  box-shadow:0 1px 2px rgba(214,71,71,.35);
 }
-
-/* Appealed - Softer yellow (already has black text) */
 .flag-badge[data-flag="AP"][data-active="true"] {
-  background: #facc15;
-  border-color: #eab308;
-  box-shadow: 0 1px 3px rgba(250, 204, 21, 0.3);
+  background:#d26d05;         /* muted orange */
+  color:#101010;              /* dark text */
+  border-color:#a45404;
+  box-shadow:0 1px 2px rgba(210,109,5,.35);
 }
 
-/* Legacy badge classes - apply same muted style */
-.badge--crimson {
-  background: #dc2626 !important;
-  color: #18181b !important;
-  border-color: #b91c1c;
+/* High-contrast hover (optional) */
+.flag-badge[data-active="true"]:hover {
+  filter:brightness(1.07);
 }
 
-.badge--redcard {
-  background: #ea580c !important;
-  color: #18181b !important;
-  border-color: #c2410c;
+/* === Gradient Hero (GH Pages) v1.7.0 === */
+.app-hero {
+  position: relative;
+  margin: 0 0 1.25rem 0;
+  padding: 18px 20px 22px;
+  border-radius: 10px;
+  overflow: hidden;
+  isolation: isolate;
+  box-shadow: 0 2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.05) inset;
 }
 
-.badge--appealed {
-  background: #facc15 !important;
-  color: #18181b !important;
-  border-color: #eab308;
+.app-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(110deg,#f4d2af 0%, #d2baff 32%, #98a6ff 62%, #7485ff 85%, #5d6dff 100%);
+  /* Gentle texture / noise (data URI tiny PNG) */
+  background-blend-mode: overlay;
+  opacity: .92;
+}
+
+.app-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 25% 15%, rgba(255,255,255,.35), transparent 55%),
+    radial-gradient(circle at 80% 70%, rgba(255,255,255,.18), transparent 65%),
+    linear-gradient(to bottom, rgba(0,0,40,.15), rgba(0,0,0,.55));
+  mix-blend-mode: normal;
+  pointer-events: none;
+}
+
+.hero-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .4rem;
+  text-align: center;
+}
+
+.hero-title {
+  font-size: clamp(1.9rem, 4.1vw, 2.75rem);
+  font-weight: 700;
+  line-height: 1.05;
+  color: #fff;
+  letter-spacing: .5px;
+  text-shadow:
+    0 2px 4px rgba(0,0,0,.55),
+    0 0 0 1px rgba(0,0,0,.25);
+}
+
+.hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  font-size: .8rem;
+  font-weight: 500;
+  color: rgba(255,255,255,.85);
+  text-shadow: 0 1px 2px rgba(0,0,0,.55);
+}
+
+.hero-meta .badge {
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: rgba(0,0,0,.35);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  border: 1px solid rgba(255,255,255,.15);
+  font-weight: 600;
+  font-size: .72rem;
+  letter-spacing: .5px;
+}
+
+@media (prefers-contrast: more) {
+  .app-hero::after { background: linear-gradient(to bottom, rgba(0,0,0,.55), rgba(0,0,0,.65)); }
+  .hero-title { text-shadow: 0 0 0 transparent; }
+  .hero-meta { text-shadow: none; }
+}
+
+/* Fallback (no backdrop support) */
+@supports not ((backdrop-filter: blur(4px)) or (-webkit-backdrop-filter: blur(4px))) {
+  .hero-meta .badge { background: rgba(0,0,0,.55); }
 }
