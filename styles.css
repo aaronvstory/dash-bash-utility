@@ -1,6 +1,6 @@
 /**
  * Dash Bash Utility - Comprehensive Stylesheet
- * Version: 1.5.3
+ * Version: 1.8.0
  *
  * This stylesheet is designed for easy theming and maintainability.
  * Update CSS variables in :root to change the entire app's appearance.
@@ -1069,50 +1069,115 @@ body.dragging {
 }
 
 /* Modern concise flag badges (C / RC / AP / D) */
-.flag-badges { display:inline-flex; gap:4px; }
+.flag-badges {
+  display: inline-flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
 .flag-badge {
-  --_bg: rgba(255,255,255,0.06);
-  --_border: rgba(255,255,255,0.12);
+  --_bg: rgba(255, 255, 255, 0.06);
+  --_border: rgba(255, 255, 255, 0.12);
   --_text: var(--text-secondary);
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  font-size:9.5px;
-  font-weight:600;
-  padding:3px 8px 4px;
-  letter-spacing:.6px;
-  line-height:1;
-  border-radius:8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 4px 8px;
+  letter-spacing: 0.6px;
+  line-height: 1;
+  border-radius: 8px;
   background: var(--_bg);
   color: var(--_text);
-  border:1px solid var(--_border);
+  -webkit-text-fill-color: currentColor !important;
+  background-clip: border-box;
+  -webkit-background-clip: border-box;
+  border: 1px solid var(--_border);
   backdrop-filter: blur(3px) saturate(140%);
   -webkit-backdrop-filter: blur(3px) saturate(140%);
-  text-transform:uppercase;
-  min-width:28px;
-  position:relative;
-  box-shadow:0 1px 2px -1px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,0.05) inset;
-  white-space:nowrap;
+  text-transform: uppercase;
+  min-width: 28px;
+  position: relative;
+  box-shadow: 0 1px 2px -1px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  white-space: nowrap;
+  transition: background-color 0.18s, color 0.18s, border-color 0.18s;
 }
-.flag-badges { flex-wrap:wrap; }
-@media (max-width:640px) {
-  .flag-badge { font-size:9px; padding:2px 6px 3px; }
+
+@media (max-width: 640px) {
+  .flag-badge {
+    font-size: 9px;
+    padding: 3px 6px;
+  }
 }
+
 .flag-badge[data-flag] {
-  opacity:0.7;
+  opacity: 0.7;
   background: #52525b;
-  color:#a1a1aa;
+  color: #a1a1aa !important;
+  -webkit-text-fill-color: #a1a1aa !important;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
+
 .flag-badge[data-flag][data-active="true"] {
-  opacity:1;
-  filter:none;
-  font-weight:700;
+  opacity: 1;
+  filter: none;
+  font-weight: 700;
 }
-.dasher-card--deactivated .flag-badge[data-flag] { opacity:.8; }
-.dasher-card--deactivated .flag-badge[data-active="true"] { filter:brightness(1.1); }
-.theme-jp .flag-badge { background:linear-gradient(140deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02)); }
-.flag-badge:hover { filter:brightness(1.15); }
+
+.flag-badge[data-flag][data-active="false"] {
+  background: rgba(82, 82, 91, 0.85);
+  border-color: rgba(113, 113, 122, 0.6);
+  color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+  opacity: 1 !important;
+}
+
+/* Support both long names and short codes present in markup: CRIMSON -> C, RED CARD -> RC, APPEALED -> AP */
+.flag-badge[data-flag="crimson"][data-active="true"],
+.flag-badge[data-flag="C"][data-active="true"] {
+  background: #000000;
+  border-color: #000000;
+  color: #990000 !important;
+  -webkit-text-fill-color: #990000 !important;
+  box-shadow: 0 2px 6px -1px rgba(153, 0, 0, 0.45);
+}
+
+.flag-badge[data-flag="redCard"][data-active="true"],
+.flag-badge[data-flag="RC"][data-active="true"] {
+  background: #ff3008;
+  border-color: #ff3008;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  box-shadow: 0 2px 6px -1px rgba(255, 48, 8, 0.45);
+}
+
+.flag-badge[data-flag="appealed"][data-active="true"],
+.flag-badge[data-flag="AP"][data-active="true"] {
+  background: #CC5500;
+  border-color: #CC5500;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  box-shadow: 0 2px 6px -1px rgba(204, 85, 0, 0.45);
+}
+
+.flag-badge:hover {
+  filter: brightness(1.15);
+}
+
+.dasher-card--deactivated .flag-badge[data-flag] {
+  opacity: 0.8;
+}
+
+.dasher-card--deactivated .flag-badge[data-active="true"] {
+  filter: brightness(1.1);
+}
+
+.theme-jp .flag-badge {
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+}
+
+
 
 /* ================================================================
    DASHER CARDS - Polished & Unified Design
@@ -1140,12 +1205,9 @@ body.dragging {
 }
 
 /* Remove old variant classes (no longer needed) */
-.dasher-card--deactivated,
-.dasher-card--ready,
-.dasher-card--appealed,
-.dasher-card--currently-using {
-  /* Unified styling via bg-gray-600/50 */
-}
+/* The variant classes are retained for backward compatibility but no longer carry styles. */
+/* .dasher-card--deactivated, .dasher-card--ready, .dasher-card--appealed, .dasher-card--currently-using */
+/* styling unified via .bg-gray-600/50 */
 
 /* Unified icon button styling (progressive enhance existing p-1 text-* buttons) */
 .icon-btn {
@@ -1185,6 +1247,16 @@ body.dragging {
   background-clip: text;
   font-weight: 400;
   letter-spacing: 0.015em;
+}
+
+/* Consistent spacing between dasher cards in bucket grids */
+.dasher-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px; /* vertical spacing between cards */
+}
+.dasher-grid > * {
+  margin: 0 !important; /* neutralize stray margins on cards */
 }
 
 /* Section icons - Subtle gradient glow */
@@ -1552,124 +1624,239 @@ h1, h2, h3 {
 
 /* === MUTED FLAG PILL PALETTE v1.7.0 ===
    Active states use distinct muted hues per spec.
-   Inactive remain legible (neutral slate). */
-.flag-badge {
-  transition: background-color .18s, color .18s, border-color .18s;
-}
-.flag-badge[data-active="false"] {
-  background: rgba(120,125,135,0.18);
-  color: #9ca3af;
-  border-color: rgba(140,145,155,0.3);
-  opacity: .75;
-}
-.flag-badge[data-flag="C"][data-active="true"] {
-  background:#b31936;        /* muted crimson */
-  color:#0f0f0f;              /* near black text */
-  border-color:#7a1025;
-  box-shadow:0 1px 2px rgba(179,25,54,.35);
-}
-.flag-badge[data-flag="RC"][data-active="true"] {
-  background:#0d0d0f;         /* black background */
-  color:#d64747;              /* red text */
-  border-color:#2a2a2f;
-  box-shadow:0 1px 2px rgba(214,71,71,.35);
-}
-.flag-badge[data-flag="AP"][data-active="true"] {
-  background:#d26d05;         /* muted orange */
-  color:#101010;              /* dark text */
-  border-color:#a45404;
-  box-shadow:0 1px 2px rgba(210,109,5,.35);
-}
 
-/* High-contrast hover (optional) */
-.flag-badge[data-active="true"]:hover {
-  filter:brightness(1.07);
-}
 
-/* === Gradient Hero (GH Pages) v1.7.0 === */
+/* PHASE3_HERO: animated gradient hero refresh */
 .app-hero {
-  position: relative;
-  margin: 0 0 1.25rem 0;
-  padding: 18px 20px 22px;
-  border-radius: 10px;
-  overflow: hidden;
-  isolation: isolate;
-  box-shadow: 0 2px 6px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.05) inset;
+  position:relative;
+  margin:0 0 1.5rem;
+  /* Phase 6 polish: slightly reduce banner height */
+  padding:44px 22px 46px;
+  border-radius:16px;
+  overflow:hidden;
+  isolation:isolate;
+  background:#0c1016;
+  box-shadow:0 10px 32px -12px rgba(0,0,0,.65),0 0 0 1px rgba(255,255,255,.05) inset;
 }
-
-.app-hero::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(110deg,#f4d2af 0%, #d2baff 32%, #98a6ff 62%, #7485ff 85%, #5d6dff 100%);
-  /* Gentle texture / noise (data URI tiny PNG) */
-  background-blend-mode: overlay;
-  opacity: .92;
-}
-
+.app-hero::before,
 .app-hero::after {
-  content: "";
-  position: absolute;
-  inset: 0;
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+}
+.app-hero::before {
   background:
-    radial-gradient(circle at 25% 15%, rgba(255,255,255,.35), transparent 55%),
-    radial-gradient(circle at 80% 70%, rgba(255,255,255,.18), transparent 65%),
-    linear-gradient(to bottom, rgba(0,0,40,.15), rgba(0,0,0,.55));
-  mix-blend-mode: normal;
-  pointer-events: none;
+    radial-gradient(circle at 18% 28%,rgba(255,210,170,.75),transparent 62%),
+    radial-gradient(circle at 80% 68%,rgba(124,140,255,.62),transparent 68%),
+    linear-gradient(125deg,#f4d2af 0%,#d7caf7 30%,#aab8ff 55%,#7c8fff 78%,#5a68ff 100%);
+  background-size:220% 220%;
+  animation:heroGradientFlow 22s ease-in-out infinite;
+  filter:saturate(115%) brightness(1.05);
+  opacity:.95;
+}
+.app-hero::after {
+  background:
+    linear-gradient(to bottom,rgba(10,14,22,.55),rgba(10,14,22,.82) 55%,rgba(10,14,22,.93)),
+    radial-gradient(circle at 65% 35%,rgba(255,255,255,.12),transparent 60%);
+  backdrop-filter:blur(5px);
+  -webkit-backdrop-filter:blur(5px);
+}
+@keyframes heroGradientFlow {
+  0% { background-position:0% 40%; }
+  50% { background-position:100% 60%; }
+  100% { background-position:0% 40%; }
 }
 
 .hero-inner {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: .4rem;
-  text-align: center;
+  position:relative;
+  z-index:1;
+  display:flex;
+  flex-direction:column;
+  gap:.9rem;
+  align-items:center;
+  text-align:center;
 }
 
 .hero-title {
-  font-size: clamp(1.9rem, 4.1vw, 2.75rem);
-  font-weight: 700;
-  line-height: 1.05;
-  color: #fff;
-  letter-spacing: .5px;
-  text-shadow:
-    0 2px 4px rgba(0,0,0,.55),
-    0 0 0 1px rgba(0,0,0,.25);
+  font-size:clamp(2.25rem,4.6vw,3.2rem);
+  font-weight:700;
+  letter-spacing:.6px;
+  line-height:1.05;
+  background:linear-gradient(90deg,#f6f9ff 0%,#e7eefc 35%,#d1e2ff 55%,#e6eefc 85%);
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+  background-size:200% 100%;
+  animation:heroSheen 8s linear infinite;
+  filter:drop-shadow(0 5px 12px rgba(0,0,0,.55));
+}
+@keyframes heroSheen {
+  0% { background-position:0% 50%; }
+  50% { background-position:100% 50%; }
+  100% { background-position:0% 50%; }
+}
+@media (prefers-reduced-motion: reduce){
+  .app-hero::before,
+  .hero-title { animation:none; }
 }
 
 .hero-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .5rem;
-  font-size: .8rem;
-  font-weight: 500;
-  color: rgba(255,255,255,.85);
-  text-shadow: 0 1px 2px rgba(0,0,0,.55);
+  display:flex;
+  flex-wrap:wrap;
+  gap:.5rem;
+  justify-content:center;
 }
-
 .hero-meta .badge {
-  padding: 2px 8px;
-  border-radius: 9999px;
-  background: rgba(0,0,0,.35);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
-  border: 1px solid rgba(255,255,255,.15);
-  font-weight: 600;
-  font-size: .72rem;
-  letter-spacing: .5px;
+  background:rgba(18,22,30,.70);
+  color:#e4edf5;
+  border:1px solid rgba(255,255,255,.10);
 }
 
+/* High contrast preference */
 @media (prefers-contrast: more) {
-  .app-hero::after { background: linear-gradient(to bottom, rgba(0,0,0,.55), rgba(0,0,0,.65)); }
-  .hero-title { text-shadow: 0 0 0 transparent; }
-  .hero-meta { text-shadow: none; }
+  .hero-title { filter:none; }
+  .app-hero::before { filter:none; }
+  .hero-meta .badge { background:#111922; }
 }
 
-/* Fallback (no backdrop support) */
-@supports not ((backdrop-filter: blur(4px)) or (-webkit-backdrop-filter: blur(4px))) {
-  .hero-meta .badge { background: rgba(0,0,0,.55); }
+/* ===== Status Pills v1.7.0 (Crimson / Red Card / Appealed) ===== */
+.status-pill {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:10px;
+  line-height:1;
+  font-weight:600;
+  letter-spacing:.5px;
+  border-radius:999px;
+  padding:4px 10px 3px;
+  min-width:68px;
+  text-transform:uppercase;
+  border:1px solid #555;
+  background:#9ca3af; /* gray */
+  color:#111;          /* black text */
+  transition:all .25s ease;
+  box-shadow:0 1px 2px rgba(0,0,0,.4);
+  position:relative;
+  top:-1px;
+}
+.status-pill + .status-pill { margin-left:6px; }
+
+/* Crimson active: black pill + crimson text */
+.status-pill--crimson.active {
+  background:#050507;
+  color:#b31936;
+  border-color:#b31936;
+  box-shadow:
+    0 0 0 1px #b31936 inset,
+    0 2px 6px -1px rgba(179,25,54,.55);
+}
+/* Red Card active: red pill + black text */
+.status-pill--redcard.active {
+  background:#b31936;
+  color:#0e0e11;
+  border-color:#b31936;
+  box-shadow:
+    0 0 0 1px #e63c55 inset,
+    0 2px 6px -1px rgba(179,25,54,.55);
+}
+/* Appealed active: orange pill + black text */
+.status-pill--appealed.active {
+  background:#d26d05;
+  color:#0b0b0e;
+  border-color:#d26d05;
+  box-shadow:
+    0 0 0 1px #ff972b inset,
+    0 2px 6px -1px rgba(210,109,5,.55);
+}
+
+/* Hover focus states for inactive */
+.status-pill:not(.active):hover {
+  background:#b3bac2;
+  border-color:#666;
+}
+
+/* Compact pill row container (inline with title) */
+.dasher-flag-row {
+  display:inline-flex;
+  align-items:center;
+  margin-left:10px;
+  gap:6px;
+}
+
+/* Optional tighter when line wraps */
+@media (max-width: 640px) {
+  .status-pill { padding:3px 8px 3px; min-width:60px; }
+  .dasher-flag-row { margin-left:6px; gap:4px; }
+}
+
+/* === Phase 5: Main Dasher Grid (incremental) === */
+.dasher-row {
+  display:grid;
+  grid-template-columns:
+     20px   /* expand */
+     20px   /* drag */
+     minmax(220px,1fr) /* name/email */
+     220px  /* status pills */
+     90px   /* balance */
+     140px  /* timer */
+     240px  /* move buttons */
+     150px; /* actions */
+  align-items:center;
+  gap:8px;
+  padding:6px 10px;
+  border-bottom:1px solid rgba(255,255,255,0.05);
+}
+.dasher-cell-ident {
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+  font-size:13px;
+  font-weight:500;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  color:#e5e7eb;
+}
+.dasher-cell-ident .email {
+  color:#93c5fd;
+  font-weight:400;
+  font-size:12px;
+}
+.dasher-cell-pills {
+  display:flex;
+  gap:6px;
+  overflow:hidden;
+  flex-wrap:nowrap;
+}
+.dasher-cell-balance {
+  font-family:monospace;
+  font-size:12px;
+  text-align:right;
+  white-space:nowrap;
+  color:#f87171;
+}
+.dasher-cell-balance.zero { color:#34d399; }
+.dasher-cell-timer {
+  font-family:monospace;
+  font-size:11px;
+  white-space:nowrap;
+  overflow:hidden;
+  color:#cbd5e1;
+}
+.dasher-cell-move,
+.dasher-cell-actions {
+  display:flex;
+  gap:4px;
+  align-items:center;
+  flex-wrap:nowrap;
+}
+.dasher-cell-actions { justify-content:flex-end; }
+.dasher-cell-move { justify-content:flex-start; }
+
+/* Button sizing inside grid keeps rows stable */
+.dasher-cell-actions .icon-btn,
+.dasher-cell-move .icon-btn {
+  flex:0 0 auto;
 }
