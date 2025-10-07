@@ -182,7 +182,8 @@
   --jp-accent-matcha: #3fbf78;
   --jp-accent-vermillion: #eb564d;
   --jp-focus: #f39ac5;
-  --jp-ring: rgba(243,154,197,0.35);
+  /* Neutral focus ring intensity for theme focus-visible and inputs */
+  --jp-ring: rgba(243,154,197,0.55);
   --jp-shadow-sm: 0 2px 4px -2px rgba(0,0,0,.4);
   --jp-shadow-md: 0 6px 18px -6px rgba(0,0,0,.5);
   --jp-shadow-lg: 0 30px 60px -15px rgba(0,0,0,.55);
@@ -356,7 +357,7 @@ body {
 .theme-jp input.bg-gray-600:focus, .theme-jp textarea.bg-gray-600:focus {
   background:#242c33;
   border-color: var(--jp-accent-indigo);
-  box-shadow: 0 0 0 3px rgba(109,125,255,0.35);
+  box-shadow: 0 0 0 3px var(--jp-ring);
   outline: none;
 }
 
@@ -735,7 +736,7 @@ p {
 .input:focus {
   outline: none;
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 3px var(--jp-ring);
 }
 
 .input-sm {
