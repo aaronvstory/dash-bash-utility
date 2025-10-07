@@ -2148,11 +2148,12 @@
 
                 const historyEntries = ensureArray(dasher.cashOutHistory);
 
-                const cashScopeKey = isEditing ? `card-${safeFieldSegment('cashout')}-${safeFieldSegment(dasher?.id ?? dasher?.email ?? dasher?.phone ?? 'dash')}` : '';
+                // Always allow editing/adding: use a stable scope key regardless of isEditing
+                const cashScopeKey = `card-${safeFieldSegment('cashout')}-${safeFieldSegment(dasher?.id ?? dasher?.email ?? dasher?.phone ?? 'dash')}`;
 
-                const draft = isEditing ? getDraftForKey(cashScopeKey) : {};
+                const draft = getDraftForKey(cashScopeKey) || {};
 
-                const setDraft = isEditing ? (updater) => setDraftForKey(cashScopeKey, updater) : () => {};
+                const setDraft = (updater) => setDraftForKey(cashScopeKey, updater);
 
                 const amtStr = draft._addCashOutAmount || '';
 
@@ -2178,7 +2179,6 @@
 
                 // Extracted handler to avoid deeply nested braces in inline prop
                 const handleAddCashOut = () => {
-                    if (!isEditing) return;
                     const amt = deriveNumericAmount(draft._addCashOutAmount);
                     if (!Number.isFinite(amt) || amt <= 0) {
                         const errMsg = 'Enter a valid positive amount.';
@@ -2257,9 +2257,9 @@
                     }, 50);
                 };
 
-                const addForm = React.createElement('div', { key: 'addRow', className: 'flex flex-wrap items-end gap-3 pt-3 border-t border-gray-700/80 mt-2' }, [
+                const addForm = React.createElement('div', { key: 'addRow', className: 'db-field-row db-align-center flex-wrap gap-3 pt-3 border-t border-gray-700/80 mt-2' }, [
 
-                    React.createElement('div', { key: 'a1', className: 'flex flex-col' }, [
+                    React.createElement('div', { key: 'a1', className: 'db-col-amount flex flex-col' }, [
 
                         React.createElement('label', { className: 'text-[10px] text-gray-400 uppercase tracking-wide' }, 'Amount'),
 
@@ -2275,11 +2275,9 @@
 
                             value: amtStr,
 
-                            disabled: !isEditing,
-
                             onChange: e => setDraft(d => ({ ...d, _addCashOutAmount: e.target.value, _addCashOutError: '' })),
 
-                            className: 'w-28 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400',
+                            className: 'db-input-sm w-28 placeholder-gray-400',
 
                             'aria-invalid': err ? 'true' : (hasAmt && !validAmt ? 'true' : 'false'),
 
@@ -2289,7 +2287,7 @@
 
                     ]),
 
-                    React.createElement('div', { key: 'a2', className: 'flex flex-col' }, [
+                    React.createElement('div', { key: 'a2', className: 'db-col-source flex flex-col' }, [
 
                         React.createElement('label', { className: 'text-[10px] text-gray-400 uppercase tracking-wide' }, 'Method'),
 
@@ -2299,32 +2297,23 @@
 
                             value: (draft._addCashOutMethod || ''),
 
-                            disabled: !isEditing,
-
                             onChange: e => setDraft(d => ({ ...d, _addCashOutMethod: e.target.value })),
 
-                            className: 'w-32 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400'
+                            className: 'db-input-sm w-32 placeholder-gray-400'
 
                         })
 
                     ]),
 
-                    React.createElement('div', { key: 'a3', className: 'flex flex-col flex-1 min-w-[160px]' }, [
+                    React.createElement('div', { key: 'a3', className: 'db-col-notes flex flex-col' }, [
 
                         React.createElement('label', { className: 'text-[10px] text-gray-400 uppercase tracking-wide' }, 'Notes'),
 
-                        React.createElement('textarea', {
-
+                        React.createElement('input', {
+                            type: 'text',
                             value: (draft._addCashOutNotes || ''),
-
-                            disabled: !isEditing,
-
                             onChange: e => setDraft(d => ({ ...d, _addCashOutNotes: e.target.value })),
-
-                            rows: 2,
-
-                            className: 'bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white placeholder-gray-400 w-full resize-y min-h-[2.5rem] focus:outline-none focus:ring-1 focus:ring-gray-400'
-
+                            className: 'db-input-sm w-full placeholder-gray-400'
                         })
 
                     ]),
@@ -2336,8 +2325,6 @@
                             type: 'checkbox',
 
                             checked: !!draft._addCashOutAdjust,
-
-                            disabled: !isEditing,
 
                             onChange: e => setDraft(d => ({ ...d, _addCashOutAdjust: e.target.checked }))
 
@@ -2351,7 +2338,7 @@
 
                     React.createElement('button', {
                         key: 'addBtn',
-                        disabled: !isEditing || !hasAmt,
+                        disabled: !hasAmt,
                         onClick: handleAddCashOut,
                         className: 'px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-xs text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors'
                     }, 'Add')
@@ -2377,9 +2364,36 @@
                                         React.createElement('tbody', { key: 'tbody' },
                                             historyEntries.map((h, i) => (
                                                 React.createElement('tr', { key: h.id || i, className: 'bg-gray-800/60 border border-gray-700 rounded' }, [
-                                                    React.createElement('td', { className: 'px-2 py-1 align-top font-mono text-green-300 whitespace-nowrap' }, `$${Number(h.amount || 0).toFixed(2)}`),
-                                                    React.createElement('td', { className: 'px-2 py-1 align-top text-gray-300 whitespace-nowrap' }, h.method || 'auto'),
-                                                    React.createElement('td', { className: 'px-2 py-1 align-top text-gray-200 break-words' }, h.notes || ''),
+                                                    React.createElement('td', { className: 'px-2 py-1 align-top whitespace-nowrap min-w-[96px]' },
+                                                        React.createElement('input', {
+                                                            type: 'number',
+                                                            step: '0.01',
+                                                            min: 0,
+                                                            className: 'db-input-sm w-24 text-green-200 font-mono',
+                                                            value: (typeof h.amount === 'string' || typeof h.amount === 'number') ? String(h.amount) : '',
+                                                            onChange: (e) => updateHistoryEntry(dasher.id, i, { amount: e.target.value }),
+                                                            onBlur: (e) => {
+                                                                const v = parseFloat(e.target.value);
+                                                                if (!isNaN(v) && v >= 0) updateHistoryEntry(dasher.id, i, { amount: v.toFixed(2) });
+                                                            }
+                                                        })
+                                                    ),
+                                                    React.createElement('td', { className: 'px-2 py-1 align-top whitespace-nowrap min-w-[120px]' },
+                                                        React.createElement('input', {
+                                                            type: 'text',
+                                                            className: 'db-input-sm w-32',
+                                                            value: h.method || '',
+                                                            onChange: (e) => updateHistoryEntry(dasher.id, i, { method: e.target.value })
+                                                        })
+                                                    ),
+                                                    React.createElement('td', { className: 'px-2 py-1 align-top min-w-[200px]' },
+                                                        React.createElement('input', {
+                                                            type: 'text',
+                                                            className: 'db-input-sm w-full',
+                                                            value: h.notes || '',
+                                                            onChange: (e) => updateHistoryEntry(dasher.id, i, { notes: e.target.value })
+                                                        })
+                                                    ),
                                                     React.createElement('td', { className: 'px-2 py-1 align-top text-gray-400 whitespace-nowrap' }, h.at ? formatDateTime(h.at) : ''),
                                                     React.createElement('td', { className: 'px-2 py-1 align-top' },
                                                         React.createElement('button', {
@@ -4192,8 +4206,8 @@
                         ]),
 
                         // Add Earning (inline)
-                        isEditing && React.createElement('div', { key: 'addEarning', className: 'flex flex-wrap items-end gap-2 pt-1' }, [
-                            React.createElement('div', { key: 'e1', className: 'flex flex-col' }, [
+                        React.createElement('div', { key: 'addEarning', className: 'db-field-row db-align-center flex-wrap gap-2 pt-1' }, [
+                            React.createElement('div', { key: 'e1', className: 'db-col-amount flex flex-col' }, [
                                 React.createElement('label', { className: 'text-[10px] text-gray-400' }, 'Amount'),
                                 React.createElement('input', {
                                     id: inlineAmountInputId,
@@ -4203,27 +4217,27 @@
                                     step: '0.01',
                                     value: inlineAmountValue,
                                     onChange: e => setDraftDasher(d => ({ ...d, _addEarningAmount: e.target.value, _addEarningError: '' })),
-                                    className: 'w-24 bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-emerald-500',
+                                    className: 'db-input-sm w-24 placeholder-gray-400',
                                     'aria-invalid': (inlineErrorMessage || (inlineHasAmount && !inlineAmountIsValid)) ? 'true' : 'false',
                                     'aria-describedby': inlineErrorMessage ? `${inlineAmountInputId}-error` : undefined
                                 })
                             ]),
-                            React.createElement('div', { key: 'e2', className: 'flex flex-col' }, [
+                            React.createElement('div', { key: 'e2', className: 'db-col-source flex flex-col' }, [
                                 React.createElement('label', { className: 'text-[10px] text-gray-400' }, 'Source'),
                                 React.createElement('input', {
                                     type: 'text',
                                     value: (draftDasher._addEarningSource || ''),
                                     onChange: e => setDraftDasher(d => ({ ...d, _addEarningSource: e.target.value })),
-                                    className: 'w-28 bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-emerald-500'
+                                    className: 'db-input-sm w-28 placeholder-gray-400'
                                 })
                             ]),
-                            React.createElement('div', { key: 'e3', className: 'flex flex-col flex-1 min-w-[140px]' }, [
+                            React.createElement('div', { key: 'e3', className: 'db-col-notes flex flex-col' }, [
                                 React.createElement('label', { className: 'text-[10px] text-gray-400' }, 'Notes'),
                                 React.createElement('input', {
                                     type: 'text',
                                     value: (draftDasher._addEarningNotes || ''),
                                     onChange: e => setDraftDasher(d => ({ ...d, _addEarningNotes: e.target.value })),
-                                    className: 'bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-white placeholder-gray-400 w-full focus:outline-none focus:ring-1 focus:ring-emerald-500'
+                                    className: 'db-input-sm w-full placeholder-gray-400'
                                 })
                             ]),
                             React.createElement('label', { key: 'e4', className: 'flex items-center gap-1 text-[11px] text-gray-300 mb-1' }, [
@@ -6574,7 +6588,7 @@
                                         <select
                                             value={dasherSort.key}
                                             onChange={(e) => { setDasherSort(prev => ({ ...prev, key: e.target.value })); requestPersist(); }}
-                                            className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-[11px] focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                                            className="db-input-sm text-[11px]"
                                             aria-label="Sort dashers"
                                         >
                                             <option value="none">Sort: None</option>
@@ -6602,7 +6616,7 @@
                                             value={globalQuery}
                                             onChange={(e) => setGlobalQuery(e.target.value)}
                                             placeholder="Search name / email / phone"
-                                            className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                                            className="db-input-sm flex-1 text-xs"
                                             aria-label="Search dashers"
                                         />
                                         <div className="text-[11px] text-gray-400 font-mono" aria-label="Matches count">
@@ -7753,6 +7767,14 @@
                                                                         ><Banknote size={16} /></button>
                                                                     )}
                                                                     <button
+                                                                        onClick={() => toggleEditDasher('deactivated', dasher.id)}
+                                                                        className={`icon-btn ${isEditing ? 'text-green-400 hover:text-green-300' : 'text-yellow-400 hover:text-yellow-300'}`}
+                                                                        title={isEditing ? 'Save' : 'Edit'}
+                                                                        aria-label={isEditing ? 'Save dasher' : 'Edit dasher'}
+                                                                    >
+                                                                        {isEditing ? <Check size={14} /> : <Edit2 size={14} />}
+                                                                    </button>
+                                                                    <button
                                                                         onClick={() => deleteDasher('deactivated', dasher.id)}
                                                                         className="icon-btn text-red-400 hover:text-red-300"
                                                                         title="Delete"
@@ -7773,7 +7795,7 @@
                                                                     saveAllToLocalStorage,
                                                                     copyToClipboard,
                                                                     timeStatus,
-                                                                    false,
+                                                                    isEditing,
                                                                     'deactivated'
                                                                 )}
                                                             </div>
@@ -7829,6 +7851,7 @@
                                             <p className="text-sm text-gray-400 text-center py-4">No archived dashers</p>
                                         ) : (
                                             filteredArchivedDashers.map((dasher) => {
+                                                const isEditing = isDasherEditing('archived', dasher.id);
                                                 const timeStatus = calculateDasherTimeStatus(dasher.lastUsed);
                                                 const dasherTitle = getDasherTitle(dasher);
                                                 const isCollapsed = isArchivedDasherCollapsed(dasher.id);
@@ -7923,6 +7946,14 @@
                                                                         ><Banknote size={16} /></button>
                                                                     )}
                                                                     <button
+                                                                        onClick={() => toggleEditDasher('archived', dasher.id)}
+                                                                        className={`icon-btn ${isEditing ? 'text-green-400 hover:text-green-300' : 'text-yellow-400 hover:text-yellow-300'}`}
+                                                                        title={isEditing ? 'Save' : 'Edit'}
+                                                                        aria-label={isEditing ? 'Save dasher' : 'Edit dasher'}
+                                                                    >
+                                                                        {isEditing ? <Check size={14} /> : <Edit2 size={14} />}
+                                                                    </button>
+                                                                    <button
                                                                         onClick={() => {
                                                                             setArchivedDashers(archivedDashers.filter(d => d.id !== dasher.id));
                                                                             requestPersist();
@@ -7946,7 +7977,7 @@
                                                                     saveAllToLocalStorage,
                                                                     copyToClipboard,
                                                                     timeStatus,
-                                                                    false,
+                                                                    isEditing,
                                                                     'archived'
                                                                 )}
                                                             </div>
@@ -8158,7 +8189,7 @@
                                                     <label className="flex items-center gap-1 text-gray-400">
                                                         <span>Method</span>
                                                         <select
-                                                            className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-gray-200"
+                                                            className="db-input-sm"
                                                             value={cashFilterMethod}
                                                             onChange={(e)=>setCashFilterMethod(e.target.value)}
                                                             aria-label="Filter cash-outs by method"
@@ -8174,7 +8205,7 @@
                                                     <label className="flex items-center gap-1 text-gray-400">
                                                         <span>Category</span>
                                                         <select
-                                                            className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-gray-200"
+                                                            className="db-input-sm"
                                                             value={cashFilterCategory}
                                                             onChange={(e)=>setCashFilterCategory(e.target.value)}
                                                             aria-label="Filter cash-outs by category"
@@ -8197,7 +8228,7 @@
                                                         <span>Dasher</span>
                                                         <input
                                                             type="text"
-                                                            className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-gray-200 placeholder-gray-500"
+                                                            className="db-input-sm placeholder-gray-500"
                                                             placeholder="name or id"
                                                             value={cashFilterDasher}
                                                             onChange={(e)=>setCashFilterDasher(e.target.value)}
