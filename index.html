@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dash Bash Utility</title>
 
-    <!-- Version 1.8.4 - Update this version with each release -->
-    <meta name="app-version" content="1.8.4">
+    <!-- Version 1.8.6 - Update this version with each release -->
+    <meta name="app-version" content="1.8.6">
 
     <!-- Cache Control Headers -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -41,18 +41,18 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- External Stylesheets (MUST load after Tailwind to override defaults) -->
-    <link rel="stylesheet" href="styles.css?v=1.5.2">
+    <link rel="stylesheet" href="styles.css?v=1.8.6">
 
     <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://unpkg.com/lucide@0.545.0/dist/umd/lucide.min.js"></script>
 </head>
 <body class="theme-jp" data-style-version="1.4.3">
     <div id="root"></div>
 
     <!-- Service Worker Registration with Version Check -->
     <script>
-    console.log('%cDash Bash Utility build 1.8.4 (Phase 9 - Global Mgmt & Fixes) loaded','background:#222;color:#f39ac5;padding:4px 8px;border-radius:4px');
-    const APP_VERSION = '1.8.4'; // Update this with each release
+    console.log('%cDash Bash Utility build 1.8.6 (Phase 9 - Global Mgmt & Fixes) loaded','background:#222;color:#f39ac5;padding:4px 8px;border-radius:4px');
+    const APP_VERSION = '1.8.6'; // Update this with each release
         // Log active stylesheets for debugging theme cascade
         window.addEventListener('load', () => {
             const sheets = [...document.styleSheets].map(s => s.href && s.href.split('/').pop());
@@ -178,7 +178,7 @@
         const FolderOpen = (props) => React.createElement(Icon, { ...props, name: 'folder-open' });
         const FileText = (props) => React.createElement(Icon, { ...props, name: 'file-text' });
         const Timer = (props) => React.createElement(Icon, { ...props, name: 'timer' });
-        const Users = (props) => React.createElement(Icon, { ...props, name: 'users' });
+    const Users = (props) => React.createElement(Icon, { ...props, name: 'users' });
         const TimerOff = (props) => React.createElement(Icon, { ...props, name: 'timer-off' });
         const BarChart3 = (props) => React.createElement(Icon, { ...props, name: 'bar-chart-3' });
         const Archive = (props) => React.createElement(Icon, { ...props, name: 'archive' });
@@ -190,6 +190,111 @@
     const Banknote = (props) => React.createElement(Icon, { ...props, name: 'banknote' });
     const Lock = (props) => React.createElement(Icon, { ...props, name: 'lock' });
     const RotateCcw = (props) => React.createElement(Icon, { ...props, name: 'rotate-ccw' });
+    const ShieldCheck = (props) => React.createElement(Icon, { ...props, name: 'shield-check' });
+
+        const ensureArray = (value) => Array.isArray(value) ? value : [];
+        const methodLabel = (s) => {
+            const t = String(s ?? 'unspecified').trim().toLowerCase().replace(/[_-]+/g, ' ');
+            return t.replace(/\b\w/g, (c) => c.toUpperCase());
+        };
+
+        const deriveNumericAmount = (value) => {
+            if (typeof value === 'number') return value;
+            if (typeof value === 'string') {
+                const normalized = value.replace(/,/g, '').trim();
+                if (!normalized) return NaN;
+                return parseFloat(normalized);
+            }
+            return NaN;
+        };
+
+        const deriveDasherIdentity = (dasher, fallbackKey) => {
+            if (dasher && dasher.id !== undefined && dasher.id !== null && String(dasher.id).trim() !== '') {
+                return String(dasher.id).toLowerCase();
+            }
+            if (dasher && typeof dasher.email === 'string' && dasher.email.trim() !== '') {
+                return dasher.email.trim().toLowerCase();
+            }
+            if (dasher && typeof dasher.phone === 'string' && dasher.phone.trim() !== '') {
+                return dasher.phone.trim().toLowerCase();
+            }
+            return String(fallbackKey);
+        };
+
+        const collectDasherEvents = (metaList, historyKey, groupSelector) => {
+            const entryMap = new Map();
+
+            metaList.forEach((meta) => {
+                const history = ensureArray(meta?.dasher?.[historyKey]);
+                history.forEach((rawEntry, entryIndex) => {
+                    if (!rawEntry) return;
+                    const amount = deriveNumericAmount(rawEntry.amount);
+                    if (!Number.isFinite(amount) || amount <= 0) return;
+                    const timestamp = rawEntry.at ? Date.parse(rawEntry.at) : NaN;
+                    if (!Number.isFinite(timestamp)) return;
+
+                    const group = groupSelector(rawEntry) || 'unspecified';
+                    const identity = deriveDasherIdentity(meta?.dasher, `${meta?.uniqueFallback ?? 'dash'}-${entryIndex}`);
+                    const entryKey = `${identity}|${timestamp}|${amount}|${group}`;
+
+                    let bucket = entryMap.get(entryKey);
+                    if (!bucket) {
+                        bucket = {
+                            amount,
+                            at: timestamp,
+                            group,
+                            buckets: new Set(),
+                            dasherIds: new Set(),
+                            dasherNames: new Set()
+                        };
+                        entryMap.set(entryKey, bucket);
+                    }
+
+                    if (meta?.bucketId) {
+                        bucket.buckets.add(String(meta.bucketId));
+                    }
+                    if (meta?.dasher?.id !== undefined && meta?.dasher?.id !== null) {
+                        bucket.dasherIds.add(String(meta.dasher.id).toLowerCase());
+                    }
+                    if (meta?.dasher?.name) {
+                        bucket.dasherNames.add(String(meta.dasher.name).toLowerCase());
+                    }
+                });
+            });
+
+            return Array.from(entryMap.values());
+        };
+
+        const computeRollingWindowSummaries = (entries, options = {}) => {
+            const { groupAccessor = (entry) => entry.group || 'unspecified', now = Date.now() } = options;
+            const windows = [
+                { key: '24h', ms: 24 * 60 * 60 * 1000 },
+                { key: '7d', ms: 7 * 24 * 60 * 60 * 1000 },
+                { key: '30d', ms: 30 * 24 * 60 * 60 * 1000 }
+            ];
+
+            const result = {};
+            windows.forEach(({ key, ms }) => {
+                const cutoff = now - ms;
+                const summary = {
+                    count: 0,
+                    total: 0,
+                    byGroup: {}
+                };
+
+                entries.forEach((entry) => {
+                    if (entry.at < cutoff) return;
+                    summary.count += 1;
+                    summary.total += entry.amount;
+                    const groupKey = groupAccessor(entry) || 'unspecified';
+                    summary.byGroup[groupKey] = (summary.byGroup[groupKey] || 0) + entry.amount;
+                });
+
+                result[key] = summary;
+            });
+
+            return result;
+        };
 
         // Tiny inline spinner (no extra libs) for perceived responsiveness
         const Spinner = ({ text = 'Loading…' }) => (
@@ -219,10 +324,16 @@
             const [isNotesOpen, setIsNotesOpen] = useState(false);
             const [isStatisticsOpen, setIsStatisticsOpen] = useState(false);
             // Cash-outs quick filters (Statistics)
-            const [cashFilterMethod, setCashFilterMethod] = useState(''); // '' => All
-            const [cashFilterCategory, setCashFilterCategory] = useState(''); // '' => All
-            const [cashFilterDasher, setCashFilterDasher] = useState(''); // substring
+            const [cashFilterMethod, setCashFilterMethod] = useState(''); // '' => All (session-scoped; avoid persisting stale filters)
+            const [cashFilterCategory, setCashFilterCategory] = useState(''); // '' => All (session scoped)
+            const [cashFilterDasher, setCashFilterDasher] = useState(''); // substring (session scoped)
             const [isStateManagementOpen, setIsStateManagementOpen] = useState(false);
+            // Earnings quick-add (Statistics)
+            const [statEarningTargetKey, setStatEarningTargetKey] = useState('');
+            const [statEarningAmount, setStatEarningAmount] = useState('');
+            const [statEarningSource, setStatEarningSource] = useState('');
+            const [statEarningNotes, setStatEarningNotes] = useState('');
+            const [statEarningApply, setStatEarningApply] = useState(true);
             const [collapsedCategories, setCollapsedCategories] = useState({});
             const [collapsedStores, setCollapsedStores] = useState({});
             const [collapsedDashers, setCollapsedDashers] = useState({});
@@ -253,7 +364,8 @@
                 appealedDashers: new Set(), // appealed dasher IDs
                 deactivatedDashers: new Set(), // deactivated dasher IDs
                 lockedDashers: new Set(),   // locked dasher IDs
-                appliedPendingDashers: new Set() // applied pending dasher IDs
+                appliedPendingDashers: new Set(), // applied pending dasher IDs
+                reverifDashers: new Set() // reverif dasher IDs
             });
 
             // State management
@@ -461,6 +573,26 @@
                 }
                 return [];
             });
+            const [reverifDashers, setReverifDashers] = useState(() => {
+                const savedState = localStorage.getItem('dashBashState');
+                if (savedState) {
+                    try {
+                        const state = JSON.parse(savedState);
+                        if (Array.isArray(state.reverifDashers)) {
+                            return state.reverifDashers;
+                        }
+                        const legacyReverif = state?.dasherCategories?.find?.((cat) => cat && cat.id === 'reverif');
+                        if (legacyReverif && Array.isArray(legacyReverif.dashers)) {
+                            return legacyReverif.dashers;
+                        }
+                    } catch (e) {
+                        console.error('Error loading reverifDashers from localStorage:', e);
+                    }
+                }
+                return [];
+            });
+            const [isReverifDashersOpen, setIsReverifDashersOpen] = useState(false);
+            const [collapsedReverifDashers, setCollapsedReverifDashers] = useState({});
             const [isLockedDashersOpen, setIsLockedDashersOpen] = useState(false);
             const [isAppliedPendingDashersOpen, setIsAppliedPendingDashersOpen] = useState(false);
             const [collapsedLockedDashers, setCollapsedLockedDashers] = useState({});
@@ -477,11 +609,21 @@
             const [usingRenderReady, setUsingRenderReady] = useState(false);
             const [appealedRenderReady, setAppealedRenderReady] = useState(false);
             const [appliedRenderReady, setAppliedRenderReady] = useState(false);
+            const [reverifRenderReady, setReverifRenderReady] = useState(false);
             const [lockedRenderReady, setLockedRenderReady] = useState(false);
             const [deactivatedRenderReady, setDeactivatedRenderReady] = useState(false);
             const [archivedRenderReady, setArchivedRenderReady] = useState(false);
             // Draft state for inline editors (e.g., cash-out add row)
-            const [draftDasher, setDraftDasher] = useState({});
+            // Per-dasher draft state (keyed by a stable scope key per card)
+            const [dashersDraft, setDashersDraft] = useState({});
+            const getDraftForKey = (key) => dashersDraft[key] || {};
+            const setDraftForKey = (key, updater) => {
+                setDashersDraft(prev => {
+                    const current = prev[key] || {};
+                    const next = typeof updater === 'function' ? updater(current) : updater;
+                    return { ...prev, [key]: next };
+                });
+            };
             const [dasherCategories, setDasherCategories] = useState(() => {
                 // Try to load from localStorage first
                 const savedState = localStorage.getItem('dashBashState');
@@ -649,6 +791,7 @@
             const toggleUsingOpen = () => toggleOpenWithSpinner(isCurrentlyUsingDashersOpen, setIsCurrentlyUsingDashersOpen, setUsingRenderReady);
             const toggleAppealedOpen = () => toggleOpenWithSpinner(isAppealedDashersOpen, setIsAppealedDashersOpen, setAppealedRenderReady);
             const toggleAppliedOpen = () => toggleOpenWithSpinner(isAppliedPendingDashersOpen, setIsAppliedPendingDashersOpen, setAppliedRenderReady);
+            const toggleReverifOpen = () => toggleOpenWithSpinner(isReverifDashersOpen, setIsReverifDashersOpen, setReverifRenderReady);
             const toggleLockedOpen = () => toggleOpenWithSpinner(isLockedDashersOpen, setIsLockedDashersOpen, setLockedRenderReady);
             const toggleDeactivatedOpen = () => toggleOpenWithSpinner(isDeactivatedDashersOpen, setIsDeactivatedDashersOpen, setDeactivatedRenderReady);
             const toggleArchivedOpen = () => toggleOpenWithSpinner(isArchivedDashersOpen, setIsArchivedDashersOpen, setArchivedRenderReady);
@@ -1021,6 +1164,7 @@
                         readyDashers,
                         currentlyUsingDashers,
                         appealedDashers,
+                        reverifDashers,
                         lockedDashers,
                         appliedPendingDashers,
                         collapsedCategories,
@@ -1028,6 +1172,7 @@
                         collapsedDashers,
                         collapsedArchivedDashers,
                         collapsedDeactivatedDashers,
+                        collapsedReverifDashers,
                         collapsedLockedDashers,
                         collapsedAppliedPendingDashers,
                         collapsedDasherCategories,
@@ -1042,12 +1187,14 @@
                         isReadyDashersOpen,
                         isCurrentlyUsingDashersOpen,
                         isAppealedDashersOpen,
+                        isReverifDashersOpen,
                         isLockedDashersOpen,
                         isAppliedPendingDashersOpen,
+                        // Cash analytics filters intentionally remain session-scoped so they refresh on new loads
                         showNonZeroOnly,
                         dasherSort,
                         timestamp: new Date().toISOString(),
-                        schemaVersion: 4 // Schema version for data migration
+                        schemaVersion: 5 // Schema version for data migration
                     };
                     localStorage.setItem('dashBashState', JSON.stringify(state));
                     if (!moveToastActiveRef.current) {
@@ -1096,7 +1243,7 @@
                         // v4 migration: lift reserved bucket categories into top-level arrays
                         if (currentVersion < 4) {
                             try {
-                                const reservedIds = new Set(['ready','currently-using','appealed','applied-pending','locked','deactivated','archived']);
+                                const reservedIds = new Set(['ready','currently-using','appealed','applied-pending','reverif','locked','deactivated','archived']);
                                 if (Array.isArray(state.dasherCategories)) {
                                     const remaining = [];
                                     state.dasherCategories.forEach(cat => {
@@ -1106,6 +1253,7 @@
                                             else if (cat.id === 'currently-using') state.currentlyUsingDashers = (state.currentlyUsingDashers || []).concat(dashers);
                                             else if (cat.id === 'appealed') state.appealedDashers = (state.appealedDashers || []).concat(dashers);
                                             else if (cat.id === 'applied-pending') state.appliedPendingDashers = (state.appliedPendingDashers || []).concat(dashers);
+                                            else if (cat.id === 'reverif') state.reverifDashers = (state.reverifDashers || []).concat(dashers);
                                             else if (cat.id === 'locked') state.lockedDashers = (state.lockedDashers || []).concat(dashers);
                                             else if (cat.id === 'deactivated') state.deactivatedDashers = (state.deactivatedDashers || []).concat(dashers);
                                             else if (cat.id === 'archived') state.archivedDashers = (state.archivedDashers || []).concat(dashers);
@@ -1120,6 +1268,33 @@
                                 console.log('[Migration] Upgraded to schema v4');
                             } catch (err) {
                                 console.warn('Schema v4 migration failed', err);
+                            }
+                        }
+
+                        // v5 migration: ensure earningsHistory arrays present on all dashers
+                        if ((state.schemaVersion || currentVersion) < 5) {
+                            try {
+                                const ensureEarnings = (list) => {
+                                    if (!Array.isArray(list)) return;
+                                    list.forEach(d => {
+                                        if (!Array.isArray(d.earningsHistory)) d.earningsHistory = [];
+                                    });
+                                };
+                                ensureEarnings(state.dasherCategories?.flatMap(c => Array.isArray(c.dashers) ? c.dashers : []) || []);
+                                ensureEarnings(state.readyDashers);
+                                ensureEarnings(state.currentlyUsingDashers);
+                                ensureEarnings(state.appealedDashers);
+                                ensureEarnings(state.appliedPendingDashers);
+                                ensureEarnings(state.reverifDashers);
+                                ensureEarnings(state.lockedDashers);
+                                ensureEarnings(state.deactivatedDashers);
+                                ensureEarnings(state.archivedDashers);
+
+                                state.schemaVersion = 5;
+                                localStorage.setItem('dashBashState', JSON.stringify(state));
+                                console.log('[Migration] Upgraded to schema v5');
+                            } catch (err) {
+                                console.warn('Schema v5 migration failed', err);
                             }
                         }
 
@@ -1146,6 +1321,17 @@
                         if (state.readyDashers) setReadyDashers(state.readyDashers);
                         if (state.currentlyUsingDashers) setCurrentlyUsingDashers(state.currentlyUsingDashers);
                         if (state.appealedDashers) setAppealedDashers(state.appealedDashers);
+                        if (Array.isArray(state.reverifDashers)) {
+                            setReverifDashers(state.reverifDashers);
+                        } else if (Array.isArray(state.dasherCategories)) {
+                            const legacyReverif = state.dasherCategories.find((cat) => cat && cat.id === 'reverif');
+                            if (legacyReverif && Array.isArray(legacyReverif.dashers)) {
+                                setReverifDashers(legacyReverif.dashers);
+                                requestPersist();
+                            } else {
+                                setReverifDashers([]);
+                            }
+                        }
 
                         // Load collapsed states if they exist
                         if (state.collapsedCategories) setCollapsedCategories(state.collapsedCategories);
@@ -1164,6 +1350,7 @@
                         if (state.isReadyDashersOpen !== undefined) setIsReadyDashersOpen(state.isReadyDashersOpen);
                         if (state.isCurrentlyUsingDashersOpen !== undefined) setIsCurrentlyUsingDashersOpen(state.isCurrentlyUsingDashersOpen);
                         if (state.isAppealedDashersOpen !== undefined) setIsAppealedDashersOpen(state.isAppealedDashersOpen);
+                        if (state.isReverifDashersOpen !== undefined) setIsReverifDashersOpen(state.isReverifDashersOpen);
                         if (state.showNonZeroOnly !== undefined) setShowNonZeroOnly(state.showNonZeroOnly);
                         if (state.dasherSort) setDasherSort(state.dasherSort);
 
@@ -1183,7 +1370,7 @@
                 try {
                     const state = {
                         appVersion: '1.7.0',
-                        schemaVersion: 4,
+                        schemaVersion: 5,
                         target,
                         targetPreset,
                         prices,
@@ -1198,6 +1385,7 @@
                         archivedDashers,
                         lockedDashers,
                         appliedPendingDashers,
+                        reverifDashers,
                         collapsedCategories,
                         collapsedStores,
                         collapsedDashers,
@@ -1205,6 +1393,7 @@
                         collapsedDeactivatedDashers,
                         collapsedLockedDashers,
                         collapsedAppliedPendingDashers,
+                        collapsedReverifDashers,
                         collapsedDasherCategories,
                         collapsedNoteCategories,
                         isArchivedDashersOpen,
@@ -1214,6 +1403,7 @@
                         isAppealedDashersOpen,
                         isLockedDashersOpen,
                         isAppliedPendingDashersOpen,
+                        isReverifDashersOpen,
                         showNonZeroOnly,
                         dasherSort,
                         exportDate: new Date().toISOString(),
@@ -1264,6 +1454,7 @@
                         appealedDashers: [],
                         lockedDashers: [],
                         appliedPendingDashers: [],
+                        reverifDashers: [],
                         notes: [],
                         stores: [],
                         messages: [],
@@ -1324,6 +1515,10 @@
                     // Collect selected applied pending dashers
                     const selectedAppliedPending = appliedPendingDashers.filter(d => selectedItems.appliedPendingDashers?.has(d.id));
                     exportData.appliedPendingDashers.push(...selectedAppliedPending);
+
+                    // Collect selected reverif dashers
+                    const selectedReverif = reverifDashers.filter(d => selectedItems.reverifDashers?.has(d.id));
+                    exportData.reverifDashers.push(...selectedReverif);
 
                     // Collect selected notes
                     noteCategories.forEach(cat => {
@@ -1429,7 +1624,7 @@
                             // main categories
                             (dasherCategories || []).forEach(c => (c.dashers || []).forEach(d => set.add(dasherIdentityKey(d))));
                             // top-level buckets
-                            [archivedDashers,deactivatedDashers,readyDashers,currentlyUsingDashers,appealedDashers,lockedDashers,appliedPendingDashers]
+                            [archivedDashers,deactivatedDashers,readyDashers,currentlyUsingDashers,appealedDashers,lockedDashers,appliedPendingDashers,reverifDashers]
                                 .forEach(list => (list || []).forEach(d => set.add(dasherIdentityKey(d))));
                             return set;
                         };
@@ -1574,6 +1769,20 @@
                                 if (importedAppliedPending.length > 0) setAppliedPendingDashers([...appliedPendingDashers, ...importedAppliedPending]);
                             }
 
+                            // Process reverif dashers
+                            if (state.reverifDashers && state.reverifDashers.length > 0) {
+                                const filtered = filterNewDashers(state.reverifDashers);
+                                const importedReverif = filtered.map(dasher => ({
+                                    ...dasher,
+                                    id: dasher.id + '-imp-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+                                    imported: true,
+                                    importDate: new Date().toISOString()
+                                }));
+                                if (importedReverif.length > 0) {
+                                    setReverifDashers([...reverifDashers, ...importedReverif]);
+                                }
+                            }
+
                             // Process individual notes
                             if (state.notes && state.notes.length > 0) {
                                 importedNoteCategory = {
@@ -1659,6 +1868,7 @@
                             if (state.appealedDashers) setAppealedDashers(state.appealedDashers);
                             if (state.lockedDashers) setLockedDashers(state.lockedDashers);
                             if (state.appliedPendingDashers) setAppliedPendingDashers(state.appliedPendingDashers);
+                            if (state.reverifDashers) setReverifDashers(state.reverifDashers);
 
                             // Load collapsed states if they exist
                             if (state.collapsedCategories) setCollapsedCategories(state.collapsedCategories);
@@ -1670,6 +1880,7 @@
                             if (state.collapsedDeactivatedDashers) setCollapsedDeactivatedDashers(state.collapsedDeactivatedDashers);
                             if (state.collapsedLockedDashers) setCollapsedLockedDashers(state.collapsedLockedDashers);
                             if (state.collapsedAppliedPendingDashers) setCollapsedAppliedPendingDashers(state.collapsedAppliedPendingDashers);
+                            if (state.collapsedReverifDashers) setCollapsedReverifDashers(state.collapsedReverifDashers);
                             if (state.isArchivedDashersOpen !== undefined) setIsArchivedDashersOpen(state.isArchivedDashersOpen);
                             if (state.isDeactivatedDashersOpen !== undefined) setIsDeactivatedDashersOpen(state.isDeactivatedDashersOpen);
                             if (state.isReadyDashersOpen !== undefined) setIsReadyDashersOpen(state.isReadyDashersOpen);
@@ -1677,6 +1888,7 @@
                             if (state.isAppealedDashersOpen !== undefined) setIsAppealedDashersOpen(state.isAppealedDashersOpen);
                             if (state.isLockedDashersOpen !== undefined) setIsLockedDashersOpen(state.isLockedDashersOpen);
                             if (state.isAppliedPendingDashersOpen !== undefined) setIsAppliedPendingDashersOpen(state.isAppliedPendingDashersOpen);
+                            if (state.isReverifDashersOpen !== undefined) setIsReverifDashersOpen(state.isReverifDashersOpen);
                             if (state.showNonZeroOnly !== undefined) setShowNonZeroOnly(state.showNonZeroOnly);
                             if (state.dasherSort) setDasherSort(state.dasherSort);
 
@@ -1792,6 +2004,17 @@
                 if (!dasher) return null;
 
                 if (isEditing) {
+                    const cashScopeKey = `card-${safeFieldSegment('cashout')}-${safeFieldSegment(dasher?.id ?? dasher?.email ?? dasher?.phone ?? 'dash')}`;
+                    const draft = getDraftForKey(cashScopeKey);
+                    const setDraft = (updater) => setDraftForKey(cashScopeKey, updater);
+                    const amtStr = draft._addCashOutAmount || '';
+                    const amtNum = deriveNumericAmount(amtStr);
+                    const hasAmt = String(amtStr).trim() !== '';
+                    const validAmt = Number.isFinite(amtNum) && amtNum > 0;
+                    const err = draft._addCashOutError || '';
+                    const cashOutAmountInputId = `inline-cashout-${cashScopeKey}`;
+                    const cashOutErrorId = `${cashOutAmountInputId}-error`;
+
                     return React.createElement('div', { className: 'space-y-2 mt-2' }, [
                         React.createElement('div',{key:'histLabel',className:'text-xs uppercase tracking-wide text-gray-400'},'Cash‑Out History'),
                         (dasher.cashOutHistory && dasher.cashOutHistory.length > 0) ?
@@ -1862,20 +2085,23 @@
                             React.createElement('div',{key:'a1',className:'flex flex-col'},[
                                 React.createElement('label',{className:'text-[10px] text-gray-400'},'Amount'),
                                 React.createElement('input',{
+                                    id: cashOutAmountInputId,
                                     type:'number',min:0,step:'0.01',
-                                    value: (draftDasher._addCashOutAmount || ''),
-                                    onChange:e=>setDraftDasher(d=>({...d,_addCashOutAmount:e.target.value})),
+                                    value: amtStr,
+                                    onChange:e=>setDraft(d=>({...d,_addCashOutAmount:e.target.value,_addCashOutError:''})),
                                     onKeyDown:(e)=>handleEditableKeyDown(e,false),
                                     onBlur:commitDasherEdit,
-                                    className:'w-24 bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs'
+                                    className:'w-24 bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs',
+                                    'aria-invalid': err ? 'true' : (hasAmt && !validAmt ? 'true' : 'false'),
+                                    'aria-describedby': err ? cashOutErrorId : undefined
                                 })
                             ]),
                             React.createElement('div',{key:'a2',className:'flex flex-col'},[
                                 React.createElement('label',{className:'text-[10px] text-gray-400'},'Method'),
                                 React.createElement('input',{
                                     type:'text',
-                                    value: (draftDasher._addCashOutMethod || ''),
-                                    onChange:e=>setDraftDasher(d=>({...d,_addCashOutMethod:e.target.value})),
+                                    value: (draft._addCashOutMethod || ''),
+                                    onChange:e=>setDraft(d=>({...d,_addCashOutMethod:e.target.value})),
                                     onKeyDown:(e)=>handleEditableKeyDown(e,false),
                                     onBlur:commitDasherEdit,
                                     className:'w-28 bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs'
@@ -1884,8 +2110,8 @@
                             React.createElement('div',{key:'a3',className:'flex flex-col flex-1 min-w-[140px]'},[
                                 React.createElement('label',{className:'text-[10px] text-gray-400'},'Notes'),
                                 React.createElement('textarea',{
-                                    value: (draftDasher._addCashOutNotes || ''),
-                                    onChange:e=>setDraftDasher(d=>({...d,_addCashOutNotes:e.target.value})),
+                                    value: (draft._addCashOutNotes || ''),
+                                    onChange:e=>setDraft(d=>({...d,_addCashOutNotes:e.target.value})),
                                     onKeyDown:(e)=>handleEditableKeyDown(e,true),
                                     onBlur:commitDasherEdit,
                                     rows:2,
@@ -1895,33 +2121,89 @@
                             React.createElement('label',{key:'adj',className:'flex items-center gap-1 text-[11px] text-gray-300 mb-1'},[
                                 React.createElement('input',{
                                     type:'checkbox',
-                                    checked: !!draftDasher._addCashOutAdjust,
-                                    onChange:e=>setDraftDasher(d=>({...d,_addCashOutAdjust:e.target.checked}))
+                                    checked: !!draft._addCashOutAdjust,
+                                    onChange:e=>setDraft(d=>({...d,_addCashOutAdjust:e.target.checked}))
                                 }),
                                 'Adjust balance'
                             ]),
+                            err && React.createElement('div',{key:'err',id:cashOutErrorId,className:'basis-full text-[11px] text-red-400',role:'status','aria-live':'polite'},err),
                             React.createElement('button',{
                                 key:'addBtn',
-                                disabled: !draftDasher._addCashOutAmount || parseFloat(draftDasher._addCashOutAmount) <= 0,
+                                disabled: !hasAmt,
                                 onClick:()=>{
-                                    const amt = parseFloat(draftDasher._addCashOutAmount);
-                                    if(isNaN(amt) || amt <= 0) return;
-                                    addCustomCashOut(
-                                        dasher.id,
-                                        {
+                                    const amt = deriveNumericAmount(draft._addCashOutAmount);
+                                    if (!Number.isFinite(amt) || amt <= 0) {
+                                        setDraft(d=>({...d,_addCashOutError:'Enter a valid positive amount.'}));
+                                        setTimeout(() => {
+                                            const inputNode = document.getElementById(cashOutAmountInputId);
+                                            if (inputNode) {
+                                                inputNode.focus();
+                                                if (typeof inputNode.select === 'function') inputNode.select();
+                                            }
+                                        }, 0);
+                                        return;
+                                    }
+
+                                    // Identity-aware mutation across duplicates (earnings path parity)
+                                    const nowIso = new Date().toISOString();
+                                    const method = (draft._addCashOutMethod || 'custom').trim() || 'custom';
+                                    const notes = (draft._addCashOutNotes || '').trim();
+                                    const adjustBalance = !!draft._addCashOutAdjust;
+
+                                    // Find all matching descriptors by identity
+                                    const targets = getDescriptorsForDasher(dasher, {
+                                        fallbackHint: `cashout-${dasher?.id ?? dasher?.email ?? dasher?.phone ?? 'dash'}`
+                                    });
+
+                                    const applyCashOut = (existing) => {
+                                        const base = {
+                                            id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `co-${Date.now()}`,
                                             amount: amt.toFixed(2),
-                                            method: draftDasher._addCashOutMethod || 'custom',
-                                            notes: draftDasher._addCashOutNotes || ''
-                                        },
-                                        !!draftDasher._addCashOutAdjust
-                                    );
-                                    setDraftDasher(d=>({
-                                        ...d,
-                                        _addCashOutAmount:'',
-                                        _addCashOutMethod:'',
-                                        _addCashOutNotes:'',
-                                        _addCashOutAdjust:false
-                                    }));
+                                            method,
+                                            notes,
+                                            at: nowIso
+                                        };
+                                        const history = ensureArray(existing.cashOutHistory);
+                                        const nextHistory = [...history, base];
+                                        let nextBalance = existing.balance;
+                                        if (adjustBalance) {
+                                            const cur = parseBalanceValue(existing.balance || '0');
+                                            const updated = Math.max(0, cur - amt);
+                                            nextBalance = updated.toString();
+                                        }
+                                        return {
+                                            ...existing,
+                                            balance: nextBalance,
+                                            cashOutHistory: nextHistory,
+                                            lastCashOutRef: adjustBalance ? { id: base.id, index: nextHistory.length - 1 } : (existing.lastCashOutRef || null)
+                                        };
+                                    };
+
+                                    if (targets.length === 0) {
+                                        setDraft(d=>({...d,_addCashOutError:'Couldn\'t locate matching dasher record.'}));
+                                        setTimeout(() => {
+                                            const inputNode = document.getElementById(cashOutAmountInputId);
+                                            if (inputNode) {
+                                                inputNode.focus();
+                                                if (typeof inputNode.select === 'function') inputNode.select();
+                                            }
+                                        }, 0);
+                                        return;
+                                    }
+
+                                    targets.forEach(descriptor => {
+                                        mutateDasherByMeta(descriptor, applyCashOut);
+                                    });
+
+                                    requestPersist();
+                                    setDraft(d=>({ _addCashOutAmount:'', _addCashOutMethod:'', _addCashOutNotes:'', _addCashOutAdjust:false, _addCashOutError:'' }));
+                                    setTimeout(() => {
+                                        const inputNode = document.getElementById(cashOutAmountInputId);
+                                        if (inputNode) {
+                                            inputNode.focus();
+                                            if (typeof inputNode.select === 'function') inputNode.select();
+                                        }
+                                    }, 50);
                                 },
                                 className:'px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-xs text-white disabled:opacity-40 disabled:cursor-not-allowed'
                             },'Add')
@@ -1983,6 +2265,9 @@
                         if (!Array.isArray(dasher.cashOutHistory)) {
                             dasher.cashOutHistory = [];
                         }
+                        if (!Array.isArray(dasher.earningsHistory)) {
+                            dasher.earningsHistory = [];
+                        }
                     });
                 };
 
@@ -2039,6 +2324,17 @@
                     stateObj.appliedPendingDashers = [];
                 }
 
+                if (!stateObj.reverifDashers && Array.isArray(stateObj.dasherCategories)) {
+                    const legacyReverif = stateObj.dasherCategories.find((cat) => cat.id === 'reverif');
+                    if (legacyReverif && Array.isArray(legacyReverif.dashers)) {
+                        stateObj.reverifDashers = legacyReverif.dashers;
+                    } else {
+                        stateObj.reverifDashers = [];
+                    }
+                } else if (!stateObj.reverifDashers) {
+                    stateObj.reverifDashers = [];
+                }
+
                 if (Array.isArray(stateObj.dasherCategories)) {
                     const collected = stateObj.dasherCategories.reduce((acc, cat) => {
                         if (cat && Array.isArray(cat.dashers)) {
@@ -2056,6 +2352,7 @@
                 ensureHistoryArray(stateObj.appealedDashers); ensureNewCashoutFields(stateObj.appealedDashers);
                 ensureHistoryArray(stateObj.lockedDashers); ensureNewCashoutFields(stateObj.lockedDashers);
                 ensureHistoryArray(stateObj.appliedPendingDashers); ensureNewCashoutFields(stateObj.appliedPendingDashers);
+                ensureHistoryArray(stateObj.reverifDashers); ensureNewCashoutFields(stateObj.reverifDashers);
             };
 
             // Cash out helper - records cash out entry, zeros balance, and saves
@@ -2140,6 +2437,7 @@
                     'currently-using': 'Currently Using',
                     'appealed': 'Appealed',
                     'applied-pending': 'Applied Pending',
+                    'reverif': 'Reverif',
                     'locked': 'Locked',
                     'deactivated': 'Deactivated',
                     'archived': 'Archived'
@@ -2183,6 +2481,7 @@
                 if (effectiveSourceKey === 'ready') { mutateList(readyDashers, setReadyDashers); showSuccessToast(currentBalance); return; }
                 if (effectiveSourceKey === 'currently-using') { mutateList(currentlyUsingDashers, setCurrentlyUsingDashers); showSuccessToast(currentBalance); return; }
                 if (effectiveSourceKey === 'appealed') { mutateList(appealedDashers, setAppealedDashers); showSuccessToast(currentBalance); return; }
+                if (effectiveSourceKey === 'reverif') { mutateList(reverifDashers, setReverifDashers); showSuccessToast(currentBalance); return; }
                 if (effectiveSourceKey === 'locked') { mutateList(lockedDashers, setLockedDashers); showSuccessToast(currentBalance); return; }
                 if (effectiveSourceKey === 'applied-pending') { mutateList(appliedPendingDashers, setAppliedPendingDashers); showSuccessToast(currentBalance); return; }
                 if (effectiveSourceKey === 'deactivated') { mutateList(deactivatedDashers, setDeactivatedDashers); showSuccessToast(currentBalance); return; }
@@ -2236,6 +2535,7 @@
                 else if (sourceKey === 'currently-using') restoreList(currentlyUsingDashers, setCurrentlyUsingDashers);
                 else if (sourceKey === 'appealed') restoreList(appealedDashers, setAppealedDashers);
                 else if (sourceKey === 'locked') restoreList(lockedDashers, setLockedDashers);
+                else if (sourceKey === 'reverif') restoreList(reverifDashers, setReverifDashers);
                 else if (sourceKey === 'applied-pending') restoreList(appliedPendingDashers, setAppliedPendingDashers);
                 else if (sourceKey === 'deactivated') restoreList(deactivatedDashers, setDeactivatedDashers);
                 else if (sourceKey === 'archived') restoreList(archivedDashers, setArchivedDashers);
@@ -2307,20 +2607,22 @@
             // Helper to add aria-label to buttons with title
             // Aggregate all dashers into a flat list for global filtering counters
             const allDashersFlat = useMemo(() => [
-                ...dasherCategories.flatMap(c => c.dashers || []),
-                ...readyDashers,
-                ...currentlyUsingDashers,
-                ...appealedDashers,
-                ...appliedPendingDashers,
-                ...lockedDashers,
-                ...deactivatedDashers,
-                ...archivedDashers
+                ...dasherCategories.flatMap(c => ensureArray(c.dashers)),
+                ...ensureArray(readyDashers),
+                ...ensureArray(currentlyUsingDashers),
+                ...ensureArray(appealedDashers),
+                ...ensureArray(appliedPendingDashers),
+                ...ensureArray(reverifDashers),
+                ...ensureArray(lockedDashers),
+                ...ensureArray(deactivatedDashers),
+                ...ensureArray(archivedDashers)
             ], [
                 dasherCategories,
                 readyDashers,
                 currentlyUsingDashers,
                 appealedDashers,
                 appliedPendingDashers,
+                reverifDashers,
                 lockedDashers,
                 deactivatedDashers,
                 archivedDashers
@@ -2344,6 +2646,11 @@
             const filteredAppliedPendingDashers = useMemo(
                 () => filterAndSortDashers(appliedPendingDashers),
                 [appliedPendingDashers, showNonZeroOnly, dasherSort, globalQuery]
+            );
+
+            const filteredReverifDashers = useMemo(
+                () => filterAndSortDashers(reverifDashers),
+                [reverifDashers, showNonZeroOnly, dasherSort, globalQuery]
             );
 
             const filteredLockedDashers = useMemo(
@@ -2374,6 +2681,269 @@
             const filteredCategoryDashers = useMemo(
                 () => filterAndSortDashers(categoryDashersFlat),
                 [categoryDashersFlat, showNonZeroOnly, dasherSort, globalQuery]
+            );
+
+            const dashersMeta = useMemo(() => {
+                const meta = [];
+
+                dasherCategories.forEach((category, catIndex) => {
+                    const dashers = ensureArray(category?.dashers);
+                    const bucketId = category?.id ? String(category.id) : `category-${catIndex}`;
+                    const bucketLabel = category?.name || bucketId;
+                    dashers.forEach((dasher, dasherIndex) => {
+                        meta.push({
+                            bucketId,
+                            bucketLabel,
+                            bucketType: 'category',
+                            categoryIndex: catIndex,
+                            dasherIndex,
+                            uniqueFallback: `category-${catIndex}-${dasherIndex}`,
+                            dasher
+                        });
+                    });
+                });
+
+                const reservedBuckets = [
+                    { id: 'ready', label: 'Ready', list: readyDashers },
+                    { id: 'currently-using', label: 'Currently using', list: currentlyUsingDashers },
+                    { id: 'appealed', label: 'Appealed', list: appealedDashers },
+                    { id: 'applied-pending', label: 'Applied Pending', list: appliedPendingDashers },
+                    { id: 'reverif', label: 'Reverif', list: reverifDashers },
+                    { id: 'locked', label: 'Locked', list: lockedDashers },
+                    { id: 'deactivated', label: 'Deactivated', list: deactivatedDashers },
+                    { id: 'archived', label: 'Archived', list: archivedDashers }
+                ];
+
+                reservedBuckets.forEach(({ id, label, list }) => {
+                    ensureArray(list).forEach((dasher, index) => {
+                        meta.push({
+                            bucketId: id,
+                            bucketLabel: label,
+                            bucketType: 'reserved',
+                            categoryIndex: null,
+                            dasherIndex: index,
+                            uniqueFallback: `${id}-${index}`,
+                            dasher
+                        });
+                    });
+                });
+
+                return meta;
+            }, [
+                dasherCategories,
+                readyDashers,
+                currentlyUsingDashers,
+                appealedDashers,
+                appliedPendingDashers,
+                reverifDashers,
+                lockedDashers,
+                deactivatedDashers,
+                archivedDashers
+            ]);
+
+            const earningEntries = useMemo(
+                () => collectDasherEvents(
+                    dashersMeta,
+                    'earningsHistory',
+                    (entry) => {
+                        const normalized = String(entry?.source ?? 'unspecified').trim().toLowerCase();
+                        return normalized || 'unspecified';
+                    }
+                ),
+                [dashersMeta]
+            );
+
+            const cashOutEntries = useMemo(
+                () => collectDasherEvents(
+                    dashersMeta,
+                    'cashOutHistory',
+                    (entry) => {
+                        const normalized = String(entry?.method ?? 'unspecified').trim().toLowerCase();
+                        return normalized || 'unspecified';
+                    }
+                ),
+                [dashersMeta]
+            );
+
+            const availableCashMethods = useMemo(() => {
+                const set = new Set();
+                cashOutEntries.forEach((entry) => {
+                    set.add(entry.group || 'unspecified');
+                });
+                return Array.from(set).sort();
+            }, [cashOutEntries]);
+
+            const dashersMetaKeyMap = useMemo(() => {
+                const map = new Map();
+                dashersMeta.forEach((meta, index) => {
+                    const key = `${meta.bucketId ?? 'bucket'}::${index}`;
+                    map.set(key, { meta, index });
+                });
+                return map;
+            }, [dashersMeta]);
+
+            const dasherSelectOptions = useMemo(
+                () => dashersMeta.map((meta, index) => ({
+                    key: `${meta.bucketId ?? 'bucket'}::${index}`,
+                    meta
+                })),
+                [dashersMeta]
+            );
+
+            const identityForMeta = useCallback(
+                (meta) => deriveDasherIdentity(meta?.dasher, meta?.uniqueFallback ?? 'dash'),
+                []
+            );
+
+            const dashersIdentityMap = useMemo(() => {
+                const map = new Map();
+                dashersMeta.forEach((meta, index) => {
+                    const identity = identityForMeta(meta);
+                    if (!identity) return;
+                    const descriptor = { meta, index };
+                    const bucket = map.get(identity);
+                    if (bucket) {
+                        bucket.push(descriptor);
+                    } else {
+                        map.set(identity, [descriptor]);
+                    }
+                });
+                return map;
+            }, [dashersMeta, identityForMeta]);
+
+            const dashersReferenceMap = useMemo(() => {
+                const map = new Map();
+                dashersMeta.forEach((meta, index) => {
+                    if (!meta?.dasher) return;
+                    const descriptor = { meta, index };
+                    const existing = map.get(meta.dasher);
+                    if (existing) {
+                        existing.push(descriptor);
+                    } else {
+                        map.set(meta.dasher, [descriptor]);
+                    }
+                });
+                return map;
+            }, [dashersMeta]);
+
+            const getDescriptorsForDasher = useCallback(
+                (candidate, options = {}) => {
+                    if (!candidate) return [];
+                    const { preferredBucketId = null, fallbackHint } = options;
+                    const keyTag = (descriptor) => `${descriptor?.meta?.bucketId ?? 'bucket'}::${descriptor?.index ?? 0}`;
+                    const ranked = new Map();
+                    const track = (descriptor, baseRank) => {
+                        if (!descriptor || !descriptor.meta) return;
+                        const key = keyTag(descriptor);
+                        const scoreAdjust = descriptor.meta.bucketId === preferredBucketId ? -2 : 0;
+                        const rank = baseRank + scoreAdjust;
+                        if (!ranked.has(key) || rank < ranked.get(key).rank) {
+                            ranked.set(key, { descriptor, rank });
+                        }
+                    };
+
+                    const fallbackKey = fallbackHint ?? `${preferredBucketId ?? 'bucket'}-${candidate?.id ?? candidate?.email ?? candidate?.phone ?? 'dash'}`;
+
+                    const referenceMatches = dashersReferenceMap.get(candidate);
+                    if (Array.isArray(referenceMatches)) {
+                        referenceMatches.forEach(desc => track(desc, 2));
+                    }
+
+                    const identityKey = deriveDasherIdentity(candidate, fallbackKey);
+                    if (identityKey) {
+                        const identityMatches = dashersIdentityMap.get(identityKey);
+                        if (Array.isArray(identityMatches)) {
+                            identityMatches.forEach(desc => track(desc, 4));
+                        }
+                    }
+
+                    if (ranked.size === 0) {
+                        dashersMeta.forEach((meta, index) => {
+                            if (meta?.dasher === candidate) {
+                                track({ meta, index }, 6);
+                            }
+                        });
+                    }
+
+                    return Array
+                        .from(ranked.values())
+                        .sort((a, b) => a.rank - b.rank)
+                        .map(entry => entry.descriptor);
+                },
+                [dashersIdentityMap, dashersReferenceMap, dashersMeta]
+            );
+
+            const mutateDasherByMeta = useCallback(
+                (descriptor, mutator) => {
+                    if (!descriptor || typeof mutator !== 'function') return;
+                    const { meta } = descriptor;
+                    if (!meta) return;
+
+                    if (meta.bucketType === 'category') {
+                        const targetIndex = meta.categoryIndex;
+                        const dasherIndex = meta.dasherIndex;
+                        if (typeof targetIndex !== 'number' || typeof dasherIndex !== 'number') return;
+                        setDasherCategories((prev) => {
+                            return prev.map((category, idx) => {
+                                if (idx !== targetIndex) return category;
+                                const dashers = ensureArray(category?.dashers);
+                                if (dasherIndex < 0 || dasherIndex >= dashers.length) return category;
+                                const nextDashers = [...dashers];
+                                nextDashers[dasherIndex] = mutator(nextDashers[dasherIndex]);
+                                return { ...category, dashers: nextDashers };
+                            });
+                        });
+                        return;
+                    }
+
+                    const updateList = (list, mutatorFn) => {
+                        const dashers = ensureArray(list);
+                        if (meta.dasherIndex < 0 || meta.dasherIndex >= dashers.length) return dashers;
+                        const next = [...dashers];
+                        next[meta.dasherIndex] = mutatorFn(next[meta.dasherIndex]);
+                        return next;
+                    };
+
+                    switch (meta.bucketId) {
+                        case 'ready':
+                            setReadyDashers((prev) => updateList(prev, mutator));
+                            break;
+                        case 'currently-using':
+                            setCurrentlyUsingDashers((prev) => updateList(prev, mutator));
+                            break;
+                        case 'appealed':
+                            setAppealedDashers((prev) => updateList(prev, mutator));
+                            break;
+                        case 'applied-pending':
+                            setAppliedPendingDashers((prev) => updateList(prev, mutator));
+                            break;
+                        case 'reverif':
+                            setReverifDashers((prev) => updateList(prev, mutator));
+                            break;
+                        case 'locked':
+                            setLockedDashers((prev) => updateList(prev, mutator));
+                            break;
+                        case 'deactivated':
+                            setDeactivatedDashers((prev) => updateList(prev, mutator));
+                            break;
+                        case 'archived':
+                            setArchivedDashers((prev) => updateList(prev, mutator));
+                            break;
+                        default:
+                            break;
+                    }
+                },
+                [
+                    setDasherCategories,
+                    setReadyDashers,
+                    setCurrentlyUsingDashers,
+                    setAppealedDashers,
+                    setAppliedPendingDashers,
+                    setReverifDashers,
+                    setLockedDashers,
+                    setDeactivatedDashers,
+                    setArchivedDashers
+                ]
             );
 
             const withAria = (title) => ({ 'aria-label': title, title });
@@ -2947,13 +3517,24 @@
                             : cat
                     ));
                 } else {
+                    const isBalance = field === 'balance';
+                    const nowIso = new Date().toISOString();
                     setDasherCategories(dasherCategories.map(cat =>
                         cat.id === categoryId
                             ? {
                                 ...cat,
-                                dashers: cat.dashers.map(dasher =>
-                                    dasher.id === dasherId ? { ...dasher, [field]: value } : dasher
-                                )
+                                dashers: cat.dashers.map(d => {
+                                    if (d.id !== dasherId) return d;
+                                    if (!isBalance) return { ...d, [field]: value };
+                                    const prevNum = parseBalanceValue(d.balance);
+                                    const nextNum = parseBalanceValue(value);
+                                    const delta = nextNum - prevNum;
+                                    if (delta > 0.000001) {
+                                        const eh = Array.isArray(d.earningsHistory) ? d.earningsHistory : [];
+                                        return { ...d, balance: value, earningsHistory: [...eh, { amount: delta, at: nowIso, source: 'balance-edit' }] };
+                                    }
+                                    return { ...d, balance: value };
+                                })
                             }
                             : cat
                     ));
@@ -3228,7 +3809,71 @@
                 if (!dasher || !Array.isArray(list) || typeof setList !== 'function') return null;
 
                 const updateListField = (field, value) => {
-                    setList(prev => prev.map(d => d.id === dasher.id ? { ...d, [field]: value } : d));
+                    const isBalance = field === 'balance';
+                    const nowIso = new Date().toISOString();
+                    if (!isBalance) {
+                        setList(prev => prev.map(d => d.id === dasher.id ? { ...d, [field]: value } : d));
+                        requestPersist();
+                        return;
+                    }
+
+                    // Identity-aware balance update across duplicates.
+                    const primaryDescriptors = gatherDescriptorsForDasher();
+                    if (!primaryDescriptors || primaryDescriptors.length === 0) {
+                        // Fallback: local-only update
+                        setList(prev => prev.map(d => d.id === dasher.id ? { ...d, balance: value } : d));
+                        requestPersist();
+                        return;
+                    }
+
+                    const prevNum = parseBalanceValue(dasher.balance);
+                    const nextNum = parseBalanceValue(value);
+                    const delta = nextNum - prevNum;
+                    const historyUpdatesByIdentity = new Map();
+
+                    primaryDescriptors.forEach((descriptor) => {
+                        const descriptorIdentity = identityForMeta(descriptor.meta) || `ref::${descriptor.index}`;
+                        mutateDasherByMeta(descriptor, (existing) => {
+                            if (!existing) return existing;
+
+                            const existingPrev = parseBalanceValue(existing.balance);
+                            const history = ensureArray(existing.earningsHistory);
+
+                            let nextBalanceValue = descriptor.meta.dasher === dasher ? nextNum : existingPrev + delta;
+                            if (!Number.isFinite(nextBalanceValue)) {
+                                nextBalanceValue = existingPrev;
+                            }
+                            const clampedBalance = Math.max(-1000000, Math.min(1000000, nextBalanceValue));
+                            const formattedBalance = Number.isFinite(clampedBalance) ? clampedBalance.toFixed(2) : existingPrev.toFixed(2);
+
+                            let nextHistory = history;
+                            if (delta > 0.000001) {
+                                if (descriptorIdentity && historyUpdatesByIdentity.has(descriptorIdentity)) {
+                                    nextHistory = historyUpdatesByIdentity.get(descriptorIdentity);
+                                } else {
+                                    const historyEntry = {
+                                        amount: Number(delta.toFixed(2)),
+                                        at: nowIso,
+                                        source: 'balance-edit'
+                                    };
+                                    const updatedHistory = [...history, historyEntry];
+                                    if (descriptorIdentity) {
+                                        historyUpdatesByIdentity.set(descriptorIdentity, updatedHistory);
+                                    }
+                                    nextHistory = updatedHistory;
+                                }
+                            } else if (descriptorIdentity && historyUpdatesByIdentity.has(descriptorIdentity)) {
+                                nextHistory = historyUpdatesByIdentity.get(descriptorIdentity);
+                            }
+
+                            return {
+                                ...existing,
+                                balance: formattedBalance,
+                                earningsHistory: nextHistory
+                            };
+                        });
+                    });
+
                     requestPersist();
                 };
 
@@ -3260,6 +3905,25 @@
                     setList(prev => prev.map(d => d.id === dasher.id ? { ...d, [field]: value } : d));
                     requestPersist();
                 };
+
+                const safeFieldSegment = (value) => String(value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                const scopeKey = `card-${safeFieldSegment(categoryId ?? 'bucket')}-${safeFieldSegment(dasher?.id ?? dasher?.email ?? dasher?.phone ?? 'dash')}`;
+                const draftDasher = getDraftForKey(scopeKey);
+                const setDraftDasher = (updater) => setDraftForKey(scopeKey, updater);
+                const inlineAmountInputId = `inline-earning-${scopeKey}`;
+                const inlineAmountValue = draftDasher._addEarningAmount ?? '';
+                const inlineParsedAmount = deriveNumericAmount(inlineAmountValue);
+                const inlineHasAmount = String(inlineAmountValue).trim() !== '';
+                const inlineAmountIsValid = Number.isFinite(inlineParsedAmount) && inlineParsedAmount > 0;
+                const inlineApplyBalance = draftDasher._addEarningApply !== undefined ? !!draftDasher._addEarningApply : true;
+                const inlineErrorMessage = draftDasher._addEarningError || '';
+
+                const gatherDescriptorsForDasher = () => (
+                    getDescriptorsForDasher(dasher, {
+                        preferredBucketId: categoryId ?? null,
+                        fallbackHint: `${categoryId ?? 'bucket'}-${dasher?.id ?? dasher?.email ?? dasher?.phone ?? 'dash'}`
+                    })
+                );
 
                 return (
                     React.createElement('div', { className: 'space-y-2 text-xs' }, [
@@ -3334,6 +3998,127 @@
                             ) : (
                                 React.createElement('div', { className: 'flex-1 text-xs text-gray-200' }, `$${parseBalanceValue(dasher.balance).toFixed(2)}`)
                             )
+                        ]),
+
+                        // Add Earning (inline)
+                        isEditing && React.createElement('div', { key: 'addEarning', className: 'flex flex-wrap items-end gap-2 pt-1' }, [
+                            React.createElement('div', { key: 'e1', className: 'flex flex-col' }, [
+                                React.createElement('label', { className: 'text-[10px] text-gray-400' }, 'Amount'),
+                                React.createElement('input', {
+                                    id: inlineAmountInputId,
+                                    type: 'number',
+                                    inputMode: 'decimal',
+                                    min: 0,
+                                    step: '0.01',
+                                    value: inlineAmountValue,
+                                    onChange: e => setDraftDasher(d => ({ ...d, _addEarningAmount: e.target.value, _addEarningError: '' })),
+                                    className: 'w-24 bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs',
+                                    'aria-invalid': (inlineErrorMessage || (inlineHasAmount && !inlineAmountIsValid)) ? 'true' : 'false',
+                                    'aria-describedby': inlineErrorMessage ? `${inlineAmountInputId}-error` : undefined
+                                })
+                            ]),
+                            React.createElement('div', { key: 'e2', className: 'flex flex-col' }, [
+                                React.createElement('label', { className: 'text-[10px] text-gray-400' }, 'Source'),
+                                React.createElement('input', {
+                                    type: 'text',
+                                    value: (draftDasher._addEarningSource || ''),
+                                    onChange: e => setDraftDasher(d => ({ ...d, _addEarningSource: e.target.value })),
+                                    className: 'w-28 bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs'
+                                })
+                            ]),
+                            React.createElement('div', { key: 'e3', className: 'flex flex-col flex-1 min-w-[140px]' }, [
+                                React.createElement('label', { className: 'text-[10px] text-gray-400' }, 'Notes'),
+                                React.createElement('input', {
+                                    type: 'text',
+                                    value: (draftDasher._addEarningNotes || ''),
+                                    onChange: e => setDraftDasher(d => ({ ...d, _addEarningNotes: e.target.value })),
+                                    className: 'bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs w-full'
+                                })
+                            ]),
+                            React.createElement('label', { key: 'e4', className: 'flex items-center gap-1 text-[11px] text-gray-300 mb-1' }, [
+                                React.createElement('input', {
+                                    type: 'checkbox',
+                                    checked: inlineApplyBalance,
+                                    onChange: e => setDraftDasher(d => ({ ...d, _addEarningApply: e.target.checked }))
+                                }),
+                                'Also increase balance'
+                            ]),
+                            inlineErrorMessage && React.createElement('div', { key: 'eError', id: `${inlineAmountInputId}-error`, className: 'basis-full text-[11px] text-red-400', role: 'status', 'aria-live': 'polite' }, inlineErrorMessage),
+                            React.createElement('button', {
+                                key: 'eAdd',
+                                disabled: !inlineHasAmount,
+                                onClick: () => {
+                                    const amt = deriveNumericAmount(draftDasher._addEarningAmount);
+                                    if (!Number.isFinite(amt) || amt <= 0) {
+                                        setDraftDasher(prev => ({ ...prev, _addEarningError: 'Enter a valid positive amount.' }));
+                                        setTimeout(() => {
+                                            const inputNode = document.getElementById(inlineAmountInputId);
+                                            if (inputNode) {
+                                                inputNode.focus();
+                                                if (typeof inputNode.select === 'function') inputNode.select();
+                                            }
+                                        }, 0);
+                                        return;
+                                    }
+
+                                    const source = (draftDasher._addEarningSource || 'manual').trim() || 'manual';
+                                    const notes = (draftDasher._addEarningNotes || '').trim();
+                                    const applyBalance = inlineApplyBalance;
+                                    const nowIso = new Date().toISOString();
+                                    const targets = gatherDescriptorsForDasher();
+
+                                    if (!targets || targets.length === 0) {
+                                        setDraftDasher(prev => ({ ...prev, _addEarningError: 'Couldn\'t locate matching dasher record.' }));
+                                        return;
+                                    }
+
+                                    targets.forEach((descriptor) => {
+                                        mutateDasherByMeta(descriptor, (existing) => {
+                                            if (!existing) return existing;
+                                            const history = ensureArray(existing.earningsHistory);
+                                            const nextHistory = [...history, { amount: amt, at: nowIso, source }];
+
+                                            let nextBalance = existing.balance;
+                                            if (applyBalance) {
+                                                const currentBalance = parseBalanceValue(existing.balance);
+                                                nextBalance = (currentBalance + amt).toString();
+                                            }
+
+                                            let nextNotes = existing.notes;
+                                            if (notes) {
+                                                const stamped = `[earning ${amt.toFixed(2)}] ${notes}`;
+                                                nextNotes = nextNotes ? `${nextNotes}\n${stamped}` : stamped;
+                                            }
+
+                                            return {
+                                                ...existing,
+                                                earningsHistory: nextHistory,
+                                                balance: nextBalance,
+                                                notes: nextNotes
+                                            };
+                                        });
+                                    });
+
+                                    requestPersist();
+                                    setDraftDasher(prev => ({
+                                        ...prev,
+                                        _addEarningAmount: '',
+                                        _addEarningSource: '',
+                                        _addEarningNotes: '',
+                                        _addEarningApply: true,
+                                        _addEarningError: ''
+                                    }));
+
+                                    setTimeout(() => {
+                                        const inputNode = document.getElementById(inlineAmountInputId);
+                                        if (inputNode) {
+                                            inputNode.focus();
+                                            if (typeof inputNode.select === 'function') inputNode.select();
+                                        }
+                                    }, 50);
+                                },
+                                className: 'px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-xs text-white disabled:opacity-40 disabled:cursor-not-allowed'
+                            }, 'Add')
                         ]),
 
                         // Appealed Timer (if appealed)
@@ -3456,7 +4241,8 @@
                 'deactivated': 'Deactivated',
                 'archived': 'Archived',
                 'locked': 'Locked',
-                'applied-pending': 'Applied Pending'
+                'applied-pending': 'Applied Pending',
+                'reverif': 'Reverif'
             };
 
             const getCategoryName = (id) => {
@@ -3539,13 +4325,16 @@
             };
 
             /* ========= UNIFIED DASHER MOVE LOGIC (main / ready / using / appealed / deactivated / archived) ========= */
-            const dasherFlowKeys = ['main', 'ready', 'currently-using', 'appealed', 'applied-pending', 'locked', 'deactivated', 'archived'];
+            const dasherFlowKeys = ['main', 'ready', 'currently-using', 'appealed', 'applied-pending', 'reverif', 'locked', 'deactivated', 'archived'];
 
             const sanitizeDasherFlags = (d) => {
                 const clone = { ...d };
                 delete clone.ready; delete clone.readyAt;
                 delete clone.currentlyUsing; delete clone.currentlyUsingAt;
                 delete clone.appealed; delete clone.appealedAt;
+                delete clone.appliedPending; delete clone.appliedPendingAt;
+                delete clone.reverif; delete clone.reverifAt;
+                delete clone.locked; delete clone.lockedAt;
                 delete clone.deactivated; delete clone.deactivatedAt;
                 delete clone.archived; delete clone.archivedAt;
                 return clone;
@@ -3562,6 +4351,7 @@
                 currentlyUsing: Array.isArray(currentlyUsingDashers) ? currentlyUsingDashers.length : 0,
                 appealed: Array.isArray(appealedDashers) ? appealedDashers.length : 0,
                 appliedPending: Array.isArray(appliedPendingDashers) ? appliedPendingDashers.length : 0,
+                reverif: Array.isArray(reverifDashers) ? reverifDashers.length : 0,
                 locked: Array.isArray(lockedDashers) ? lockedDashers.length : 0,
                 deactivated: Array.isArray(deactivatedDashers) ? deactivatedDashers.length : 0,
                 archived: Array.isArray(archivedDashers) ? archivedDashers.length : 0,
@@ -3573,6 +4363,7 @@
                     ['currently-using', currentlyUsingDashers],
                     ['appealed', appealedDashers],
                     ['applied-pending', appliedPendingDashers],
+                    ['reverif', reverifDashers],
                     ['locked', lockedDashers],
                     ['deactivated', deactivatedDashers],
                     ['archived', archivedDashers]
@@ -3626,6 +4417,7 @@
                 else if (sourceKey === 'currently-using') removeFromList(setCurrentlyUsingDashers);
                 else if (sourceKey === 'appealed') removeFromList(setAppealedDashers);
                 else if (sourceKey === 'applied-pending') removeFromList(setAppliedPendingDashers);
+                else if (sourceKey === 'reverif') removeFromList(setReverifDashers);
                 else if (sourceKey === 'locked') removeFromList(setLockedDashers);
                 else if (sourceKey === 'deactivated') removeFromList(setDeactivatedDashers);
                 else if (sourceKey === 'archived') removeFromList(setArchivedDashers);
@@ -3737,6 +4529,14 @@
                         }
                         return [item, ...prev];
                     });
+                } else if (destKey === 'reverif') {
+                    setReverifDashers(prev => {
+                        const item = stamp('reverif', 'reverifAt');
+                        if (DEV) {
+                            try { console.debug('[DashBash] insertDasherIntoBucket', { destKey, dasherId: item.id, newLength: (prev?.length||0) + 1 }); } catch {}
+                        }
+                        return [item, ...prev];
+                    });
                 } else if (destKey === 'locked') {
                     setLockedDashers(prev => {
                         const item = stamp('locked', 'lockedAt');
@@ -3777,6 +4577,7 @@
                     setCurrentlyUsingDashers(prev => Array.isArray(prev) ? prev.filter(d => !idsMatch(d.id, dasherId)) : prev);
                     setAppealedDashers(prev => Array.isArray(prev) ? prev.filter(d => !idsMatch(d.id, dasherId)) : prev);
                     setAppliedPendingDashers(prev => Array.isArray(prev) ? prev.filter(d => !idsMatch(d.id, dasherId)) : prev);
+                    setReverifDashers(prev => Array.isArray(prev) ? prev.filter(d => !idsMatch(d.id, dasherId)) : prev);
                     setLockedDashers(prev => Array.isArray(prev) ? prev.filter(d => !idsMatch(d.id, dasherId)) : prev);
                     setDeactivatedDashers(prev => Array.isArray(prev) ? prev.filter(d => !idsMatch(d.id, dasherId)) : prev);
                     setArchivedDashers(prev => Array.isArray(prev) ? prev.filter(d => !idsMatch(d.id, dasherId)) : prev);
@@ -3862,6 +4663,7 @@
                 deactivatedDashers.forEach(d => selectedItems.deactivatedDashers.has(d.id) && jobs.push({ from: 'deactivated', id: d.id }));
                 lockedDashers.forEach(d => selectedItems.lockedDashers.has(d.id) && jobs.push({ from: 'locked', id: d.id }));
                 appliedPendingDashers.forEach(d => selectedItems.appliedPendingDashers.has(d.id) && jobs.push({ from: 'applied-pending', id: d.id }));
+                reverifDashers.forEach(d => selectedItems.reverifDashers?.has(d.id) && jobs.push({ from: 'reverif', id: d.id }));
                 archivedDashers.forEach(d => selectedItems.archivedDashers.has(d.id) && jobs.push({ from: 'archived', id: d.id }));
 
                 if (jobs.length === 0) return;
@@ -3885,6 +4687,7 @@
                     { key: 'currently-using', icon: Activity,    color: 'text-blue-400',   title: 'Move to Using' },
                     { key: 'appealed',        icon: CircleCheck, color: 'text-amber-400',  title: 'Move to Appealed' },
                     { key: 'applied-pending', icon: Clock,       color: 'text-purple-300', title: 'Move to Applied Pending' },
+                    { key: 'reverif',         icon: ShieldCheck, color: 'text-emerald-300', title: 'Move to Reverif' },
                     { key: 'locked',          icon: Lock,        color: 'text-gray-400',   title: 'Move to Locked' },
                     { key: 'deactivated',     icon: UserX,       color: 'text-red-400',    title: 'Move to Deactivated' },
                     { key: 'archived',        icon: Archive,     color: 'text-yellow-400', title: 'Move to Archived' }
@@ -3910,6 +4713,7 @@
                     ['currently-using', setCurrentlyUsingDashers],
                     ['appealed', setAppealedDashers],
                     ['applied-pending', setAppliedPendingDashers],
+                    ['reverif', setReverifDashers],
                     ['locked', setLockedDashers],
                     ['deactivated', setDeactivatedDashers],
                     ['archived', setArchivedDashers],
@@ -4122,7 +4926,8 @@
                     appealedDashers: new Set(),
                     deactivatedDashers: new Set(),
                     lockedDashers: new Set(),
-                    appliedPendingDashers: new Set()
+                    appliedPendingDashers: new Set(),
+                    reverifDashers: new Set()
                 });
             };
 
@@ -4181,6 +4986,21 @@
                         allExpanded[key] = false;
                     });
                 });
+                const topLevelBuckets = [
+                    ensureArray(readyDashers),
+                    ensureArray(currentlyUsingDashers),
+                    ensureArray(appealedDashers),
+                    ensureArray(appliedPendingDashers),
+                    ensureArray(reverifDashers),
+                    ensureArray(lockedDashers),
+                    ensureArray(deactivatedDashers),
+                    ensureArray(archivedDashers)
+                ];
+                topLevelBuckets.forEach(list => {
+                    list.forEach(dasher => {
+                        allExpanded[dasher.id] = false;
+                    });
+                });
                 setCollapsedDashers(allExpanded);
                 // Auto-save after expanding all
                 setTimeout(() => {
@@ -4194,6 +5014,21 @@
                     cat.dashers.forEach(dasher => {
                         const key = `${cat.id}-${dasher.id}`;
                         allCollapsed[key] = true;
+                    });
+                });
+                const topLevelBuckets = [
+                    ensureArray(readyDashers),
+                    ensureArray(currentlyUsingDashers),
+                    ensureArray(appealedDashers),
+                    ensureArray(appliedPendingDashers),
+                    ensureArray(reverifDashers),
+                    ensureArray(lockedDashers),
+                    ensureArray(deactivatedDashers),
+                    ensureArray(archivedDashers)
+                ];
+                topLevelBuckets.forEach(list => {
+                    list.forEach(dasher => {
+                        allCollapsed[dasher.id] = true;
                     });
                 });
                 setCollapsedDashers(allCollapsed);
@@ -5581,12 +6416,12 @@
 
                                     <div className="flex items-center gap-1">
                                         <button
-                                            onClick={() => { expandKeySections(); setIsAppealedDashersOpen(true); setIsAppliedPendingDashersOpen(true); setIsLockedDashersOpen(true); setIsDeactivatedDashersOpen(true); setIsArchivedDashersOpen(true); }}
+                                            onClick={() => { expandKeySections(); setIsAppealedDashersOpen(true); setIsAppliedPendingDashersOpen(true); setIsReverifDashersOpen(true); setReverifRenderReady(true); setIsLockedDashersOpen(true); setIsDeactivatedDashersOpen(true); setIsArchivedDashersOpen(true); }}
                                             className="px-3 py-1.5 text-[11px] rounded bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-200"
                                             aria-label="Expand all dasher sections"
                                         >Expand All</button>
                                         <button
-                                            onClick={() => { collapseKeySections(); setIsAppealedDashersOpen(false); setIsAppliedPendingDashersOpen(false); setIsLockedDashersOpen(false); setIsDeactivatedDashersOpen(false); setIsArchivedDashersOpen(false); }}
+                                            onClick={() => { collapseKeySections(); setIsAppealedDashersOpen(false); setIsAppliedPendingDashersOpen(false); setIsReverifDashersOpen(false); setReverifRenderReady(false); setIsLockedDashersOpen(false); setIsDeactivatedDashersOpen(false); setIsArchivedDashersOpen(false); }}
                                             className="px-3 py-1.5 text-[11px] rounded bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-200"
                                             aria-label="Collapse all dasher sections"
                                         >Collapse All</button>
@@ -5803,7 +6638,7 @@
                                                                         }}
                                                                     >
                                                                         {/* Dasher Header */}
-                                                                        <div className="flex items-center justify-between p-3">
+                                                                        <div className="flex items-start justify-between p-3">
                                                                             <div className="flex items-center gap-2 flex-1">
                                                                                 {/* Checkbox for selection (only visible in edit mode) */}
                                                                                 {isEditMode && (
@@ -6290,7 +7125,7 @@
                                                             className={`bg-gray-600/50 rounded-lg overflow-hidden border border-gray-500/30 transition-opacity ${cardRecentlyMoved ? 'ring-2 ring-amber-400/80 animate-pulse' : ''}`}
                                                         >
                                                             {/* Header */}
-                                                            <div className="flex items-center justify-between p-3">
+                                                            <div className="flex items-start justify-between p-3">
                                                                 <div className="flex items-center gap-2 flex-1">
                                                                     {isEditMode && (
                                                                         <input
@@ -6402,7 +7237,7 @@
 
                                                     return (
                                                         <div key={dasher.id} className={`bg-gray-600/50 rounded-lg overflow-visible border border-gray-500/30 transition-opacity ${cardRecentlyMoved ? 'ring-2 ring-amber-400/80 animate-pulse' : ''}`}>
-                                                            <div className="flex items-center justify-between p-3">
+                                                            <div className="flex items-start justify-between p-3">
                                                                 <div className="flex items-center gap-2 flex-1">
                                                                     {isEditMode && (
                                                                         <input type="checkbox" checked={isSelected} onChange={() => {
@@ -6504,7 +7339,7 @@
 
                                                     return (
                                                         <div key={dasher.id} className={`bg-gray-600/50 rounded-lg overflow-visible border border-gray-500/30 transition-opacity ${cardRecentlyMoved ? 'ring-2 ring-amber-400/80 animate-pulse' : ''}`}>
-                                                            <div className="flex items-center justify-between p-3">
+                                                            <div className="flex items-start justify-between p-3">
                                                                 <div className="flex items-center gap-2 flex-1">
                                                                     {isEditMode && (
                                                                         <input type="checkbox" checked={isSelected} onChange={() => {
@@ -6659,6 +7494,97 @@
                                         </div>
                                     </div>
                                 ) : <Spinner text="Loading applied pending dashers…" />)}
+                            </div>
+
+                            {/* Dashers - Reverif Section */}
+                            <div className="bg-gray-800 rounded-lg overflow-hidden mt-3">
+                                <button
+                                    onClick={toggleReverifOpen}
+                                    className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <ShieldCheck size={20} className="text-emerald-300" />
+                                        <span className="text-lg font-medium flex items-center gap-2">
+                                            Reverif {renderStableCount(filteredReverifDashers.length, reverifDashers.length)}
+                                        </span>
+                                    </div>
+                                    {isReverifDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                </button>
+                                {isReverifDashersOpen && (reverifRenderReady ? (
+                                    <div className="mt-2 px-2 pb-2">
+                                        <div className="dasher-grid" role="table" aria-label="Reverif Dashers">
+                                            {filteredReverifDashers.length === 0 ? (
+                                                <div className="text-center text-gray-500 py-8 text-sm italic col-span-full" role="row">No reverif dashers</div>
+                                            ) : (
+                                                filteredReverifDashers.map((dasher) => {
+                                                    const isSelected = selectedItems.reverifDashers && selectedItems.reverifDashers.has ? selectedItems.reverifDashers.has(dasher.id) : false;
+                                                    const isCollapsed = collapsedDashers[dasher.id] || false;
+                                                    const isEditing = isDasherEditing('reverif', dasher.id);
+                                                    const dasherTitle = getDasherTitle(dasher);
+                                                    const cardRecentlyMoved = recentlyMoved instanceof Set && recentlyMoved.has(dasher.id);
+                                                    const movedNote = dasher.reverifAt ? `Reverif: ${formatRelativeTime(dasher.reverifAt)}` : null;
+
+                                                    return (
+                                                        <div key={dasher.id} className={`bg-gray-600/50 rounded-lg overflow-visible border border-gray-500/30 transition-opacity ${cardRecentlyMoved ? 'ring-2 ring-amber-400/80 animate-pulse' : ''}`}>
+                                                            <div className="flex items-center justify-between p-3">
+                                                                <div className="flex items-center gap-2 flex-1">
+                                                                    {isEditMode && (
+                                                                        <input type="checkbox" checked={isSelected} onChange={() => {
+                                                                            const set = new Set(selectedItems.reverifDashers || []);
+                                                                            isSelected ? set.delete(dasher.id) : set.add(dasher.id);
+                                                                            setSelectedItems({ ...selectedItems, reverifDashers: set });
+                                                                        }} onClick={(e)=>e.stopPropagation()} className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-500 rounded focus:ring-blue-500" />
+                                                                    )}
+                                                                    <div className={`${isEditing ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 hover:text-gray-300 cursor-move'}`} aria-label="Drag to reorder" style={{ pointerEvents: isEditing ? 'none' : 'auto' }}>
+                                                                        <GripVertical size={14} />
+                                                                    </div>
+                                                                    <button onClick={() => { setCollapsedDashers({ ...collapsedDashers, [dasher.id]: !isCollapsed }); requestPersist(); }} className="flex items-center gap-2 flex-1 text-left">
+                                                                        {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <h5 className="font-medium text-sm flex items-center gap-2 truncate">
+                                                                                {dasherTitle}
+                                                                                <span className="flag-badges" aria-label="Dasher status flags (Crimson, Red Card, Appealed, FastPay)">
+                                                                                    <span className="flag-badge" data-flag="C" data-active={dasher.crimson ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='crimson' ? 'true' : 'false'}>CRIMSON</span>
+                                                                                    <span className="flag-badge" data-flag="FP" data-active={dasher.fastPay ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='fastpay' ? 'true' : 'false'} title={dasher.fastPay ? (dasher.fastPayInfo ? `FastPay: ${dasher.fastPayInfo}` : 'FastPay active') : 'FastPay inactive'}>FastPay</span>
+                                                                                    <span className="flag-badge" data-flag="RC" data-active={dasher.redCard ? 'true' : 'false'}>RED CARD</span>
+                                                                                    <span className="flag-badge" data-flag="AP" data-active={dasher.appealed ? 'true' : 'false'}>APPEALED</span>
+                                                                                </span>
+                                                                            </h5>
+                                                                            {movedNote && (
+                                                                                <div className="text-[11px] text-amber-300/80 mt-0.5">{movedNote}</div>
+                                                                            )}
+                                                                        </div>
+                                                                    </button>
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
+                                                                    {renderMoveButtons('reverif', dasher.id)}
+                                                                    <div className="flex items-center gap-1">
+                                                                        <button onClick={() => toggleEditDasher('reverif', dasher.id)} className={`icon-btn ${isEditing ? 'text-green-400 hover:text-green-300' : 'text-yellow-400 hover:text-yellow-300'}`} title={isEditing ? 'Save' : 'Edit'} aria-label={isEditing ? 'Save dasher' : 'Edit dasher'}>
+                                                                            {isEditing ? <Check size={14} /> : <Edit2 size={14} />}
+                                                                        </button>
+                                                                        {parseBalanceValue(dasher.balance) > 0 && (
+                                                                            <button onClick={() => addCashOutEntry('reverif', dasher.id, 'auto')} className="icon-btn text-green-300 hover:text-green-200" title="Cash Out" aria-label="Cash out balance">
+                                                                                <Banknote size={16} />
+                                                                            </button>
+                                                                        )}
+                                                                        <button onClick={() => { if (confirm('Delete this dasher?')) { setReverifDashers(prev => prev.filter(d => d.id !== dasher.id)); requestPersist(); } }} className="icon-btn text-red-400 hover:text-red-300" title="Delete" aria-label="Delete dasher">
+                                                                            <Trash2 size={14} />
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            {!isCollapsed && (
+                                                                <div className="border-b border-gray-800 px-4 py-2 bg-gray-900/30">
+                                                                    {renderDasherDetails(dasher, reverifDashers, setReverifDashers, saveAllToLocalStorage, copyToClipboard, null, isEditing, 'reverif')}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : <Spinner text="Loading reverif dashers…" />)}
                             </div>
 
                             {/* Dashers - Locked Section */}
@@ -7617,6 +8543,172 @@
 
                                 {isStatisticsOpen && (
                                     <div className="border-t border-gray-700 p-4 space-y-4">
+                                        {/* Quick Add Earning */}
+                                        <div className="bg-gray-700/30 rounded-lg p-3 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <h4 className="text-sm font-medium text-amber-200">Add Earning</h4>
+                                            </div>
+                                            {(() => {
+
+                                                const parsedQuickAmount = deriveNumericAmount(statEarningAmount);
+
+                                                const onAdd = () => {
+                                                    const targetKey = statEarningTargetKey;
+                                                    const descriptor = targetKey ? dashersMetaKeyMap.get(targetKey) : null;
+                                                    const amt = deriveNumericAmount(statEarningAmount);
+                                                    if (!descriptor || !Number.isFinite(amt) || amt <= 0) return;
+
+                                                    const source = (statEarningSource || 'manual').trim() || 'manual';
+                                                    const notes = (statEarningNotes || '').trim();
+                                                    const nowIso = new Date().toISOString();
+                                                    const applyBump = !!statEarningApply;
+
+                                                    const produceUpdatedDasher = (dasher) => {
+                                                        const history = ensureArray(dasher?.earningsHistory);
+                                                        const next = {
+                                                            ...dasher,
+                                                            earningsHistory: [...history, { amount: amt, at: nowIso, source }]
+                                                        };
+                                                        if (applyBump) {
+                                                            const currentBalance = parseBalanceValue(dasher?.balance);
+                                                            next.balance = (currentBalance + amt).toString();
+                                                        }
+                                                        if (notes) {
+                                                            const stamped = `[earning ${amt.toFixed(2)}] ${notes}`;
+                                                            next.notes = dasher?.notes ? `${dasher.notes}\n${stamped}` : stamped;
+                                                        }
+                                                        return next;
+                                                    };
+
+                                                    const identity = identityForMeta(descriptor.meta);
+                                                    const targets = dasherSelectOptions
+                                                        .map((option) => dashersMetaKeyMap.get(option.key))
+                                                        .filter((entry) => entry && identityForMeta(entry.meta) === identity);
+
+                                                    const mutationTargets = targets.length > 0 ? targets : [descriptor];
+                                                    mutationTargets.forEach((targetMeta) => {
+                                                        mutateDasherByMeta(targetMeta, produceUpdatedDasher);
+                                                    });
+
+                                                    requestPersist();
+                                                    setStatEarningTargetKey('');
+                                                    setStatEarningAmount('');
+                                                    setStatEarningSource('');
+                                                    setStatEarningNotes('');
+                                                    setStatEarningApply(true);
+                                                };
+
+                                                return (
+                                                    <div className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
+                                                        <label className="text-[11px] text-gray-400 flex flex-col">
+                                                            <span>Dasher</span>
+                                                            <select className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-gray-200"
+                                                                value={statEarningTargetKey}
+                                                                onChange={(e)=>setStatEarningTargetKey(e.target.value)}
+                                                                aria-label="Select dasher for earning">
+                                                                <option value="">Select…</option>
+                                                                {dasherSelectOptions.map(({ key, meta }) => {
+                                                                    const displayName = meta.dasher?.name || meta.dasher?.id || 'Unnamed';
+                                                                    return (
+                                                                        <option key={key} value={key}>
+                                                                            {displayName} • {meta.bucketLabel}
+                                                                        </option>
+                                                                    );
+                                                                })}
+                                                            </select>
+                                                        </label>
+                                                        <label className="text-[11px] text-gray-400 flex flex-col">
+                                                            <span>Amount</span>
+                                                            <input type="number" inputMode="decimal" step="0.01" min="0"
+                                                                className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-gray-200"
+                                                                value={statEarningAmount}
+                                                                onChange={(e)=>setStatEarningAmount(e.target.value)}
+                                                                placeholder="0.00" />
+                                                        </label>
+                                                        <label className="text-[11px] text-gray-400 flex flex-col">
+                                                            <span>Source</span>
+                                                            <input type="text" className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-gray-200"
+                                                                value={statEarningSource}
+                                                                onChange={(e)=>setStatEarningSource(e.target.value)}
+                                                                placeholder="manual / tips / etc" />
+                                                        </label>
+                                                        <label className="text-[11px] text-gray-400 flex flex-col md:col-span-2">
+                                                            <span>Notes</span>
+                                                            <input type="text" className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-gray-200"
+                                                                value={statEarningNotes}
+                                                                onChange={(e)=>setStatEarningNotes(e.target.value)}
+                                                                placeholder="optional note" />
+                                                        </label>
+                                                        <div className="flex items-center gap-3 md:col-span-5">
+                                                            <label className="text-[11px] text-gray-300 inline-flex items-center gap-1">
+                                                                <input type="checkbox" className="accent-emerald-500"
+                                                                    checked={!!statEarningApply}
+                                                                    onChange={(e)=>setStatEarningApply(e.target.checked)} />
+                                                                <span>Also increase balance</span>
+                                                            </label>
+                                                            <button className="ml-auto px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-xs"
+                                                                onClick={onAdd}
+                                                                disabled={!statEarningTargetKey || !Number.isFinite(parsedQuickAmount) || parsedQuickAmount <= 0}>Add</button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
+                                        {/* Earnings (Last 24h / 7d / 30d) */}
+                                        <div className="bg-gray-700/40 rounded-lg p-3 space-y-3">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <h4 className="text-sm font-medium text-amber-300">Earnings</h4>
+                                            </div>
+                                            {(() => {
+                                                const now = Date.now();
+                                                const summaries = computeRollingWindowSummaries(earningEntries, {
+                                                    now,
+                                                    groupAccessor: (entry) => entry.group || 'unspecified'
+                                                });
+
+                                                const windowConfig = [
+                                                    { key: '24h', label: 'Last 24 hours', accent: 'text-amber-300' },
+                                                    { key: '7d', label: 'Last 7 days', accent: 'text-yellow-300' },
+                                                    { key: '30d', label: 'Last 30 days', accent: 'text-orange-300' }
+                                                ];
+
+                                                const formatSourceLabel = (src) => methodLabel(src || 'unspecified');
+
+                                                const Row = ({ config }) => {
+                                                    const summary = summaries[config.key] || { total: 0, count: 0, byGroup: {} };
+                                                    const breakdown = Object.entries(summary.byGroup || {}).sort(([, a], [, b]) => b - a);
+
+                                                    return (
+                                                        <div className="border border-gray-600/60 rounded-md p-2 bg-gray-800/40">
+                                                            <div className="flex justify-between items-center text-xs">
+                                                                <span className="text-gray-400">{config.label}</span>
+                                                                <span className={`font-medium ${config.accent}`}>
+                                                                    ${summary.total.toFixed(2)} <span className="text-gray-400 ml-1">({summary.count})</span>
+                                                                </span>
+                                                            </div>
+                                                            {breakdown.length > 0 && (
+                                                                <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-gray-300">
+                                                                    {breakdown.map(([src, amt]) => (
+                                                                        <div key={`${config.key}-${src}`} className="flex justify-between items-center">
+                                                                            <span className="text-gray-500">{formatSourceLabel(src)}:</span>
+                                                                            <span>${amt.toFixed(2)}</span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                };
+
+                                                return (
+                                                    <div className="space-y-2">
+                                                        {windowConfig.map((cfg) => (
+                                                            <Row key={cfg.key} config={cfg} />
+                                                        ))}
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
                                         {/* Cash‑outs (Last 24h / 7d / 30d) */}
                                         <div className="bg-gray-700/40 rounded-lg p-3 space-y-3">
                                             <div className="flex items-center justify-between gap-2">
@@ -7632,13 +8724,9 @@
                                                             aria-label="Filter cash-outs by method"
                                                         >
                                                             <option value="">All</option>
-                                                            {/* Options populated dynamically below */}
-                                                            {(() => {
-                                                                const methodSet = new Set();
-                                                                dasherCategories.forEach(c => (c.dashers||[]).forEach(d => (d.cashOutHistory||[]).forEach(h => methodSet.add(h.method||'unspecified'))));
-                                                                [readyDashers,currentlyUsingDashers,appealedDashers,appliedPendingDashers,lockedDashers,deactivatedDashers,archivedDashers].forEach(list => (list||[]).forEach(d => (d.cashOutHistory||[]).forEach(h => methodSet.add(h.method||'unspecified'))));
-                                                                return Array.from(methodSet).sort().map(m => <option key={m} value={m}>{m}</option>);
-                                                            })()}
+                                                            {availableCashMethods.map((m) => (
+                                                                <option key={m || 'unspecified'} value={m}>{methodLabel(m)}</option>
+                                                            ))}
                                                         </select>
                                                     </label>
 
@@ -7657,6 +8745,7 @@
                                                             <option value="currently-using">Currently using</option>
                                                             <option value="appealed">Appealed</option>
                                                             <option value="applied-pending">Applied Pending</option>
+                                                            <option value="reverif">Reverif</option>
                                                             <option value="locked">Locked</option>
                                                             <option value="deactivated">Deactivated</option>
                                                             <option value="archived">Archived</option>
@@ -7678,90 +8767,67 @@
                                                 </div>
                                             </div>
                                             {(() => {
-                                                // Gather all cash-out entries from all dashers across all sources
-                                                const allByCategory = {
-                                                    // main categories by id, then top-level buckets
-                                                };
-                                                dasherCategories.forEach(c => { allByCategory[c.id] = (c.dashers||[]); });
-                                                allByCategory['ready'] = readyDashers;
-                                                allByCategory['currently-using'] = currentlyUsingDashers;
-                                                allByCategory['appealed'] = appealedDashers;
-                                                allByCategory['applied-pending'] = appliedPendingDashers;
-                                                allByCategory['locked'] = lockedDashers;
-                                                allByCategory['deactivated'] = deactivatedDashers;
-                                                allByCategory['archived'] = archivedDashers;
-
-                                                const allDashers = Object.entries(allByCategory).flatMap(([key, arr]) => (arr||[]).map(d => ({...d, __cat:key})));
-                                                const dasherQuery = (cashFilterDasher||'').trim().toLowerCase();
-
-                                                let entries = [];
                                                 const now = Date.now();
-                                                allDashers.forEach(d => {
-                                                    if (cashFilterCategory && d.__cat !== cashFilterCategory) return;
-                                                    if (dasherQuery) {
-                                                        const nm = (d.name||'').toLowerCase();
-                                                        const idStr = String(d.id||'').toLowerCase();
-                                                        if (!nm.includes(dasherQuery) && !idStr.includes(dasherQuery)) return;
+                                                const normalizedMethod = cashFilterMethod ? cashFilterMethod.trim().toLowerCase() : '';
+                                                const dasherQuery = (cashFilterDasher || '').trim().toLowerCase();
+
+                                                const filteredEntries = cashOutEntries.filter((entry) => {
+                                                    if (normalizedMethod && entry.group !== normalizedMethod) return false;
+                                                    if (cashFilterCategory) {
+                                                        if (!entry.buckets || !entry.buckets.has(String(cashFilterCategory))) return false;
                                                     }
-                                                    if (!Array.isArray(d.cashOutHistory)) return;
-                                                    d.cashOutHistory.forEach(h => {
-                                                        // Only include valid numeric amounts and parseable timestamps
-                                                        const amt = typeof h.amount === 'number' ? h.amount : parseFloat(h.amount);
-                                                        const ts = h.at ? new Date(h.at).getTime() : NaN;
-                                                        const method = h.method || 'unspecified';
-                                                        if (!isNaN(amt) && amt > 0 && !isNaN(ts)) {
-                                                            if (cashFilterMethod && method !== cashFilterMethod) return;
-                                                            entries.push({ amount: amt, method, at: ts });
-                                                        }
-                                                    });
+                                                    if (dasherQuery) {
+                                                        const ids = Array.from(entry.dasherIds || []);
+                                                        const names = Array.from(entry.dasherNames || []);
+                                                        const matchesId = ids.some((id) => id.includes(dasherQuery));
+                                                        const matchesName = names.some((name) => name.includes(dasherQuery));
+                                                        if (!matchesId && !matchesName) return false;
+                                                    }
+                                                    return true;
                                                 });
 
-                                                // Helper to aggregate within windowMs
-                                                const aggregateWindow = (windowMs) => {
-                                                    const cutoff = now - windowMs;
-                                                    const filtered = entries.filter(e => e.at >= cutoff);
-                                                    const count = filtered.length;
-                                                    const total = filtered.reduce((s, e) => s + e.amount, 0);
-                                                    const byMethod = {};
-                                                    filtered.forEach(e => {
-                                                        const key = e.method || 'unspecified';
-                                                        byMethod[key] = (byMethod[key] || 0) + e.amount;
-                                                    });
-                                                    return { count, total, byMethod };
-                                                };
+                                                const summaries = computeRollingWindowSummaries(filteredEntries, {
+                                                    now,
+                                                    groupAccessor: (entry) => entry.group || 'unspecified'
+                                                });
 
-                                                const oneDay = 24 * 60 * 60 * 1000;
-                                                const sevenDays = 7 * oneDay;
-                                                const thirtyDays = 30 * oneDay;
+                                                const windowConfig = [
+                                                    { key: '24h', label: 'Last 24 hours', accent: 'text-green-400' },
+                                                    { key: '7d', label: 'Last 7 days', accent: 'text-emerald-400' },
+                                                    { key: '30d', label: 'Last 30 days', accent: 'text-teal-400' }
+                                                ];
 
-                                                const w24 = aggregateWindow(oneDay);
-                                                const w7 = aggregateWindow(sevenDays);
-                                                const w30 = aggregateWindow(thirtyDays);
+                                                const Row = ({ config }) => {
+                                                    const summary = summaries[config.key] || { total: 0, count: 0, byGroup: {} };
+                                                    const breakdown = Object.entries(summary.byGroup || {}).sort(([, a], [, b]) => b - a);
 
-                                                const renderRow = (label, agg, accent) => (
-                                                    <div className="border border-gray-600/60 rounded-md p-2 bg-gray-800/40">
-                                                        <div className="flex justify-between items-center text-xs">
-                                                            <span className="text-gray-400">{label}</span>
-                                                            <span className={`font-medium ${accent}`}>${agg.total.toFixed(2)} <span className="text-gray-400 ml-1">({agg.count})</span></span>
-                                                        </div>
-                                                        {Object.keys(agg.byMethod).length > 0 && (
-                                                            <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-gray-300">
-                                                                {Object.entries(agg.byMethod).map(([m, amt]) => (
-                                                                    <div key={label + m} className="flex justify-between items-center">
-                                                                        <span className="text-gray-500 capitalize">{m}:</span>
-                                                                        <span>${amt.toFixed(2)}</span>
-                                                                    </div>
-                                                                ))}
+                                                    return (
+                                                        <div className="border border-gray-600/60 rounded-md p-2 bg-gray-800/40">
+                                                            <div className="flex justify-between items-center text-xs">
+                                                                <span className="text-gray-400">{config.label}</span>
+                                                                <span className={`font-medium ${config.accent}`}>
+                                                                    ${summary.total.toFixed(2)} <span className="text-gray-400 ml-1">({summary.count})</span>
+                                                                </span>
                                                             </div>
-                                                        )}
-                                                    </div>
-                                                );
+                                                            {breakdown.length > 0 && (
+                                                                <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-gray-300">
+                                                                    {breakdown.map(([method, amount]) => (
+                                                                        <div key={`${config.key}-${method}`} className="flex justify-between items-center">
+                                                                            <span className="text-gray-500">{methodLabel(method)}:</span>
+                                                                            <span>${amount.toFixed(2)}</span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                };
 
                                                 return (
                                                     <div className="space-y-2">
-                                                        {renderRow('Last 24 hours', w24, 'text-green-400')}
-                                                        {renderRow('Last 7 days', w7, 'text-emerald-400')}
-                                                        {renderRow('Last 30 days', w30, 'text-teal-400')}
+                                                        {windowConfig.map((cfg) => (
+                                                            <Row key={cfg.key} config={cfg} />
+                                                        ))}
                                                     </div>
                                                 );
                                             })()}
@@ -7769,25 +8835,26 @@
 
                                         {/* Dasher Count Statistics */}
                                         <div className="bg-gray-700/40 rounded-lg p-3 space-y-2">
-                                            <h4 className="text-sm font-medium text-cyan-300 mb-2">Dashers per Category</h4>
+                                            <h4 className="text-sm font-medium text-cyan-300 mb-2">Dashers per Store Category</h4>
                                             {dasherCategories.map((category) => (
                                                 <div key={category.id} className="flex justify-between items-center text-xs">
                                                     <span className="text-gray-400">{category.name}:</span>
-                                                    <span className="text-gray-200 font-medium">{category.dashers.length} dashers</span>
+                                                    <span className="text-gray-200 font-medium">{ensureArray(category.dashers).length} dashers</span>
                                                 </div>
                                             ))}
                                             <div className="border-t border-gray-600 pt-2 mt-2">
                                                 {(() => {
                                                     // Aggregate all dashers from all sources
                                                     const allDashers = [
-                                                        ...dasherCategories.flatMap(c => c.dashers),
-                                                        ...readyDashers,
-                                                        ...currentlyUsingDashers,
-                                                        ...appealedDashers,
-                                                        ...appliedPendingDashers,
-                                                        ...lockedDashers,
-                                                        ...deactivatedDashers,
-                                                        ...archivedDashers
+                                                        ...dasherCategories.flatMap(c => ensureArray(c.dashers)),
+                                                        ...ensureArray(readyDashers),
+                                                        ...ensureArray(currentlyUsingDashers),
+                                                        ...ensureArray(appealedDashers),
+                                                        ...ensureArray(appliedPendingDashers),
+                                                        ...ensureArray(reverifDashers),
+                                                        ...ensureArray(lockedDashers),
+                                                        ...ensureArray(deactivatedDashers),
+                                                        ...ensureArray(archivedDashers)
                                                     ];
                                                     return (
                                                         <React.Fragment>
@@ -7797,13 +8864,14 @@
                                                             </div>
                                                             {allDashers.length > 0 && (
                                                                 <div className="mt-2 grid grid-cols-2 gap-y-1 gap-x-4 text-[11px] text-gray-300">
-                                                                    <div><span className="text-gray-500">Ready:</span> {readyDashers.length}</div>
-                                                                    <div><span className="text-gray-500">Using:</span> {currentlyUsingDashers.length}</div>
-                                                                    <div><span className="text-gray-500">Appealed:</span> {appealedDashers.length}</div>
-                                                                    <div><span className="text-gray-500">Applied Pending:</span> {appliedPendingDashers.length}</div>
-                                                                    <div><span className="text-gray-500">Locked:</span> {lockedDashers.length}</div>
-                                                                    <div><span className="text-gray-500">Deactivated:</span> {deactivatedDashers.length}</div>
-                                                                    <div><span className="text-gray-500">Archived:</span> {archivedDashers.length}</div>
+                                                                    <div><span className="text-gray-500">Ready:</span> {ensureArray(readyDashers).length}</div>
+                                                                    <div><span className="text-gray-500">Using:</span> {ensureArray(currentlyUsingDashers).length}</div>
+                                                                    <div><span className="text-gray-500">Appealed:</span> {ensureArray(appealedDashers).length}</div>
+                                                                    <div><span className="text-gray-500">Applied Pending:</span> {ensureArray(appliedPendingDashers).length}</div>
+                                                                    <div><span className="text-gray-500">Reverif:</span> {ensureArray(reverifDashers).length}</div>
+                                                                    <div><span className="text-gray-500">Locked:</span> {ensureArray(lockedDashers).length}</div>
+                                                                    <div><span className="text-gray-500">Deactivated:</span> {ensureArray(deactivatedDashers).length}</div>
+                                                                    <div><span className="text-gray-500">Archived:</span> {ensureArray(archivedDashers).length}</div>
                                                                     <div><span className="text-gray-500">Crimson:</span> {allDashers.filter(d => d.crimson).length}</div>
                                                                     <div><span className="text-gray-500">Red Card:</span> {allDashers.filter(d => d.redCard).length}</div>
                                                                 </div>
@@ -7827,14 +8895,15 @@
 
                                                 // Aggregate all dashers from all sources
                                                 const allDashers = [
-                                                    ...dasherCategories.flatMap(c => c.dashers),
-                                                    ...readyDashers,
-                                                    ...currentlyUsingDashers,
-                                                    ...appealedDashers,
-                                                    ...appliedPendingDashers,
-                                                    ...lockedDashers,
-                                                    ...deactivatedDashers,
-                                                    ...archivedDashers
+                                                    ...dasherCategories.flatMap(c => ensureArray(c.dashers)),
+                                                    ...ensureArray(readyDashers),
+                                                    ...ensureArray(currentlyUsingDashers),
+                                                    ...ensureArray(appealedDashers),
+                                                    ...ensureArray(appliedPendingDashers),
+                                                    ...ensureArray(reverifDashers),
+                                                    ...ensureArray(lockedDashers),
+                                                    ...ensureArray(deactivatedDashers),
+                                                    ...ensureArray(archivedDashers)
                                                 ];
 
                                                 allDashers.forEach(dasher => {
@@ -7891,7 +8960,7 @@
 
                                         {/* Cash Out Totals */}
                                         <div className="bg-gray-700/40 rounded-lg p-3 space-y-2">
-                                            <h4 className="text-sm font-medium text-green-300 mb-2">Cash Out Totals</h4>
+                                            <h4 className="text-sm font-medium text-green-300 mb-2">Cash Out Totals (All Time)</h4>
                                             {(() => {
                                                 let totalCashOut = 0;
                                                 let cashOutCount = 0;
@@ -7899,25 +8968,26 @@
 
                                                 // Aggregate from all dasher sources
                                                 const allDashersCash = [
-                                                    ...dasherCategories.flatMap(cat => cat.dashers),
-                                                    ...readyDashers,
-                                                    ...currentlyUsingDashers,
-                                                    ...appealedDashers,
-                                                    ...appliedPendingDashers,
-                                                    ...lockedDashers,
-                                                    ...deactivatedDashers,
-                                                    ...archivedDashers
+                                                    ...dasherCategories.flatMap(cat => ensureArray(cat.dashers)),
+                                                    ...ensureArray(readyDashers),
+                                                    ...ensureArray(currentlyUsingDashers),
+                                                    ...ensureArray(appealedDashers),
+                                                    ...ensureArray(appliedPendingDashers),
+                                                    ...ensureArray(reverifDashers),
+                                                    ...ensureArray(lockedDashers),
+                                                    ...ensureArray(deactivatedDashers),
+                                                    ...ensureArray(archivedDashers)
                                                 ];
 
                                                 allDashersCash.forEach(dasher => {
-                                                    if (dasher.cashOutHistory && dasher.cashOutHistory.length > 0) {
-                                                        dasher.cashOutHistory.forEach(entry => {
-                                                            totalCashOut += entry.amount;
-                                                            cashOutCount++;
-                                                            const method = entry.method || 'unspecified';
-                                                            methodTotals[method] = (methodTotals[method] || 0) + entry.amount;
-                                                        });
-                                                    }
+                                                    ensureArray(dasher.cashOutHistory).forEach(entry => {
+                                                        const amount = typeof entry.amount === 'number' ? entry.amount : parseFloat(entry.amount);
+                                                        if (!Number.isFinite(amount) || amount <= 0) return;
+                                                        totalCashOut += amount;
+                                                        cashOutCount++;
+                                                        const method = String((entry.method ?? 'unspecified')).trim().toLowerCase();
+                                                        methodTotals[method] = (methodTotals[method] || 0) + amount;
+                                                    });
                                                 });
 
                                                 return (
@@ -7939,7 +9009,7 @@
                                                                         <div className="text-xs text-gray-400 mb-1">By Method:</div>
                                                                         {Object.entries(methodTotals).map(([method, amount]) => (
                                                                             <div key={method} className="flex justify-between items-center text-xs pl-2">
-                                                                                <span className="text-gray-500 capitalize">{method}:</span>
+                                                                                <span className="text-gray-500">{methodLabel(method)}:</span>
                                                                                 <span className="text-gray-300">${amount.toFixed(2)}</span>
                                                                             </div>
                                                                         ))}
@@ -7956,13 +9026,14 @@
                                         <div className="bg-gray-700/40 rounded-lg p-3 space-y-2">
                                             <h4 className="text-sm font-medium text-cyan-300 mb-2">Balance by Category</h4>
                                             {dasherCategories.map((category) => {
-                                                const categoryBalance = category.dashers.reduce((sum, dasher) => {
+                                                const categoryDashers = ensureArray(category.dashers);
+                                                const categoryBalance = categoryDashers.reduce((sum, dasher) => {
                                                     return sum + parseBalanceValue(dasher.balance);
                                                 }, 0);
 
-                                                const crimsonCount = category.dashers.filter(d => d.crimson).length;
-                                                const redCardCount = category.dashers.filter(d => d.redCard).length;
-                                                const nonCrimsonCount = category.dashers.length - crimsonCount;
+                                                const crimsonCount = categoryDashers.filter(d => d.crimson).length;
+                                                const redCardCount = categoryDashers.filter(d => d.redCard).length;
+                                                const nonCrimsonCount = categoryDashers.length - crimsonCount;
 
                                                 return (
                                                     <div key={category.id} className="space-y-1">
@@ -7972,7 +9043,7 @@
                                                                 ${categoryBalance.toFixed(2)}
                                                             </span>
                                                         </div>
-                                                        {category.dashers.length > 0 && (
+                                                        {categoryDashers.length > 0 && (
                                                             <div className="text-xs text-gray-500 pl-4">
                                                                 {crimsonCount > 0 && <span className="text-red-500">{crimsonCount} crimson</span>}
                                                                 {crimsonCount > 0 && redCardCount > 0 && <span className="text-gray-600"> / </span>}
@@ -7999,7 +9070,7 @@
                                 >
                                     <div className="flex items-center gap-3">
                                         <Settings size={20} className="text-purple-400" />
-                                        <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.8.4</span></span>
+                                        <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.8.6</span></span>
                                     </div>
                                     {isStateManagementOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </button>
@@ -8116,6 +9187,7 @@
                                                         selectedItems.currentlyUsingDashers.size +
                                                         selectedItems.appealedDashers.size +
                                                         selectedItems.appliedPendingDashers.size +
+                                                        (selectedItems.reverifDashers ? selectedItems.reverifDashers.size : 0) +
                                                         selectedItems.lockedDashers.size +
                                                         selectedItems.deactivatedDashers.size +
                                                         selectedItems.archivedDashers.size;
@@ -8164,6 +9236,13 @@
                                                                 >
                                                                     <Clock size={12} />
                                                                     → Applied Pending
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => bulkMoveSelectedDashers('reverif')}
+                                                                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded text-xs transition-colors flex items-center gap-1"
+                                                                >
+                                                                    <ShieldCheck size={12} />
+                                                                    → Reverif
                                                                 </button>
                                                                 <button
                                                                     onClick={() => bulkMoveSelectedDashers('locked')}
