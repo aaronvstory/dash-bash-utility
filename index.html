@@ -465,6 +465,11 @@
             const [isAppliedPendingDashersOpen, setIsAppliedPendingDashersOpen] = useState(false);
             const [collapsedLockedDashers, setCollapsedLockedDashers] = useState({});
             const [collapsedAppliedPendingDashers, setCollapsedAppliedPendingDashers] = useState({});
+            // Collapsed note views (per item)
+            const [collapsedDasherNotes, setCollapsedDasherNotes] = useState({}); // { [dasherId]: boolean }
+            const [collapsedStoreNotes, setCollapsedStoreNotes] = useState({});   // { [`${categoryId}-${storeId}`]: boolean }
+            const [collapsedCashOutNotes, setCollapsedCashOutNotes] = useState({}); // { [dasherId]: boolean }
+            const [collapsedCategoryNotes, setCollapsedCategoryNotes] = useState({}); // { [`${categoryId}-${noteIndex}`]: boolean }
             const [collapsedDeactivatedDashers, setCollapsedDeactivatedDashers] = useState({});
             // Lightweight render-ready flags to show a spinner right away on open
             const [dashersRenderReady, setDashersRenderReady] = useState(false);
@@ -647,6 +652,18 @@
             const toggleLockedOpen = () => toggleOpenWithSpinner(isLockedDashersOpen, setIsLockedDashersOpen, setLockedRenderReady);
             const toggleDeactivatedOpen = () => toggleOpenWithSpinner(isDeactivatedDashersOpen, setIsDeactivatedDashersOpen, setDeactivatedRenderReady);
             const toggleArchivedOpen = () => toggleOpenWithSpinner(isArchivedDashersOpen, setIsArchivedDashersOpen, setArchivedRenderReady);
+
+            // Collapsed notes helpers
+            const isDasherNotesCollapsed = (dasherId) => !!collapsedDasherNotes[dasherId];
+            const toggleDasherNotesCollapsed = (dasherId) => setCollapsedDasherNotes(prev => ({ ...prev, [dasherId]: !prev[dasherId] }));
+            const storeKey = (categoryId, storeId) => `${categoryId}-${storeId}`;
+            const isStoreNotesCollapsed = (categoryId, storeId) => !!collapsedStoreNotes[storeKey(categoryId, storeId)];
+            const toggleStoreNotesCollapsed = (categoryId, storeId) => setCollapsedStoreNotes(prev => ({ ...prev, [storeKey(categoryId, storeId)]: !prev[storeKey(categoryId, storeId)] }));
+            const isCashOutNotesCollapsed = (dasherId) => !!collapsedCashOutNotes[dasherId];
+            const setCashOutNotesCollapsed = (dasherId, val) => setCollapsedCashOutNotes(prev => ({ ...prev, [dasherId]: !!val }));
+            const noteKey = (categoryId, noteIndex) => `${categoryId}-${noteIndex}`;
+            const isCategoryNoteCollapsed = (categoryId, noteIndex) => !!collapsedCategoryNotes[noteKey(categoryId, noteIndex)];
+            const toggleCategoryNoteCollapsed = (categoryId, noteIndex) => setCollapsedCategoryNotes(prev => ({ ...prev, [noteKey(categoryId, noteIndex)]: !prev[noteKey(categoryId, noteIndex)] }));
 
             const expandKeySections = () => {
                 // Open all buckets and stage spinners for consistent feedback
@@ -1015,6 +1032,11 @@
                         collapsedAppliedPendingDashers,
                         collapsedDasherCategories,
                         collapsedNoteCategories,
+                        // Persist collapsed notes preferences
+                        collapsedDasherNotes,
+                        collapsedStoreNotes,
+                        collapsedCashOutNotes,
+                        collapsedCategoryNotes,
                         isArchivedDashersOpen,
                         isDeactivatedDashersOpen,
                         isReadyDashersOpen,
@@ -1133,6 +1155,10 @@
                         if (state.collapsedDeactivatedDashers) setCollapsedDeactivatedDashers(state.collapsedDeactivatedDashers);
                         if (state.collapsedDasherCategories) setCollapsedDasherCategories(state.collapsedDasherCategories);
                         if (state.collapsedNoteCategories) setCollapsedNoteCategories(state.collapsedNoteCategories);
+                        if (state.collapsedDasherNotes) setCollapsedDasherNotes(state.collapsedDasherNotes);
+                        if (state.collapsedStoreNotes) setCollapsedStoreNotes(state.collapsedStoreNotes);
+                        if (state.collapsedCashOutNotes) setCollapsedCashOutNotes(state.collapsedCashOutNotes);
+                        if (state.collapsedCategoryNotes) setCollapsedCategoryNotes(state.collapsedCategoryNotes);
                         if (state.isArchivedDashersOpen !== undefined) setIsArchivedDashersOpen(state.isArchivedDashersOpen);
                         if (state.isDeactivatedDashersOpen !== undefined) setIsDeactivatedDashersOpen(state.isDeactivatedDashersOpen);
                         if (state.isReadyDashersOpen !== undefined) setIsReadyDashersOpen(state.isReadyDashersOpen);
@@ -1811,15 +1837,15 @@
                                             onBlur:commitDasherEdit,
                                             className:'bg-gray-900 border border-gray-600 rounded px-1 py-0.5 text-xs'
                                         }),
-                                        React.createElement('input',{
+                                        React.createElement('textarea',{
                                             key:'notes',
-                                            type:'text',
                                             placeholder:'notes',
                                             value:h.notes||'',
                                             onChange:e=>updateHistoryEntry(dasher.id,i,{notes:e.target.value}),
-                                            onKeyDown:(e)=>handleEditableKeyDown(e,false),
+                                            onKeyDown:(e)=>handleEditableKeyDown(e,true),
                                             onBlur:commitDasherEdit,
-                                            className:'flex-1 bg-gray-900 border border-gray-600 rounded px-1 py-0.5 text-xs min-w-0'
+                                            rows:2,
+                                            className:'flex-1 bg-gray-900 border border-gray-600 rounded px-1 py-0.5 text-xs min-w-0 resize-y'
                                         }),
                                         React.createElement('button',{
                                             key:'del',
@@ -1857,13 +1883,13 @@
                             ]),
                             React.createElement('div',{key:'a3',className:'flex flex-col flex-1 min-w-[140px]'},[
                                 React.createElement('label',{className:'text-[10px] text-gray-400'},'Notes'),
-                                React.createElement('input',{
-                                    type:'text',
+                                React.createElement('textarea',{
                                     value: (draftDasher._addCashOutNotes || ''),
                                     onChange:e=>setDraftDasher(d=>({...d,_addCashOutNotes:e.target.value})),
-                                    onKeyDown:(e)=>handleEditableKeyDown(e,false),
+                                    onKeyDown:(e)=>handleEditableKeyDown(e,true),
                                     onBlur:commitDasherEdit,
-                                    className:'bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs w-full'
+                                    rows:2,
+                                    className:'bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs w-full resize-y min-h-[2.5rem]'
                                 })
                             ]),
                             React.createElement('label',{key:'adj',className:'flex items-center gap-1 text-[11px] text-gray-300 mb-1'},[
@@ -1910,10 +1936,19 @@
                     );
                 }
 
+                const collapsed = isCashOutNotesCollapsed(dasher.id);
                 return React.createElement('div', { className: 'mt-2' }, [
                     React.createElement('div', { key: 'label', className: 'text-[11px] text-gray-400 mb-1' },
                         `${dasher.cashOutHistory.length} cash‑out${dasher.cashOutHistory.length>1?'s':''}`
                     ),
+                    React.createElement('div', { key:'controls', className:'flex items-center justify-end mb-1' },[
+                        React.createElement('button',{
+                            key:'toggleNotes',
+                            onClick:()=>setCashOutNotesCollapsed(dasher.id,!collapsed),
+                            className:'text-[11px] text-blue-300 hover:text-blue-200',
+                            title: collapsed ? 'Show full notes' : 'Show single line'
+                        }, collapsed ? 'Show full notes' : 'Collapse notes')
+                    ]),
                     React.createElement('div', { key: 'tablewrap', className: 'overflow-x-auto' },
                         React.createElement('table', { className: 'w-full text-[11px] border-separate border-spacing-y-1' }, [
                             React.createElement('thead', { key: 'thead', className: 'text-gray-400' },
@@ -1929,7 +1964,7 @@
                                     React.createElement('tr', { key: h.id || i, className: 'bg-gray-800/60 border border-gray-700 rounded' }, [
                                         React.createElement('td', { className: 'px-2 py-1 align-top font-mono text-green-300 whitespace-nowrap' }, `$${Number(h.amount||0).toFixed(2)}`),
                                         React.createElement('td', { className: 'px-2 py-1 align-top text-gray-300 whitespace-nowrap' }, h.method || 'auto'),
-                                        React.createElement('td', { className: 'px-2 py-1 align-top text-gray-200 break-words' }, h.notes || ''),
+                                        React.createElement('td', { className: `px-2 py-1 align-top text-gray-200 ${collapsed ? 'truncate max-w-[28ch]' : 'break-words'} ` }, h.notes || ''),
                                         React.createElement('td', { className: 'px-2 py-1 align-top text-gray-400 whitespace-nowrap' }, h.at ? formatDateTime(h.at) : '')
                                     ])
                                 ))
@@ -3330,8 +3365,9 @@
                                 })
                             ) : (
                                 React.createElement(React.Fragment, {}, [
-                                    React.createElement('div', { key: 'n1', className: 'flex-1 text-xs text-gray-200 whitespace-pre-wrap' }, dasher.notes || React.createElement('span', { className: 'italic text-gray-500' }, 'No notes')),
-                                    (dasher.notes) && React.createElement('button', { key: 'n2', onClick: () => copyToClipboard(dasher.notes), className: 'text-blue-400 hover:text-blue-300 p-1 self-start', title: 'Copy notes' }, React.createElement(Copy, { size: 12 }))
+                                    React.createElement('div', { key: 'n1', className: `flex-1 text-xs text-gray-200 ${isDasherNotesCollapsed(dasher.id) ? 'truncate max-w-[48ch]' : 'whitespace-pre-wrap'}` }, dasher.notes || React.createElement('span', { className: 'italic text-gray-500' }, 'No notes')),
+                                    (dasher.notes) && React.createElement('button', { key: 'n2', onClick: () => copyToClipboard(dasher.notes), className: 'text-blue-400 hover:text-blue-300 p-1 self-start', title: 'Copy notes' }, React.createElement(Copy, { size: 12 })),
+                                    React.createElement('button', { key: 'n3', onClick: () => toggleDasherNotesCollapsed(dasher.id), className: 'text-blue-300 hover:text-blue-200 p-1 self-start', title: isDasherNotesCollapsed(dasher.id) ? 'Show full notes' : 'Collapse notes' }, isDasherNotesCollapsed(dasher.id) ? 'Show full' : 'Collapse')
                                 ])
                             )
                         ]),
@@ -5178,8 +5214,17 @@
                                                                                             placeholder="Any notes..."
                                                                                         />
                                                                                     ) : (
-                                                                                        <div className="flex-1 text-xs text-gray-200 mt-1">
-                                                                                            {store.notes || <span className="italic text-gray-500">No notes</span>}
+                                                                                        <div className="flex items-start gap-2 flex-1 mt-1">
+                                                                                            <div className={`flex-1 text-xs text-gray-200 ${isStoreNotesCollapsed(category.id, store.id) ? 'truncate max-w-[48ch]' : 'whitespace-pre-wrap'}`}>
+                                                                                                {store.notes || <span className="italic text-gray-500">No notes</span>}
+                                                                                            </div>
+                                                                                            <button
+                                                                                                onClick={() => toggleStoreNotesCollapsed(category.id, store.id)}
+                                                                                                className="text-blue-300 hover:text-blue-200 p-1 self-start"
+                                                                                                title={isStoreNotesCollapsed(category.id, store.id) ? 'Show full notes' : 'Collapse notes'}
+                                                                                            >
+                                                                                                {isStoreNotesCollapsed(category.id, store.id) ? 'Show full' : 'Collapse'}
+                                                                                            </button>
                                                                                         </div>
                                                                                     )}
                                                                                 </div>
@@ -5395,7 +5440,7 @@
                                                                                             placeholder="Enter your note..."
                                                                                         />
                                                                                     ) : (
-                                                                                        <div className="text-sm text-gray-100 whitespace-pre-wrap">
+                                                                                        <div className={`text-sm text-gray-100 ${isCategoryNoteCollapsed(category.id, noteIndex) ? 'truncate max-w-[64ch]' : 'whitespace-pre-wrap'}`}>
                                                                                             {note || <span className="italic text-gray-500">Empty note - click edit to add content</span>}
                                                                                         </div>
                                                                                     )}
@@ -5426,6 +5471,15 @@
                                                                                     >
                                                                                         {isEditing ? <Check size={14} /> : <Edit2 size={14} />}
                                                                                     </button>
+                                                                                    {!isEditing && (
+                                                                                        <button
+                                                                                            onClick={() => toggleCategoryNoteCollapsed(category.id, noteIndex)}
+                                                                                            className="text-blue-300 hover:text-blue-200 p-1"
+                                                                                            title={isCategoryNoteCollapsed(category.id, noteIndex) ? 'Show full note' : 'Collapse note'}
+                                                                                        >
+                                                                                            {isCategoryNoteCollapsed(category.id, noteIndex) ? 'Show full' : 'Collapse'}
+                                                                                        </button>
+                                                                                    )}
                                                                                     <button
                                                                                         onClick={() => deleteNote(category.id, noteIndex)}
                                                                                         className="text-red-400 hover:text-red-300 p-1"
@@ -7142,7 +7196,7 @@
                                                                     />
                                                                 ) : (
                                                                     <React.Fragment>
-                                                                        <div className="flex-1 text-xs text-gray-200 whitespace-pre-wrap">
+                                                                        <div className={`flex-1 text-xs text-gray-200 ${isDasherNotesCollapsed(dasher.id) ? 'truncate max-w-[48ch]' : 'whitespace-pre-wrap'}`}>
                                                                             {dasher.notes || <span className="italic text-gray-500">No notes</span>}
                                                                         </div>
                                                                         {dasher.notes && (
@@ -7154,6 +7208,13 @@
                                                                                 <Copy size={12} />
                                                                             </button>
                                                                         )}
+                                                                        <button
+                                                                            onClick={() => toggleDasherNotesCollapsed(dasher.id)}
+                                                                            className="text-blue-300 hover:text-blue-200 p-1 self-start"
+                                                                            title={isDasherNotesCollapsed(dasher.id) ? 'Show full notes' : 'Collapse notes'}
+                                                                        >
+                                                                            {isDasherNotesCollapsed(dasher.id) ? 'Show full' : 'Collapse'}
+                                                                        </button>
                                                                     </React.Fragment>
                                                                 )}
                                                             </div>
@@ -7500,7 +7561,7 @@
                                                             {/* Notes - Expandable */}
                                                             <div className="flex items-start gap-2">
                                                                 <label className="text-xs text-gray-400 w-20 mt-1">Notes:</label>
-                                                                <div className="flex-1 text-xs text-gray-200 whitespace-pre-wrap">
+                                                                <div className={`flex-1 text-xs text-gray-200 ${isDasherNotesCollapsed(dasher.id) ? 'truncate max-w-[48ch]' : 'whitespace-pre-wrap'}`}>
                                                                     {dasher.notes || <span className="italic text-gray-500">No notes</span>}
                                                                 </div>
                                                                 {dasher.notes && (
@@ -7512,6 +7573,13 @@
                                                                         <Copy size={12} />
                                                                     </button>
                                                                 )}
+                                                                <button
+                                                                    onClick={() => toggleDasherNotesCollapsed(dasher.id)}
+                                                                    className="text-blue-300 hover:text-blue-200 p-1 self-start"
+                                                                    title={isDasherNotesCollapsed(dasher.id) ? 'Show full notes' : 'Collapse notes'}
+                                                                >
+                                                                    {isDasherNotesCollapsed(dasher.id) ? 'Show full' : 'Collapse'}
+                                                                </button>
                                                             </div>
 
                                                             {renderCashOutHistory(dasher, false)}
