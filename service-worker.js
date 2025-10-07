@@ -4,8 +4,8 @@ const CORE_CACHE = `dashbash-core-${APP_VERSION}`;
 const RUNTIME_CACHE = `dashbash-runtime-${APP_VERSION}`;
 const PRECACHE_URLS = [
   "./",
-  `./favicon.svg?v=${APP_VERSION}`,
-  `./manifest.json?v=${APP_VERSION}`,
+  "./favicon.svg",
+  "./manifest.json",
   // Intentionally exclude index.html & styles.css from precache to force network-first each load
 ];
 
@@ -13,25 +13,12 @@ const PRECACHE_URLS = [
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
-      try {
-        const cache = await caches.open(CORE_CACHE);
-        await Promise.all(
-          PRECACHE_URLS.map(async (u) => {
-            try {
-              const response = await fetch(u, { cache: "no-store" });
-              if (response && response.ok) {
-                await cache.put(u, response);
-              } else {
-                console.info("[SW] Skipping precache", u, response?.status);
-              }
-            } catch (err) {
-              console.info("[SW] Skipping precache", u, err?.message ?? err);
-            }
-          })
-        );
-      } catch (err) {
-        console.warn("[SW] Precache setup failed", err);
-      }
+      const cache = await caches.open(CORE_CACHE);
+      await Promise.all(
+        PRECACHE_URLS.map((u) =>
+          cache.add(u).catch((err) => console.warn("Precache miss", u, err))
+        )
+      );
     })()
   );
   self.skipWaiting();
@@ -97,23 +84,4 @@ self.addEventListener("fetch", (event) => {
       return cached || fetchPromise;
     })()
   );
-});
-
-self.addEventListener("message", (event) => {
-  const data = event.data || {};
-  if (data.type === "VERSION_CHECK") {
-    const respond = async () => {
-      const client = event.source || (await self.clients.get(data.clientId));
-      if (client && client.postMessage) {
-        client.postMessage({
-          type: "VERSION_INFO",
-          version: APP_VERSION,
-          cacheKeys: await caches.keys(),
-        });
-      }
-    };
-    event.waitUntil(respond());
-  } else if (data.type === "SKIP_WAITING") {
-    self.skipWaiting();
-  }
 });

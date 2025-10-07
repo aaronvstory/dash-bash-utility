@@ -1,38 +1,101 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Plus, Copy, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, Edit2, Check, Save, X, GripVertical, Clock, MapPin, Calculator, MessageSquare, Building2, Settings, Download, Upload, RefreshCw, FolderOpen, Timer, Users, FileText, TimerOff } from 'lucide-react';
+import { Trash2, Plus, Copy, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, Edit2, Check, Save, X, GripVertical, Clock, MapPin, Calculator, MessageSquare, Building2, Settings, Download, Upload, RefreshCw, FolderOpen, Timer, Users, FileText, TimerOff, BarChart3 } from 'lucide-react';
+
+// Type Definitions
+interface Store {
+  id: number;
+  address: string;
+  openTime: string;
+  closeTime: string;
+  notes: string;
+}
+
+interface Category {
+  id: number;
+  name: string;
+  stores: Store[];
+}
+
+interface NoteItem {
+  id: number;
+  text: string;
+}
+
+interface NoteCategory {
+  id: number;
+  name: string;
+  notes: NoteItem[];
+}
+
+interface CashOutEntry {
+  amount: number;
+  method: string;
+  notes: string;
+  timestamp: string;
+}
+
+interface Dasher {
+  id: number;
+  name: string;
+  email: string;
+  balance: number;
+  lastUsed: string;
+  isCrimson: boolean;
+  isFastPay: boolean;
+  isRedCard: boolean;
+  isAppealed: boolean;
+  cashOutHistory: CashOutEntry[];
+  notes: string;
+}
+
+interface DasherCategory {
+  id: number;
+  name: string;
+  dashers: Dasher[];
+}
+
+interface DraggedStore {
+  categoryId: number;
+  storeIndex: number;
+}
+
+interface EditingStore {
+  categoryId: number;
+  storeId: number;
+}
 
 const EnhancedCalculator = () => {
-  const [target, setTarget] = useState('99');
-  const [targetPreset, setTargetPreset] = useState('99'); // '99', '120', or 'custom'
-  const [isEditingTarget, setIsEditingTarget] = useState(false);
-  const [customTarget, setCustomTarget] = useState('');
-  const [prices, setPrices] = useState([]);
-  const [currentPrice, setCurrentPrice] = useState('');
-  const priceInputRef = useRef(null);
+  const [target, setTarget] = useState<string>('99');
+  const [targetPreset, setTargetPreset] = useState<string>('99'); // '99', '120', or 'custom'
+  const [isEditingTarget, setIsEditingTarget] = useState<boolean>(false);
+  const [customTarget, setCustomTarget] = useState<string>('');
+  const [prices, setPrices] = useState<number[]>([]);
+  const [currentPrice, setCurrentPrice] = useState<string>('');
+  const priceInputRef = useRef<HTMLInputElement>(null);
   
   // Collapsible sections state
-  const [isCalculatorOpen, setIsCalculatorOpen] = useState(true);
-  const [isMessagesOpen, setIsMessagesOpen] = useState(false);
-  const [isAddressBookOpen, setIsAddressBookOpen] = useState(false);
-  const [isStatisticsOpen, setIsStatisticsOpen] = useState(false);
-  const [isStateManagementOpen, setIsStateManagementOpen] = useState(false);
-  const [collapsedCategories, setCollapsedCategories] = useState({});
-  const [collapsedStores, setCollapsedStores] = useState({});
-  const [collapsedDashers, setCollapsedDashers] = useState({});
-  const [draggedStore, setDraggedStore] = useState({ categoryId: -1, storeIndex: -1 });
-  
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState<boolean>(true);
+  const [isMessagesOpen, setIsMessagesOpen] = useState<boolean>(false);
+  const [isAddressBookOpen, setIsAddressBookOpen] = useState<boolean>(false);
+  const [isStatisticsOpen, setIsStatisticsOpen] = useState<boolean>(false);
+  const [isStateManagementOpen, setIsStateManagementOpen] = useState<boolean>(false);
+  const [collapsedCategories, setCollapsedCategories] = useState<Record<number, boolean>>({});
+  const [collapsedStores, setCollapsedStores] = useState<Record<string, boolean>>({});
+  const [collapsedDashers, setCollapsedDashers] = useState<Record<string, boolean>>({});
+  const [draggedStore, setDraggedStore] = useState<DraggedStore>({ categoryId: -1, storeIndex: -1 });
+
   // State management
-  const [availableExports, setAvailableExports] = useState([]);
-  const [importNotification, setImportNotification] = useState('');
+  const [availableExports, setAvailableExports] = useState<string[]>([]);
+  const [importNotification, setImportNotification] = useState<string>('');
   
   // Quick messages state
-  const [editingIndex, setEditingIndex] = useState(-1);
-  const [editText, setEditText] = useState('');
-  const [draggedIndex, setDraggedIndex] = useState(-1);
-  const [isAddingNew, setIsAddingNew] = useState(false);
-  const [newMessageText, setNewMessageText] = useState('');
-  const [copyNotification, setCopyNotification] = useState('');
-  const [messages, setMessages] = useState([
+  const [editingIndex, setEditingIndex] = useState<number>(-1);
+  const [editText, setEditText] = useState<string>('');
+  const [draggedIndex, setDraggedIndex] = useState<number>(-1);
+  const [isAddingNew, setIsAddingNew] = useState<boolean>(false);
+  const [newMessageText, setNewMessageText] = useState<string>('');
+  const [copyNotification, setCopyNotification] = useState<string>('');
+  const [messages, setMessages] = useState<string[]>([
     "hi can u pls see if u can help get a dasher assigned quicker!? I'm in a rush to get to work asap! Thank you",
     "Ok someone got it! darn it i just noticed i put the tip so high by accident :( can u help change the tip to $0 pls?",
     "Thanks, have a great day! <3",
@@ -53,7 +116,7 @@ const EnhancedCalculator = () => {
   ]);
 
   // Address Book state
-  const [categories, setCategories] = useState([
+  const [categories, setCategories] = useState<Category[]>([
     {
       id: 1,
       name: "Dollar General",
@@ -81,18 +144,17 @@ const EnhancedCalculator = () => {
       ]
     }
   ]);
-  const [editingCategory, setEditingCategory] = useState(-1);
-  const [editingStore, setEditingStore] = useState({ categoryId: -1, storeId: -1 });
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [isAddingCategory, setIsAddingCategory] = useState(false);
-  const [draggedCategory, setDraggedCategory] = useState(-1);
-  const [draggedStore, setDraggedStore] = useState({ categoryId: -1, storeId: -1 });
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [saveNotification, setSaveNotification] = useState('');
+  const [editingCategory, setEditingCategory] = useState<number>(-1);
+  const [editingStore, setEditingStore] = useState<EditingStore>({ categoryId: -1, storeId: -1 });
+  const [newCategoryName, setNewCategoryName] = useState<string>('');
+  const [isAddingCategory, setIsAddingCategory] = useState<boolean>(false);
+  const [draggedCategory, setDraggedCategory] = useState<number>(-1);
+  const [currentTime, setCurrentTime] = useState<Date>(new Date());
+  const [saveNotification, setSaveNotification] = useState<string>('');
 
   // Notes state
-  const [isNotesOpen, setIsNotesOpen] = useState(false);
-  const [noteCategories, setNoteCategories] = useState(() => {
+  const [isNotesOpen, setIsNotesOpen] = useState<boolean>(false);
+  const [noteCategories, setNoteCategories] = useState<NoteCategory[]>(() => {
     // Try to load from localStorage first
     const savedState = localStorage.getItem('dashBashState');
     if (savedState) {
@@ -108,21 +170,21 @@ const EnhancedCalculator = () => {
     
     // Only use defaults if no saved state exists
     return [
-      { 
-        id: Date.now().toString(), 
-        name: 'General', 
-        notes: ['Welcome to Dash Bash! This is a sample note. You can edit, copy, or delete it. Try adding your own notes!'] 
+      {
+        id: Date.now(),
+        name: 'General',
+        notes: [{ id: Date.now(), text: 'Welcome to Dash Bash! This is a sample note. You can edit, copy, or delete it. Try adding your own notes!' }]
       }
     ];
   });
-  const [editingNote, setEditingNote] = useState({ categoryId: '', noteIndex: -1 });
-  const [draggedNote, setDraggedNote] = useState({ categoryId: '', noteIndex: -1 });
-  const [collapsedNoteCategories, setCollapsedNoteCategories] = useState({});
-  const [editingNoteCategory, setEditingNoteCategory] = useState(-1);
+  const [editingNote, setEditingNote] = useState<{ categoryId: number; noteIndex: number }>({ categoryId: -1, noteIndex: -1 });
+  const [draggedNote, setDraggedNote] = useState<{ categoryId: number; noteIndex: number }>({ categoryId: -1, noteIndex: -1 });
+  const [collapsedNoteCategories, setCollapsedNoteCategories] = useState<Record<number, boolean>>({});
+  const [editingNoteCategory, setEditingNoteCategory] = useState<number>(-1);
 
   // Dashers state
-  const [isDashersOpen, setIsDashersOpen] = useState(false);
-  const [dasherCategories, setDasherCategories] = useState(() => {
+  const [isDashersOpen, setIsDashersOpen] = useState<boolean>(false);
+  const [dasherCategories, setDasherCategories] = useState<DasherCategory[]>(() => {
     // Try to load from localStorage first
     const savedState = localStorage.getItem('dashBashState');
     if (savedState) {
@@ -135,46 +197,38 @@ const EnhancedCalculator = () => {
         console.error('Error loading dasherCategories from localStorage:', e);
       }
     }
-    
+
     // Only use defaults if no saved state exists
     return [
-      { 
-        id: 'main', 
-        name: 'Main', 
+      {
+        id: 1,
+        name: 'Main',
         dashers: [{
-          id: 'test-dasher-' + Date.now(),
+          id: Date.now(),
           name: 'Test Dasher',
           email: 'test@example.com',
-          emailPw: 'password123',
-          dasherPw: 'dasher456',
-          phone: '555-0123',
-          balance: '$50.00',
-          crimson: false,
-          redCard: false,
-          lastUsed: null,
+          balance: 50.00,
+          lastUsed: new Date().toISOString(),
+          isCrimson: false,
+          isFastPay: false,
+          isRedCard: false,
+          isAppealed: false,
+          cashOutHistory: [],
           notes: 'This is a sample dasher for testing. Feel free to edit or delete!'
-        }] 
+        }]
       },
-      { id: 'currently-using', name: 'Currently using', dashers: [] },
-      { id: 'deactivated', name: 'Deactivated', dashers: [] },
-      { id: 'locked', name: 'Locked', dashers: [] },
-      { id: 'reverif', name: 'Reverif', dashers: [] },
-      { id: 'ready', name: 'Ready', dashers: [{
-        id: 'version-test-dasher',
-        name: 'Version Test Dasher',
-        email: 'test@version.check',
-        crimson: false,
-        redCard: false,
-        lastUsed: null,
-        notes: 'TEST DASHER - Added to verify GitHub Pages deployment'
-      }] }
+      { id: 2, name: 'Currently using', dashers: [] },
+      { id: 3, name: 'Deactivated', dashers: [] },
+      { id: 4, name: 'Locked', dashers: [] },
+      { id: 5, name: 'Reverif', dashers: [] },
+      { id: 6, name: 'Ready', dashers: [] }
     ];
   });
-  const [editingDasher, setEditingDasher] = useState({ categoryId: '', dasherId: '' });
-  const [draggedDasher, setDraggedDasher] = useState({ categoryId: '', dasherIndex: -1 });
-  const [collapsedDasherCategories, setCollapsedDasherCategories] = useState({});
-  const [dasherUpdateInterval, setDasherUpdateInterval] = useState(null);
-  const [editingDasherCategory, setEditingDasherCategory] = useState(-1);
+  const [editingDasher, setEditingDasher] = useState<{ categoryId: number; dasherId: number }>({ categoryId: -1, dasherId: -1 });
+  const [draggedDasher, setDraggedDasher] = useState<{ categoryId: number; dasherIndex: number }>({ categoryId: -1, dasherIndex: -1 });
+  const [collapsedDasherCategories, setCollapsedDasherCategories] = useState<Record<number, boolean>>({});
+  const [dasherUpdateInterval, setDasherUpdateInterval] = useState<NodeJS.Timeout | null>(null);
+  const [editingDasherCategory, setEditingDasherCategory] = useState<number>(-1);
 
   // Load from localStorage on component mount
   useEffect(() => {
@@ -232,23 +286,23 @@ const EnhancedCalculator = () => {
     }
   };
 
-  const removePrice = (index) => {
+  const removePrice = (index: number): void => {
     setPrices(prices.filter((_, i) => i !== index));
     setTimeout(() => priceInputRef.current?.focus(), 0);
   };
 
-  const clearAll = () => {
+  const clearAll = (): void => {
     setPrices([]);
     setTimeout(() => priceInputRef.current?.focus(), 0);
   };
 
-  const handleKeyPress = (e) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === 'Enter') {
       addPrice();
     }
   };
 
-  const handleTargetKeyPress = (e) => {
+  const handleTargetKeyPress = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === 'Enter') {
       if (isEditingTarget) {
         handleCustomTargetSave();
@@ -258,7 +312,7 @@ const EnhancedCalculator = () => {
     }
   };
 
-  const handleTargetPresetChange = (preset) => {
+  const handleTargetPresetChange = (preset: string): void => {
     setTargetPreset(preset);
     setIsEditingTarget(false);
     
@@ -293,7 +347,7 @@ const EnhancedCalculator = () => {
   }, []);
 
   // Message management functions
-  const copyToClipboard = async (text) => {
+  const copyToClipboard = async (text: string): Promise<void> => {
     try {
       await navigator.clipboard.writeText(text);
       const preview = text.length > 40 ? text.substring(0, 40) + '...' : text;
@@ -306,7 +360,7 @@ const EnhancedCalculator = () => {
     }
   };
 
-  const startEdit = (index) => {
+  const startEdit = (index: number): void => {
     setEditingIndex(index);
     setEditText(messages[index]);
   };
@@ -345,17 +399,17 @@ const EnhancedCalculator = () => {
     }, 100);
   };
 
-  const handleDragStart = (e, index) => {
+  const handleDragStart = (e: React.DragEvent, index: number): void => {
     setDraggedIndex(index);
     e.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleDragOver = (e) => {
+  const handleDragOver = (e: React.DragEvent): void => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
   };
 
-  const handleDrop = (e, dropIndex) => {
+  const handleDrop = (e: React.DragEvent, dropIndex: number): void => {
     e.preventDefault();
     if (draggedIndex === -1 || draggedIndex === dropIndex) return;
 
@@ -365,7 +419,7 @@ const EnhancedCalculator = () => {
     newMessages.splice(dropIndex, 0, draggedMessage);
     setMessages(newMessages);
     setDraggedIndex(-1);
-    
+
     // Auto-save after reordering
     setTimeout(() => {
       saveAllToLocalStorage();
@@ -392,12 +446,12 @@ const EnhancedCalculator = () => {
   };
 
   // Address Book functions
-  const extractCityState = (address) => {
+  const extractCityState = (address: string): string => {
     if (!address) return '';
-    
+
     // Split by comma and trim spaces
-    const parts = address.split(',').map(part => part.trim());
-    
+    const parts = address.split(',').map((part: string) => part.trim());
+
     if (parts.length >= 3) {
       // Format: "Street, City, State ZIP"
       const city = parts[1];
@@ -410,7 +464,7 @@ const EnhancedCalculator = () => {
       const cityState = parts[1];
       return cityState;
     }
-    
+
     return '';
   };
 
@@ -522,13 +576,17 @@ const EnhancedCalculator = () => {
     }
   };
 
-  const importFromJSON = (event) => {
-    const file = event.target.files[0];
+  const importFromJSON = (event: React.ChangeEvent<HTMLInputElement>): void => {
+    const file = event.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = (e: ProgressEvent<FileReader>) => {
       try {
+        if (!e.target || !e.target.result || typeof e.target.result !== 'string') {
+          setImportNotification('❌ Failed to read file');
+          return;
+        }
         const state = JSON.parse(e.target.result);
         
         // Load target configuration
@@ -607,29 +665,29 @@ const EnhancedCalculator = () => {
     }
   };
 
-  const formatTime = (timeStr) => {
+  const formatTime = (timeStr: string): string => {
     if (!timeStr || timeStr.length !== 4) return '';
     const hours = timeStr.substring(0, 2);
     const minutes = timeStr.substring(2, 4);
     return `${hours}:${minutes}`;
   };
 
-  const calculateTimeStatus = (closeTimeStr) => {
+  const calculateTimeStatus = (closeTimeStr: string): { status: string; text: string; color: string; formatted?: string } | null => {
     if (!closeTimeStr || closeTimeStr.length !== 4) return null;
-    
-    const closeHours = parseInt(closeTimeStr.substring(0, 2));
-    const closeMinutes = parseInt(closeTimeStr.substring(2, 4));
-    
+
+    const closeHours = parseInt(closeTimeStr.substring(0, 2), 10);
+    const closeMinutes = parseInt(closeTimeStr.substring(2, 4), 10);
+
     const now = new Date();
     const todayClose = new Date(now);
     todayClose.setHours(closeHours, closeMinutes, 0, 0);
-    
+
     // If closing time has passed today, assume it's tomorrow's closing time
     if (todayClose < now) {
       todayClose.setDate(todayClose.getDate() + 1);
     }
-    
-    const diffMs = todayClose - now;
+
+    const diffMs = todayClose.getTime() - now.getTime();
     const diffMinutes = Math.floor(diffMs / (1000 * 60));
     const diffHours = Math.floor(diffMinutes / 60);
     const remainingMinutes = diffMinutes % 60;
@@ -680,35 +738,35 @@ const EnhancedCalculator = () => {
     }
   };
 
-  const updateCategory = (categoryId, newName) => {
-    setCategories(categories.map(cat => 
+  const updateCategory = (categoryId: number, newName: string): void => {
+    setCategories(categories.map((cat: Category) =>
       cat.id === categoryId ? { ...cat, name: newName } : cat
     ));
-    
+
     // Auto-save
     setTimeout(() => {
       saveAllToLocalStorage();
     }, 100);
   };
 
-  const deleteCategory = (categoryId) => {
-    setCategories(categories.filter(cat => cat.id !== categoryId));
-    
+  const deleteCategory = (categoryId: number): void => {
+    setCategories(categories.filter((cat: Category) => cat.id !== categoryId));
+
     // Auto-save
     setTimeout(() => {
       saveAllToLocalStorage();
     }, 100);
   };
 
-  const addStore = (categoryId) => {
-    const newStore = {
+  const addStore = (categoryId: number): void => {
+    const newStore: Store = {
       id: Date.now(),
       address: "",
       openTime: "",
       closeTime: "",
       notes: ""
     };
-    setCategories(categories.map(cat => 
+    setCategories(categories.map((cat: Category) => 
       cat.id === categoryId 
         ? { ...cat, stores: [...cat.stores, newStore] }
         : cat
@@ -720,31 +778,31 @@ const EnhancedCalculator = () => {
     }, 100);
   };
 
-  const updateStore = (categoryId, storeId, field, value) => {
-    setCategories(categories.map(cat => 
-      cat.id === categoryId 
+  const updateStore = (categoryId: number, storeId: number, field: keyof Store, value: string): void => {
+    setCategories(categories.map((cat: Category) =>
+      cat.id === categoryId
         ? {
             ...cat,
-            stores: cat.stores.map(store => 
+            stores: cat.stores.map((store: Store) =>
               store.id === storeId ? { ...store, [field]: value } : store
             )
           }
         : cat
     ));
-    
+
     // Auto-save
     setTimeout(() => {
       saveAllToLocalStorage();
     }, 100);
   };
 
-  const deleteStore = (categoryId, storeId) => {
-    setCategories(categories.map(cat => 
-      cat.id === categoryId 
-        ? { ...cat, stores: cat.stores.filter(store => store.id !== storeId) }
+  const deleteStore = (categoryId: number, storeId: number): void => {
+    setCategories(categories.map((cat: Category) =>
+      cat.id === categoryId
+        ? { ...cat, stores: cat.stores.filter((store: Store) => store.id !== storeId) }
         : cat
     ));
-    
+
     // Auto-save
     setTimeout(() => {
       saveAllToLocalStorage();
@@ -856,12 +914,12 @@ const EnhancedCalculator = () => {
     setDraggedStore({ categoryId: -1, storeIndex: -1 });
   };
 
-  const calculateQuantities = (price, targetAmount) => {
+  const calculateQuantities = (price: number, targetAmount: number): { validOptions: Array<{ quantity: number; total: number; difference: number }> } => {
     if (price === 0) return { validOptions: [] };
-    
+
     const maxQuantity = Math.floor(targetAmount / price);
-    const validOptions = [];
-    
+    const validOptions: Array<{ quantity: number; total: number; difference: number }> = [];
+
     for (let qty = maxQuantity; qty >= 1; qty--) {
       const total = qty * price;
       if (total <= targetAmount) {
@@ -872,13 +930,13 @@ const EnhancedCalculator = () => {
         });
       }
     }
-    
+
     return { validOptions };
   };
 
-  const findBestOption = (validOptions) => {
+  const findBestOption = (validOptions: Array<{ quantity: number; total: number; difference: number }>): { quantity: number; total: number; difference: number } | null => {
     if (validOptions.length === 0) return null;
-    
+
     return validOptions.sort((a, b) => {
       if (Math.abs(a.difference - b.difference) < 0.01) {
         return a.quantity - b.quantity;
@@ -949,28 +1007,28 @@ const EnhancedCalculator = () => {
     }, 100);
   };
 
-  const updateNote = (categoryId, noteIndex, newText) => {
-    setNoteCategories(noteCategories.map(cat => 
-      cat.id === categoryId 
+  const updateNote = (categoryId: number, noteIndex: number, newText: string): void => {
+    setNoteCategories(noteCategories.map((cat: NoteCategory) =>
+      cat.id === categoryId
         ? {
             ...cat,
-            notes: cat.notes.map((note, idx) => 
-              idx === noteIndex ? newText : note
+            notes: cat.notes.map((note: NoteItem, idx: number) =>
+              idx === noteIndex ? { ...note, text: newText } : note
             )
           }
         : cat
     ));
-    
+
     // Auto-save
     setTimeout(() => {
       saveAllToLocalStorage();
     }, 100);
   };
 
-  const deleteNote = (categoryId, noteIndex) => {
-    setNoteCategories(noteCategories.map(cat => 
-      cat.id === categoryId 
-        ? { ...cat, notes: cat.notes.filter((_, idx) => idx !== noteIndex) }
+  const deleteNote = (categoryId: number, noteIndex: number): void => {
+    setNoteCategories(noteCategories.map((cat: NoteCategory) =>
+      cat.id === categoryId
+        ? { ...cat, notes: cat.notes.filter((_: NoteItem, idx: number) => idx !== noteIndex) }
         : cat
     ));
     
@@ -1090,7 +1148,7 @@ const EnhancedCalculator = () => {
     }, 100);
   };
 
-  const updateDasher = (categoryId, dasherId, field, value) => {
+  const updateDasher = (categoryId: number, dasherId: number, field: keyof Dasher, value: any): void => {
     // Validate email if updating email field
     if (field === 'email' && value) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -1098,14 +1156,14 @@ const EnhancedCalculator = () => {
         // Only validate if it looks like they're trying to enter an email
         return; // Don't update if invalid email format
       }
-      
+
       // Check for duplicate email across all categories
-      const isDuplicate = dasherCategories.some(cat => 
-        cat.dashers.some(dasher => 
+      const isDuplicate = dasherCategories.some((cat: DasherCategory) =>
+        cat.dashers.some((dasher: Dasher) =>
           dasher.id !== dasherId && dasher.email && dasher.email.toLowerCase() === value.toLowerCase()
         )
       );
-      
+
       if (isDuplicate) {
         // Show a toast or alert for duplicate email
         setSaveNotification('A dasher with this email already exists');
@@ -1113,28 +1171,28 @@ const EnhancedCalculator = () => {
         return; // Don't update if duplicate email
       }
     }
-    
-    setDasherCategories(dasherCategories.map(cat => 
-      cat.id === categoryId 
+
+    setDasherCategories(dasherCategories.map((cat: DasherCategory) =>
+      cat.id === categoryId
         ? {
             ...cat,
-            dashers: cat.dashers.map(dasher => 
+            dashers: cat.dashers.map((dasher: Dasher) =>
               dasher.id === dasherId ? { ...dasher, [field]: value } : dasher
             )
           }
         : cat
     ));
-    
+
     // Auto-save
     setTimeout(() => {
       saveAllToLocalStorage();
     }, 100);
   };
 
-  const deleteDasher = (categoryId, dasherId) => {
-    setDasherCategories(dasherCategories.map(cat => 
-      cat.id === categoryId 
-        ? { ...cat, dashers: cat.dashers.filter(dasher => dasher.id !== dasherId) }
+  const deleteDasher = (categoryId: number, dasherId: number): void => {
+    setDasherCategories(dasherCategories.map((cat: DasherCategory) =>
+      cat.id === categoryId
+        ? { ...cat, dashers: cat.dashers.filter((dasher: Dasher) => dasher.id !== dasherId) }
         : cat
     ));
     
@@ -1328,12 +1386,12 @@ const EnhancedCalculator = () => {
     }
   };
 
-  const calculateDasherTimeStatus = (lastUsedTime) => {
+  const calculateDasherTimeStatus = (lastUsedTime: string): { status: string; text: string; color: string; hoursRemaining?: number; hoursElapsed?: number } | null => {
     if (!lastUsedTime) return null;
-    
+
     const lastUsed = new Date(lastUsedTime);
     const now = new Date();
-    const diffMs = now - lastUsed;
+    const diffMs = now.getTime() - lastUsed.getTime();
     const diffHours = diffMs / (1000 * 60 * 60);
     const diffMinutes = Math.floor((diffMs / (1000 * 60)) % 60);
     const remainingHours = 24 - diffHours;
@@ -1372,9 +1430,9 @@ const EnhancedCalculator = () => {
     }
   };
 
-  const getDasherTitle = (dasher) => {
-    const parts = [];
-    
+  const getDasherTitle = (dasher: Dasher): JSX.Element => {
+    const parts: JSX.Element[] = [];
+
     // Name (purple - keep default color)
     if (dasher.name) {
       parts.push(<span key="name">{dasher.name}</span>);

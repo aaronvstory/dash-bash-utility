@@ -2176,6 +2176,87 @@
 
                 } : () => {};
 
+                // Extracted handler to avoid deeply nested braces in inline prop
+                const handleAddCashOut = () => {
+                    if (!isEditing) return;
+                    const amt = deriveNumericAmount(draft._addCashOutAmount);
+                    if (!Number.isFinite(amt) || amt <= 0) {
+                        const errMsg = 'Enter a valid positive amount.';
+                        setDraft(d => ({ ...d, _addCashOutError: errMsg }));
+                        setTimeout(() => {
+                            const inputNode = document.getElementById(cashOutAmountInputId);
+                            if (inputNode) {
+                                inputNode.focus();
+                                if (typeof inputNode.select === 'function') inputNode.select();
+                            }
+                        }, 0);
+                        announceFailure(errMsg);
+                        return;
+                    }
+
+                    const nowIso = new Date().toISOString();
+                    const method = (draft._addCashOutMethod || 'custom').trim() || 'custom';
+                    const notes = (draft._addCashOutNotes || '').trim();
+                    const adjustBalance = !!draft._addCashOutAdjust;
+
+                    const targets = getDescriptorsForDasher(dasher, {
+                        fallbackHint: `cashout-${dasher?.id ?? dasher?.email ?? dasher?.phone ?? 'dash'}`
+                    });
+
+                    const applyCashOut = (existing) => {
+                        const base = {
+                            id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `co-${Date.now()}`,
+                            amount: amt.toFixed(2),
+                            method,
+                            notes,
+                            at: nowIso
+                        };
+                        const history = ensureArray(existing.cashOutHistory);
+                        const nextHistory = [...history, base];
+                        let nextBalance = existing.balance;
+                        if (adjustBalance) {
+                            const cur = parseBalanceValue(existing.balance || '0');
+                            const updated = Math.max(0, cur - amt);
+                            nextBalance = updated.toString();
+                        }
+                        return {
+                            ...existing,
+                            balance: nextBalance,
+                            cashOutHistory: nextHistory,
+                            lastCashOutRef: adjustBalance ? { id: base.id, index: nextHistory.length - 1 } : (existing.lastCashOutRef || null)
+                        };
+                    };
+
+                    if (!targets || targets.length === 0) {
+                        const errMsg = 'Couldn\'t locate matching dasher record.';
+                        setDraft(d => ({ ...d, _addCashOutError: errMsg }));
+                        setTimeout(() => {
+                            const inputNode = document.getElementById(cashOutAmountInputId);
+                            if (inputNode) {
+                                inputNode.focus();
+                                if (typeof inputNode.select === 'function') inputNode.select();
+                            }
+                        }, 0);
+                        announceFailure(errMsg);
+                        return;
+                    }
+
+                    targets.forEach(descriptor => {
+                        mutateDasherByMeta(descriptor, applyCashOut);
+                    });
+
+                    requestPersist();
+                    setDraft(d => ({ _addCashOutAmount: '', _addCashOutMethod: '', _addCashOutNotes: '', _addCashOutAdjust: false, _addCashOutError: '' }));
+                    announceSuccess('Cash-out added');
+                    setTimeout(() => {
+                        const inputNode = document.getElementById(cashOutAmountInputId);
+                        if (inputNode) {
+                            inputNode.focus();
+                            if (typeof inputNode.select === 'function') inputNode.select();
+                        }
+                    }, 50);
+                };
+
                 const addForm = React.createElement('div', { key: 'addRow', className: 'flex flex-wrap items-end gap-3 pt-3 border-t border-gray-700/80 mt-2' }, [
 
                     React.createElement('div', { key: 'a1', className: 'flex flex-col' }, [
@@ -2269,161 +2350,10 @@
                     err && React.createElement('div', { key: 'err', id: cashOutErrorId, className: 'basis-full text-[11px] text-red-400', role: 'status', 'aria-live': 'polite' }, err),
 
                     React.createElement('button', {
-
                         key: 'addBtn',
-
                         disabled: !isEditing || !hasAmt,
-
-                        onClick: () => {
-
-                            if (!isEditing) return;
-
-                            const amt = deriveNumericAmount(draft._addCashOutAmount);
-
-                            if (!Number.isFinite(amt) || amt <= 0) {
-
-                                const errMsg = 'Enter a valid positive amount.';
-
-                                setDraft(d => ({ ...d, _addCashOutError: errMsg }));
-
-                                setTimeout(() => {
-
-                                    const inputNode = document.getElementById(cashOutAmountInputId);
-
-                                    if (inputNode) {
-
-                                        inputNode.focus();
-
-                                        if (typeof inputNode.select === 'function') inputNode.select();
-
-                                    }
-
-                                }, 0);
-
-                                announceFailure(errMsg);
-
-                                return;
-
-                            }
-
-                            const nowIso = new Date().toISOString();
-
-                            const method = (draft._addCashOutMethod || 'custom').trim() || 'custom';
-
-                            const notes = (draft._addCashOutNotes || '').trim();
-
-                            const adjustBalance = !!draft._addCashOutAdjust;
-
-                            const targets = getDescriptorsForDasher(dasher, {
-
-                                fallbackHint: `cashout-${dasher?.id ?? dasher?.email ?? dasher?.phone ?? 'dash'}`
-
-                            });
-
-                            const applyCashOut = (existing) => {
-
-                                const base = {
-
-                                    id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `co-${Date.now()}`,
-
-                                    amount: amt.toFixed(2),
-
-                                    method,
-
-                                    notes,
-
-                                    at: nowIso
-
-                                };
-
-                                const history = ensureArray(existing.cashOutHistory);
-
-                                const nextHistory = [...history, base];
-
-                                let nextBalance = existing.balance;
-
-                                if (adjustBalance) {
-
-                                    const cur = parseBalanceValue(existing.balance || '0');
-
-                                    const updated = Math.max(0, cur - amt);
-
-                                    nextBalance = updated.toString();
-
-                                }
-
-                                return {
-
-                                    ...existing,
-
-                                    balance: nextBalance,
-
-                                    cashOutHistory: nextHistory,
-
-                                    lastCashOutRef: adjustBalance ? { id: base.id, index: nextHistory.length - 1 } : (existing.lastCashOutRef || null)
-
-                                };
-
-                            };
-
-                            if (targets.length === 0) {
-
-                                const errMsg = 'Couldn\'t locate matching dasher record.';
-
-                                setDraft(d => ({ ...d, _addCashOutError: errMsg }));
-
-                                setTimeout(() => {
-
-                                    const inputNode = document.getElementById(cashOutAmountInputId);
-
-                                    if (inputNode) {
-
-                                        inputNode.focus();
-
-                                        if (typeof inputNode.select === 'function') inputNode.select();
-
-                                    }
-
-                                }, 0);
-
-                                announceFailure(errMsg);
-
-                                return;
-
-                            }
-
-                            targets.forEach(descriptor => {
-
-                                mutateDasherByMeta(descriptor, applyCashOut);
-
-                            });
-
-                            requestPersist();
-
-                            setDraft(d => ({ _addCashOutAmount: '', _addCashOutMethod: '', _addCashOutNotes: '', _addCashOutAdjust: false, _addCashOutError: '' }));
-
-                            announceSuccess('Cash-out added');
-
-                            setTimeout(() => {
-
-                                const inputNode = document.getElementById(cashOutAmountInputId);
-
-                                if (inputNode) {
-
-                                    inputNode.focus();
-
-                                    if (typeof inputNode.select === 'function') inputNode.select();
-
-                                    }
-
-                                }, 50);
-
-                            }
-
-                        },
-
+                        onClick: handleAddCashOut,
                         className: 'px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-xs text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors'
-
                     }, 'Add')
 
                 ]);
