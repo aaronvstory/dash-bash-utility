@@ -1860,3 +1860,35 @@ h1, h2, h3 {
 .dasher-cell-move .icon-btn {
   flex:0 0 auto;
 }
+
+/* ===== New: FastPay flag + selected cash-out glow ===== */
+/* Active FastPay: dark blue pill + black text */
+.flag-badge[data-flag="FP"][data-active="true"] {
+  background: #1e3a8a; /* dark blue */
+  border-color: #3b82f6; /* blue-500 border accent */
+  color: #000;
+  -webkit-text-fill-color: #000 !important;
+}
+
+/* Inactive FastPay: subtle dark-blue outline */
+.flag-badge[data-flag="FP"][data-active="false"] {
+  background: rgba(30, 58, 138, 0.15); /* translucent dark blue */
+  border-color: rgba(59, 130, 246, 0.35);
+  color: rgba(255,255,255,0.65);
+  -webkit-text-fill-color: rgba(255,255,255,0.65) !important;
+}
+
+/* Selected cash-out glow (applies to Crimson or FastPay when chosen) */
+.flag-badge[data-selected="true"] {
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,0.85),
+    0 0 8px rgba(255,255,255,0.55);
+  border-color: #ffffff !important;
+}
+
+/* Tone down glow for deactivated cards */
+.dasher-card--deactivated .flag-badge[data-selected="true"] {
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,0.5),
+    0 0 6px rgba(255,255,255,0.35);
+}
