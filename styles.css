@@ -1578,10 +1578,10 @@ body.dragging {
   --db-input-border: #374151;       /* gray-700 */
   --db-input-text: #e5e7eb;         /* gray-200 */
   --db-input-placeholder: #9ca3af;  /* gray-400 */
-  --db-input-radius: 8px;
-  --db-input-height: 40px;
+  --db-input-radius: 2px;
+  --db-input-height: 30px;
   --db-input-px: 12px;
-  --db-input-py: 8px;
+  --db-input-py: 4px;
 
   box-sizing: border-box;
   appearance: none;
@@ -1619,8 +1619,9 @@ body.dragging {
 
 /* Compact height variant for tight inline rows */
 .theme-jp .db-input-sm {
-  --db-input-height: 36px;
-  --db-input-py: 6px;
+  --db-input-height: 30px;
+  --db-input-py: 4px;
+  --db-input-radius: 2px;
 }
 
 /* Ensure textareas using the compact input start the same height */
@@ -2019,4 +2020,70 @@ h1, h2, h3 {
   box-shadow: inset 0 0 7px rgba(255,255,255,0.22);
   background: linear-gradient(150deg, rgba(255,255,255,0.22), rgba(255,255,255,0));
   opacity: 0.75;
+}
+
+/* ========================================
+   Animated Gradient Header – additive styles
+   Applies only when .animated-gradient-text is present
+   ======================================== */
+
+@keyframes gradient-flow {
+  0%   { background-position:   0% 50%; }
+  25%  { background-position:  50% 60%; }
+  50%  { background-position: 100% 50%; }
+  75%  { background-position:  50% 40%; }
+  100% { background-position:   0% 50%; }
+}
+
+/* Override the base hero title sheen with a richer color flow when opted-in */
+.hero-title.animated-gradient-text {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  /* Keep existing clamp size but allow slightly larger on wide screens */
+  font-size: clamp(2.25rem, 5.5vw, 3.6rem);
+
+  /* Animated gradient text fill */
+  background: linear-gradient(
+    120deg,
+    var(--jp-accent-indigo, #6d7dff) 0%,
+    var(--jp-accent-sakura, #f39ac5) 55%,
+    #8fd3ff 100%
+  );
+  background-size: 400% 400%;
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-flow 12s ease-in-out infinite;
+  text-shadow: rgba(0,0,0,0.35) 0 6px 18px;
+}
+
+/* Metadata badges: subtle glass and hover lift within hero only */
+.hero-meta .badge {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--jp-text-med, #a0aec0);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition:
+    transform var(--jp-trans-fast, 160ms) ease,
+    border-color var(--jp-trans-fast, 160ms) ease,
+    background-color var(--jp-trans-fast, 160ms) ease,
+    color var(--jp-trans-fast, 160ms) ease;
+}
+
+.hero-meta .badge:hover {
+  transform: translateY(-1px);
+  color: #ffffff;
+  border-color: var(--jp-ring, rgba(243, 154, 197, 0.55));
+  background: rgba(255, 255, 255, 0.09);
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .hero-title.animated-gradient-text { animation: none !important; }
 }

@@ -5,21 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dash Bash Utility</title>
 
-    <!-- Version 1.8.10 - Update this version with each release -->
-    <meta name="app-version" content="1.8.10">
+    <!-- Version 1.8.11 - Update this version with each release -->
+    <meta name="app-version" content="1.8.11">
 
     <!-- Cache Control Headers -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
 
-    <link rel="icon" type="image/svg+xml" href="favicon.svg?v=1.8.10">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg?v=1.8.11">
     <link rel="alternate icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%231f2937'/%3E%3Ctext x='16' y='22' font-family='Arial, sans-serif' font-size='18' font-weight='bold' text-anchor='middle' fill='%23fbbf24'%3E$%3C/text%3E%3Crect x='6' y='8' width='6' height='2' fill='%2360a5fa' opacity='0.8'/%3E%3Crect x='20' y='8' width='6' height='2' fill='%2360a5fa' opacity='0.8'/%3E%3Crect x='6' y='22' width='6' height='2' fill='%23a78bfa' opacity='0.8'/%3E%3Crect x='20' y='22' width='6' height='2' fill='%23a78bfa' opacity='0.8'/%3E%3C/svg%3E" />
     <meta name="description" content="Target Calculator & Address Book Utility with Dashers Management">
     <meta name="theme-color" content="#111827">
 
     <!-- PWA Support -->
-    <link rel="manifest" href="manifest.json?v=1.8.10">
+    <link rel="manifest" href="manifest.json?v=1.8.11">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
@@ -37,10 +37,10 @@
     <!-- Google Fonts - Modern Sans-Serif -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- External Stylesheets (MUST load after Tailwind to override defaults) -->
-    <link rel="stylesheet" href="styles.css?v=1.8.10">
+    <link rel="stylesheet" href="styles.css?v=1.8.12">
 
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@0.545.0/dist/umd/lucide.min.js"></script>
@@ -50,8 +50,8 @@
 
     <!-- Service Worker Registration with Version Check -->
     <script>
-    console.log('%cDash Bash Utility build 1.8.10 (Main parity + SW harden) loaded','background:#222;color:#f39ac5;padding:4px 8px;border-radius:4px');
-    const APP_VERSION = '1.8.10'; // Update this with each release
+    console.log('%cDash Bash Utility build 1.8.11 (UX: enforce one-line add rows) loaded','background:#222;color:#f39ac5;padding:4px 8px;border-radius:4px');
+    const APP_VERSION = '1.8.11'; // Update this with each release
     const versionState = {
         registration: null,
         banner: null,
@@ -737,6 +737,10 @@
             const [collapsedCashOutNotes, setCollapsedCashOutNotes] = useState({}); // { [dasherId]: boolean }
             const [collapsedCategoryNotes, setCollapsedCategoryNotes] = useState({}); // { [`${categoryId}-${noteIndex}`]: boolean }
             const [collapsedDeactivatedDashers, setCollapsedDeactivatedDashers] = useState({});
+            // NEW: Add parity maps for buckets that were missing them
+            const [collapsedReadyDashers, setCollapsedReadyDashers] = useState({});
+            const [collapsedCurrentlyUsingDashers, setCollapsedCurrentlyUsingDashers] = useState({});
+            const [collapsedAppealedDashers, setCollapsedAppealedDashers] = useState({});
             // Lightweight render-ready flags to show a spinner right away on open
             const [dashersRenderReady, setDashersRenderReady] = useState(false);
             const [readyRenderReady, setReadyRenderReady] = useState(false);
@@ -1327,6 +1331,9 @@
                         collapsedCategories,
                         collapsedStores,
                         collapsedDashers,
+                        collapsedReadyDashers,
+                        collapsedCurrentlyUsingDashers,
+                        collapsedAppealedDashers,
                         collapsedArchivedDashers,
                         collapsedDeactivatedDashers,
                         collapsedReverifDashers,
@@ -1495,6 +1502,9 @@
                         if (state.collapsedCategories) setCollapsedCategories(state.collapsedCategories);
                         if (state.collapsedStores) setCollapsedStores(state.collapsedStores);
                         if (state.collapsedDashers) setCollapsedDashers(state.collapsedDashers);
+                        if (state.collapsedReadyDashers) setCollapsedReadyDashers(state.collapsedReadyDashers);
+                        if (state.collapsedCurrentlyUsingDashers) setCollapsedCurrentlyUsingDashers(state.collapsedCurrentlyUsingDashers);
+                        if (state.collapsedAppealedDashers) setCollapsedAppealedDashers(state.collapsedAppealedDashers);
                         if (state.collapsedArchivedDashers) setCollapsedArchivedDashers(state.collapsedArchivedDashers);
                         if (state.collapsedDeactivatedDashers) setCollapsedDeactivatedDashers(state.collapsedDeactivatedDashers);
                         if (state.collapsedDasherCategories) setCollapsedDasherCategories(state.collapsedDasherCategories);
@@ -1549,6 +1559,9 @@
                         collapsedCategories,
                         collapsedStores,
                         collapsedDashers,
+                        collapsedReadyDashers,
+                        collapsedCurrentlyUsingDashers,
+                        collapsedAppealedDashers,
                         collapsedArchivedDashers,
                         collapsedDeactivatedDashers,
                         collapsedLockedDashers,
@@ -2279,80 +2292,81 @@
                     }, 50);
                 };
 
-                const addForm = React.createElement('div', { key: 'addRow', className: 'db-field-row db-align-center gap-3 pt-3 border-t border-gray-700/80 mt-2' }, [
+                const addForm = React.createElement('div', { key: 'addFormWrapper', className: 'pt-3 border-t border-gray-700/80 mt-2' }, [
+                    React.createElement('div', { key: 'addRow', className: 'db-field-row db-align-center gap-3' }, [
 
-                    React.createElement('div', { key: 'a1', className: 'db-col-amount' },
-                        React.createElement('input', {
+                        React.createElement('div', { key: 'a1', className: 'db-col-amount' },
+                            React.createElement('input', {
 
-                            id: cashOutAmountInputId,
+                                id: cashOutAmountInputId,
 
-                            type: 'number',
+                                type: 'number',
 
-                            min: 0,
+                                min: 0,
 
-                            step: '0.01',
+                                step: '0.01',
 
-                            value: amtStr,
-                            onChange: e => setDraft(d => ({ ...d, _addCashOutAmount: e.target.value, _addCashOutError: '' })),
-                            placeholder: 'Amount',
-                            className: 'db-input-sm w-28 placeholder-gray-400',
-                            'aria-label': 'Add cash-out amount',
+                                value: amtStr,
+                                onChange: e => setDraft(d => ({ ...d, _addCashOutAmount: e.target.value, _addCashOutError: '' })),
+                                placeholder: 'Amount',
+                                className: 'db-input-sm w-28 placeholder-gray-400',
+                                'aria-label': 'Add cash-out amount',
 
-                            'aria-invalid': err ? 'true' : (hasAmt && !validAmt ? 'true' : 'false'),
+                                'aria-invalid': err ? 'true' : (hasAmt && !validAmt ? 'true' : 'false'),
 
-                            'aria-describedby': err ? cashOutErrorId : undefined
+                                'aria-describedby': err ? cashOutErrorId : undefined
 
-                        })
+                            })
 
-                    ),
+                        ),
 
-                    React.createElement('div', { key: 'a2', className: 'db-col-source' },
-                        React.createElement('input', {
-                            type: 'text',
-                            value: (draft._addCashOutMethod || ''),
-                            onChange: e => setDraft(d => ({ ...d, _addCashOutMethod: e.target.value })),
-                            placeholder: 'Method',
-                            className: 'db-input-sm w-32 placeholder-gray-400',
-                            'aria-label': 'Add cash-out method'
-                        })
-                    ),
+                        React.createElement('div', { key: 'a2', className: 'db-col-source' },
+                            React.createElement('input', {
+                                type: 'text',
+                                value: (draft._addCashOutMethod || ''),
+                                onChange: e => setDraft(d => ({ ...d, _addCashOutMethod: e.target.value })),
+                                placeholder: 'Method',
+                                className: 'db-input-sm w-32 placeholder-gray-400',
+                                'aria-label': 'Add cash-out method'
+                            })
+                        ),
 
-                    React.createElement('div', { key: 'a3', className: 'db-col-notes' },
-                        React.createElement('input', {
-                            type: 'text',
-                            value: (draft._addCashOutNotes || ''),
-                            onChange: e => setDraft(d => ({ ...d, _addCashOutNotes: e.target.value })),
-                            placeholder: 'Notes',
-                            className: 'db-input-sm w-full placeholder-gray-400',
-                            'aria-label': 'Add cash-out notes'
-                        })
-                    ),
+                        React.createElement('div', { key: 'a3', className: 'db-col-notes' },
+                            React.createElement('input', {
+                                type: 'text',
+                                value: (draft._addCashOutNotes || ''),
+                                onChange: e => setDraft(d => ({ ...d, _addCashOutNotes: e.target.value })),
+                                placeholder: 'Notes',
+                                className: 'db-input-sm w-full placeholder-gray-400',
+                                'aria-label': 'Add cash-out notes'
+                            })
+                        ),
 
-                    React.createElement('label', { key: 'adj', className: 'flex items-center gap-2 text-[11px] text-gray-300' }, [
+                        React.createElement('label', { key: 'adj', className: 'flex items-center gap-2 text-[11px] text-gray-300' }, [
 
-                        React.createElement('input', {
+                            React.createElement('input', {
 
-                            type: 'checkbox',
+                                type: 'checkbox',
 
-                            checked: !!draft._addCashOutAdjust,
+                                checked: !!draft._addCashOutAdjust,
 
-                            onChange: e => setDraft(d => ({ ...d, _addCashOutAdjust: e.target.checked }))
+                                onChange: e => setDraft(d => ({ ...d, _addCashOutAdjust: e.target.checked }))
 
-                        }),
+                            }),
 
-                        React.createElement('span', null, 'Adjust balance')
+                            React.createElement('span', null, 'Adjust balance')
+
+                        ]),
+
+                        React.createElement('button', {
+                            key: 'addBtn',
+                            disabled: !hasAmt,
+                            onClick: handleAddCashOut,
+                            className: 'px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-xs text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors'
+                        }, 'Add'),
 
                     ]),
-
-                    err && React.createElement('div', { key: 'err', id: cashOutErrorId, className: 'basis-full text-[11px] text-red-400', role: 'status', 'aria-live': 'polite' }, err),
-
-                    React.createElement('button', {
-                        key: 'addBtn',
-                        disabled: !hasAmt,
-                        onClick: handleAddCashOut,
-                        className: 'px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-xs text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors'
-                    }, 'Add')
-
+                    err && React.createElement('div', { key: 'err', id: cashOutErrorId, className: 'text-[11px] text-red-400 mt-1', role: 'status', 'aria-live': 'polite' }, err)
                 ]);
 
                 if (isEditing) {
@@ -4229,54 +4243,54 @@
                         ]),
 
                         // Add Earning (inline)
-                        React.createElement('div', { key: 'addEarning', className: 'db-field-row db-align-center gap-2 pt-1' }, [
-                            React.createElement('div', { key: 'e1', className: 'db-col-amount' },
-                                React.createElement('input', {
-                                    id: inlineAmountInputId,
-                                    type: 'number',
-                                    inputMode: 'decimal',
-                                    min: 0,
-                                    step: '0.01',
-                                    value: inlineAmountValue,
-                                    onChange: e => setDraftDasher(d => ({ ...d, _addEarningAmount: e.target.value, _addEarningError: '' })),
-                                    placeholder: 'Amount',
-                                    className: 'db-input-sm w-24 placeholder-gray-400',
-                                    'aria-label': 'Add earning amount',
-                                    'aria-invalid': (inlineErrorMessage || (inlineHasAmount && !inlineAmountIsValid)) ? 'true' : 'false',
-                                    'aria-describedby': inlineErrorMessage ? `${inlineAmountInputId}-error` : undefined
-                                })
-                            ),
-                            React.createElement('div', { key: 'e2', className: 'db-col-source' },
-                                React.createElement('input', {
-                                    type: 'text',
-                                    value: (draftDasher._addEarningSource || ''),
-                                    onChange: e => setDraftDasher(d => ({ ...d, _addEarningSource: e.target.value })),
-                                    placeholder: 'Source',
-                                    className: 'db-input-sm w-28 placeholder-gray-400',
-                                    'aria-label': 'Add earning source'
-                                })
-                            ),
-                            React.createElement('div', { key: 'e3', className: 'db-col-notes' },
-                                React.createElement('input', {
-                                    type: 'text',
-                                    value: (draftDasher._addEarningNotes || ''),
-                                    onChange: e => setDraftDasher(d => ({ ...d, _addEarningNotes: e.target.value })),
-                                    placeholder: 'Notes',
-                                    className: 'db-input-sm w-full placeholder-gray-400',
-                                    'aria-label': 'Add earning notes'
-                                })
-                            ),
-                            React.createElement('label', { key: 'e4', className: 'flex items-center gap-1 text-[11px] text-gray-300' }, [
-                                React.createElement('input', {
-                                    type: 'checkbox',
-                                    checked: inlineApplyBalance,
-                                    onChange: e => setDraftDasher(d => ({ ...d, _addEarningApply: e.target.checked }))
-                                }),
-                                'Also increase balance'
-                            ]),
-                            inlineErrorMessage && React.createElement('div', { key: 'eError', id: `${inlineAmountInputId}-error`, className: 'basis-full text-[11px] text-red-400', role: 'status', 'aria-live': 'polite' }, inlineErrorMessage),
-                            React.createElement('button', {
-                                key: 'eAdd',
+                        React.createElement('div', { key: 'addEarningWrapper', className: 'pt-1' }, [
+                            React.createElement('div', { key: 'addEarning', className: 'db-field-row db-align-center gap-2' }, [
+                                React.createElement('div', { key: 'e1', className: 'db-col-amount' },
+                                    React.createElement('input', {
+                                        id: inlineAmountInputId,
+                                        type: 'number',
+                                        inputMode: 'decimal',
+                                        min: 0,
+                                        step: '0.01',
+                                        value: inlineAmountValue,
+                                        onChange: e => setDraftDasher(d => ({ ...d, _addEarningAmount: e.target.value, _addEarningError: '' })),
+                                        placeholder: 'Amount',
+                                        className: 'db-input-sm w-24 placeholder-gray-400',
+                                        'aria-label': 'Add earning amount',
+                                        'aria-invalid': (inlineErrorMessage || (inlineHasAmount && !inlineAmountIsValid)) ? 'true' : 'false',
+                                        'aria-describedby': inlineErrorMessage ? `${inlineAmountInputId}-error` : undefined
+                                    })
+                                ),
+                                React.createElement('div', { key: 'e2', className: 'db-col-source' },
+                                    React.createElement('input', {
+                                        type: 'text',
+                                        value: (draftDasher._addEarningSource || ''),
+                                        onChange: e => setDraftDasher(d => ({ ...d, _addEarningSource: e.target.value })),
+                                        placeholder: 'Source',
+                                        className: 'db-input-sm w-28 placeholder-gray-400',
+                                        'aria-label': 'Add earning source'
+                                    })
+                                ),
+                                React.createElement('div', { key: 'e3', className: 'db-col-notes' },
+                                    React.createElement('input', {
+                                        type: 'text',
+                                        value: (draftDasher._addEarningNotes || ''),
+                                        onChange: e => setDraftDasher(d => ({ ...d, _addEarningNotes: e.target.value })),
+                                        placeholder: 'Notes',
+                                        className: 'db-input-sm w-full placeholder-gray-400',
+                                        'aria-label': 'Add earning notes'
+                                    })
+                                ),
+                                React.createElement('label', { key: 'e4', className: 'flex items-center gap-1 text-[11px] text-gray-300' }, [
+                                    React.createElement('input', {
+                                        type: 'checkbox',
+                                        checked: inlineApplyBalance,
+                                        onChange: e => setDraftDasher(d => ({ ...d, _addEarningApply: e.target.checked }))
+                                    }),
+                                    'Also increase balance'
+                                ]),
+                                React.createElement('button', {
+                                    key: 'eAdd',
                                 disabled: !inlineHasAmount,
                                 onClick: () => {
                                     const amt = deriveNumericAmount(draftDasher._addEarningAmount);
@@ -4354,7 +4368,9 @@
                                     }, 50);
                                 },
                                 className: 'px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-xs text-white disabled:opacity-40 disabled:cursor-not-allowed'
-                            }, 'Add')
+                            }, 'Add'),
+                            ]),
+                            inlineErrorMessage && React.createElement('div', { key: 'eError', id: `${inlineAmountInputId}-error`, className: 'text-[11px] text-red-400 mt-1', role: 'status', 'aria-live': 'polite' }, inlineErrorMessage)
                         ]),
 
                         // Appealed Timer (if appealed)
@@ -5301,6 +5317,145 @@
                 }
             };
 
+            // NEW: Generic bucket expand/collapse helpers
+            // Normalize a list into a collapsed map { [id]: true }
+            const toCollapsedMap = (list = []) =>
+                list.reduce((m, d) => {
+                    if (d && d.id !== undefined && d.id !== null) m[d.id] = true;
+                    return m;
+                }, {});
+
+            // Expand/collapse an entire bucket in one click
+            const expandBucket = (key) => {
+                switch (key) {
+                    case 'main':                // Main "Dashers" (categories)
+                        expandAllDasherCategories();
+                        break;
+                    case 'ready':
+                        setCollapsedReadyDashers({});
+                        break;
+                    case 'currently-using':
+                        setCollapsedCurrentlyUsingDashers({});
+                        break;
+                    case 'appealed':
+                        setCollapsedAppealedDashers({});
+                        break;
+                    case 'applied-pending':
+                        setCollapsedAppliedPendingDashers({});
+                        break;
+                    case 'reverif':
+                        setCollapsedReverifDashers({});
+                        break;
+                    case 'locked':
+                        setCollapsedLockedDashers({});
+                        break;
+                    case 'deactivated':
+                        setCollapsedDeactivatedDashers({});
+                        break;
+                    case 'archived':
+                        setCollapsedArchivedDashers({});
+                        break;
+                }
+                requestPersist();
+            };
+
+            const collapseBucket = (key) => {
+                switch (key) {
+                    case 'main':
+                        collapseAllDasherCategories();
+                        break;
+                    case 'ready':
+                        setCollapsedReadyDashers(toCollapsedMap(readyDashers));
+                        break;
+                    case 'currently-using':
+                        setCollapsedCurrentlyUsingDashers(toCollapsedMap(currentlyUsingDashers));
+                        break;
+                    case 'appealed':
+                        setCollapsedAppealedDashers(toCollapsedMap(appealedDashers));
+                        break;
+                    case 'applied-pending':
+                        setCollapsedAppliedPendingDashers(toCollapsedMap(appliedPendingDashers));
+                        break;
+                    case 'reverif':
+                        setCollapsedReverifDashers(toCollapsedMap(reverifDashers));
+                        break;
+                    case 'locked':
+                        setCollapsedLockedDashers(toCollapsedMap(lockedDashers));
+                        break;
+                    case 'deactivated':
+                        setCollapsedDeactivatedDashers(toCollapsedMap(deactivatedDashers));
+                        break;
+                    case 'archived':
+                        setCollapsedArchivedDashers(toCollapsedMap(archivedDashers));
+                        break;
+                }
+                requestPersist();
+            };
+
+            // Row-level toggle that updates the right map for the active bucket
+            const toggleBucketRowCollapsed = (bucketKey, dasherId, next) => {
+                const updater = (prev) => {
+                    const v = next !== undefined ? !!next : !prev[dasherId];
+                    return { ...prev, [dasherId]: v };
+                };
+                switch (bucketKey) {
+                    case 'main': // main categories use per-category map; leave as-is
+                        setCollapsedDashers(updater);   // if you use per-category+id keys, adapt here
+                        break;
+                    case 'ready':
+                        setCollapsedReadyDashers(updater);
+                        break;
+                    case 'currently-using':
+                        setCollapsedCurrentlyUsingDashers(updater);
+                        break;
+                    case 'appealed':
+                        setCollapsedAppealedDashers(updater);
+                        break;
+                    case 'applied-pending':
+                        setCollapsedAppliedPendingDashers(updater);
+                        break;
+                    case 'reverif':
+                        setCollapsedReverifDashers(updater);
+                        break;
+                    case 'locked':
+                        setCollapsedLockedDashers(updater);
+                        break;
+                    case 'deactivated':
+                        setCollapsedDeactivatedDashers(updater);
+                        break;
+                    case 'archived':
+                        setCollapsedArchivedDashers(updater);
+                        break;
+                }
+                requestPersist();
+            };
+
+            // Reusable chevrons component for bucket headers
+            const BucketChevrons = ({ bucketKey, isVisible = true }) => (
+                React.createElement('div', {
+                    className: 'flex items-center gap-1 ml-2',
+                    style: {
+                        opacity: isVisible ? 1 : 0,
+                        pointerEvents: isVisible ? 'auto' : 'none',
+                        transition: 'opacity 200ms'
+                    },
+                    onClick: (event) => event.stopPropagation()
+                },
+                    React.createElement('button', {
+                        className: 'text-indigo-400 hover:text-indigo-300 p-1 hover:bg-gray-600/50 rounded transition-colors',
+                        title: 'Collapse all categories',
+                        'aria-label': 'Collapse all categories',
+                        onClick: () => collapseBucket(bucketKey)
+                    }, React.createElement(ChevronUp, { size: 16 })),
+                    React.createElement('button', {
+                        className: 'text-indigo-400 hover:text-indigo-300 p-1 hover:bg-gray-600/50 rounded transition-colors',
+                        title: 'Expand all categories',
+                        'aria-label': 'Expand all categories',
+                        onClick: () => expandBucket(bucketKey)
+                    }, React.createElement(ChevronDown, { size: 16 }))
+                )
+            );
+
             // PHASE 6: Helper function to resolve time status based on bucket type
             function resolveDasherTimeStatus(dasher, sourceKey) {
                 // Appealed bucket uses appealedAt timestamp
@@ -5639,7 +5794,7 @@
                         {/* Gradient Hero Header - v1.7.0 */}
                         <div className="app-hero" role="banner" aria-label="Dash Bash Utility header">
                             <div className="hero-inner">
-                                <h1 className="hero-title">Dash Bash Utility</h1>
+                                <h1 className="hero-title animated-gradient-text">Dash Bash Utility</h1>
                                 <div className="hero-meta">
                                     <span className="badge">
                                         {currentTime.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
@@ -6678,38 +6833,7 @@
                                         <span className="text-lg font-medium flex items-center gap-2">
                                             Dashers {renderStableCount(filteredCategoryDashers.length, categoryDashersFlat.length)}
                                         </span>
-                                        {/* per-section filter bar removed in favor of global controls */}
-                                        {/* Category Expand/Collapse Chevrons */}
-                                        <div
-                                            className="flex items-center gap-1 ml-2"
-                                            onClick={(e) => e.stopPropagation()}
-                                            style={{
-                                                opacity: isDashersOpen && dasherCategories.length > 0 ? 1 : 0,
-                                                pointerEvents: isDashersOpen && dasherCategories.length > 0 ? 'auto' : 'none',
-                                                transition: 'opacity 200ms'
-                                            }}
-                                        >
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    collapseAllDasherCategories();
-                                                }}
-                                                className="text-indigo-400 hover:text-indigo-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
-                                                title="Collapse all categories"
-                                            >
-                                                <ChevronUp size={16} />
-                                            </button>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    expandAllDasherCategories();
-                                                }}
-                                                className="text-indigo-400 hover:text-indigo-300 p-1 hover:bg-gray-600/50 rounded transition-colors"
-                                                title="Expand all categories"
-                                            >
-                                                <ChevronDown size={16} />
-                                            </button>
-                                        </div>
+                                        <BucketChevrons bucketKey="main" isVisible={isDashersOpen && dasherCategories.length > 0} />
                                     </div>
                                     {isDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </button>
@@ -7057,7 +7181,10 @@
                                             Ready {renderStableCount(filteredReadyDashers.length, readyDashers.length)}
                                         </span>
                                     </div>
-                                    {isReadyDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                    <div className="flex items-center gap-2">
+                                        <BucketChevrons bucketKey="ready" isVisible={isReadyDashersOpen && filteredReadyDashers.length > 0} />
+                                        {isReadyDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                    </div>
                                 </button>
                                 {isReadyDashersOpen && (
                                     readyRenderReady ? (
@@ -7071,7 +7198,7 @@
                                             ) : (
                                                 filteredReadyDashers.map((dasher) => {
                                                     const isSelected = selectedItems.readyDashers.has(dasher.id);
-                                                    const isCollapsed = collapsedDashers[dasher.id] || false;
+                                                    const isCollapsed = !!collapsedReadyDashers[dasher.id];
                                                     const isEditing = isDasherEditing('ready', dasher.id);
                                                     const dasherTitle = getDasherTitle(dasher);
                                                     const cardRecentlyMoved = recentlyMoved instanceof Set && recentlyMoved.has(dasher.id);
@@ -7101,7 +7228,7 @@
                                                                     <div className={`${isEditing ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 hover:text-gray-300 cursor-move'}`} aria-label="Drag to reorder" style={{ pointerEvents: isEditing ? 'none' : 'auto' }}>
                                                                         <GripVertical size={14} />
                                                                     </div>
-                                                                    <button onClick={() => { setCollapsedDashers({ ...collapsedDashers, [dasher.id]: !isCollapsed }); requestPersist(); }} className="flex items-center gap-2 flex-1 text-left">
+                                                                    <button onClick={() => toggleBucketRowCollapsed('ready', dasher.id)} className="flex items-center gap-2 flex-1 text-left">
                                                                         {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
                                                                         <div className="flex-1 min-w-0">
                                                                             <h5 className="font-medium text-sm flex items-center gap-2 truncate">
@@ -7171,7 +7298,10 @@
                                             Using {renderStableCount(filteredCurrentlyUsingDashers.length, currentlyUsingDashers.length)}
                                         </span>
                                     </div>
-                                    {isCurrentlyUsingDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                    <div className="flex items-center gap-2">
+                                        <BucketChevrons bucketKey="currently-using" isVisible={isCurrentlyUsingDashersOpen && filteredCurrentlyUsingDashers.length > 0} />
+                                        {isCurrentlyUsingDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                    </div>
                                 </button>
                                 {isCurrentlyUsingDashersOpen && (
                                     usingRenderReady ? (
@@ -7187,7 +7317,7 @@
                                             ) : (
                                                 filteredCurrentlyUsingDashers.map(dasher => {
                                                     const isSelected = selectedItems.currentlyUsingDashers.has(dasher.id);
-                                                    const isCollapsed = collapsedDashers[dasher.id] || false;
+                                                    const isCollapsed = !!collapsedCurrentlyUsingDashers[dasher.id];
                                                     const isEditing = isDasherEditing('currently-using', dasher.id);
                                                     const dasherTitle = getDasherTitle(dasher);
                                                     const cardRecentlyMoved = recentlyMoved instanceof Set && recentlyMoved.has(dasher.id);
@@ -7207,7 +7337,7 @@
                                                                     <div className={`${isEditing ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 hover:text-gray-300 cursor-move'}`} aria-label="Drag to reorder" style={{ pointerEvents: isEditing ? 'none' : 'auto' }}>
                                                                         <GripVertical size={14} />
                                                                     </div>
-                                                                    <button onClick={() => { setCollapsedDashers({ ...collapsedDashers, [dasher.id]: !isCollapsed }); requestPersist(); }} className="flex items-center gap-2 flex-1 text-left">
+                                                                    <button onClick={() => toggleBucketRowCollapsed('currently-using', dasher.id)} className="flex items-center gap-2 flex-1 text-left">
                                                                         {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
                                                                         <div className="flex-1 min-w-0">
                                                                             <h5 className="font-medium text-sm flex items-center gap-2 truncate">
@@ -7274,7 +7404,10 @@
                                             Appealed {renderStableCount(filteredAppealedDashers.length, appealedDashers.length)}
                                         </span>
                                     </div>
-                                    {isAppealedDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                    <div className="flex items-center gap-2">
+                                        <BucketChevrons bucketKey="appealed" isVisible={isAppealedDashersOpen && filteredAppealedDashers.length > 0} />
+                                        {isAppealedDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                    </div>
                                 </button>
                                 {isAppealedDashersOpen && (appealedRenderReady ? (
                                     <div className="mt-2 px-2 pb-2">
@@ -7289,7 +7422,7 @@
                                             ) : (
                                                 filteredAppealedDashers.map(dasher => {
                                                     const isSelected = selectedItems.appealedDashers.has(dasher.id);
-                                                    const isCollapsed = collapsedDashers[dasher.id] || false;
+                                                    const isCollapsed = !!collapsedAppealedDashers[dasher.id];
                                                     const isEditing = isDasherEditing('appealed', dasher.id);
                                                     const dasherTitle = getDasherTitle(dasher);
                                                     const cardRecentlyMoved = recentlyMoved instanceof Set && recentlyMoved.has(dasher.id);
@@ -7309,7 +7442,7 @@
                                                                     <div className={`${isEditing ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 hover:text-gray-300 cursor-move'}`} aria-label="Drag to reorder" style={{ pointerEvents: isEditing ? 'none' : 'auto' }}>
                                                                         <GripVertical size={14} />
                                                                     </div>
-                                                                    <button onClick={() => { setCollapsedDashers({ ...collapsedDashers, [dasher.id]: !isCollapsed }); requestPersist(); }} className="flex items-center gap-2 flex-1 text-left">
+                                                                    <button onClick={() => toggleBucketRowCollapsed('appealed', dasher.id)} className="flex items-center gap-2 flex-1 text-left">
                                                                         {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
                                                                         <div className="flex-1 min-w-0">
                                                                             <h5 className="font-medium text-sm flex items-center gap-2 truncate">
@@ -7375,7 +7508,10 @@
                                             Applied Pending {renderStableCount(filteredAppliedPendingDashers.length, appliedPendingDashers.length)}
                                         </span>
                                     </div>
-                                    {isAppliedPendingDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                    <div className="flex items-center gap-2">
+                                        <BucketChevrons bucketKey="applied-pending" isVisible={isAppliedPendingDashersOpen && filteredAppliedPendingDashers.length > 0} />
+                                        {isAppliedPendingDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                    </div>
                                 </button>
                                 {isAppliedPendingDashersOpen && (appliedRenderReady ? (
                                     <div className="mt-2 px-2 pb-2">
@@ -7385,7 +7521,7 @@
                                             ) : (
                                                 filteredAppliedPendingDashers.map((dasher) => {
                                                     const isSelected = selectedItems.appliedPendingDashers.has(dasher.id);
-                                                    const isCollapsed = collapsedDashers[dasher.id] || false;
+                                                    const isCollapsed = !!collapsedAppliedPendingDashers[dasher.id];
                                                     const isEditing = isDasherEditing('applied-pending', dasher.id);
                                                     const dasherTitle = getDasherTitle(dasher);
                                                     const cardRecentlyMoved = recentlyMoved instanceof Set && recentlyMoved.has(dasher.id);
@@ -7405,7 +7541,7 @@
                                                                     <div className={`${isEditing ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 hover:text-gray-300 cursor-move'}`} aria-label="Drag to reorder" style={{ pointerEvents: isEditing ? 'none' : 'auto' }}>
                                                                         <GripVertical size={14} />
                                                                     </div>
-                                                                    <button onClick={() => { setCollapsedDashers({ ...collapsedDashers, [dasher.id]: !isCollapsed }); requestPersist(); }} className="flex items-center gap-2 flex-1 text-left">
+                                                                    <button onClick={() => toggleBucketRowCollapsed('applied-pending', dasher.id)} className="flex items-center gap-2 flex-1 text-left">
                                                                         {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
                                                                         <div className="flex-1 min-w-0">
                                                                             <h5 className="font-medium text-sm flex items-center gap-2 truncate">
@@ -7466,7 +7602,10 @@
                                             Reverif {renderStableCount(filteredReverifDashers.length, reverifDashers.length)}
                                         </span>
                                     </div>
-                                    {isReverifDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                    <div className="flex items-center gap-2">
+                                        <BucketChevrons bucketKey="reverif" isVisible={isReverifDashersOpen && filteredReverifDashers.length > 0} />
+                                        {isReverifDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                    </div>
                                 </button>
                                 {isReverifDashersOpen && (reverifRenderReady ? (
                                     <div className="mt-2 px-2 pb-2">
@@ -7476,7 +7615,7 @@
                                             ) : (
                                                 filteredReverifDashers.map((dasher) => {
                                                     const isSelected = selectedItems.reverifDashers && selectedItems.reverifDashers.has ? selectedItems.reverifDashers.has(dasher.id) : false;
-                                                    const isCollapsed = collapsedDashers[dasher.id] || false;
+                                                    const isCollapsed = !!collapsedReverifDashers[dasher.id];
                                                     const isEditing = isDasherEditing('reverif', dasher.id);
                                                     const dasherTitle = getDasherTitle(dasher);
                                                     const cardRecentlyMoved = recentlyMoved instanceof Set && recentlyMoved.has(dasher.id);
@@ -7496,7 +7635,7 @@
                                                                     <div className={`${isEditing ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 hover:text-gray-300 cursor-move'}`} aria-label="Drag to reorder" style={{ pointerEvents: isEditing ? 'none' : 'auto' }}>
                                                                         <GripVertical size={14} />
                                                                     </div>
-                                                                    <button onClick={() => { setCollapsedDashers({ ...collapsedDashers, [dasher.id]: !isCollapsed }); requestPersist(); }} className="flex items-center gap-2 flex-1 text-left">
+                                                                    <button onClick={() => toggleBucketRowCollapsed('reverif', dasher.id)} className="flex items-center gap-2 flex-1 text-left">
                                                                         {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
                                                                         <div className="flex-1 min-w-0">
                                                                             <h5 className="font-medium text-sm flex items-center gap-2 truncate">
@@ -7557,7 +7696,10 @@
                                             Locked {renderStableCount(filteredLockedDashers.length, lockedDashers.length)}
                                         </span>
                                     </div>
-                                    {isLockedDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                    <div className="flex items-center gap-2">
+                                        <BucketChevrons bucketKey="locked" isVisible={isLockedDashersOpen && filteredLockedDashers.length > 0} />
+                                        {isLockedDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                    </div>
                                 </button>
                                 {isLockedDashersOpen && (lockedRenderReady ? (
                                     <div className="mt-2 px-2 pb-2">
@@ -7567,7 +7709,7 @@
                                             ) : (
                                                 filteredLockedDashers.map((dasher) => {
                                                     const isSelected = selectedItems.lockedDashers.has(dasher.id);
-                                                    const isCollapsed = collapsedDashers[dasher.id] || false;
+                                                    const isCollapsed = !!collapsedLockedDashers[dasher.id];
                                                     const isEditing = isDasherEditing('locked', dasher.id);
                                                     const dasherTitle = getDasherTitle(dasher);
                                                     const cardRecentlyMoved = recentlyMoved instanceof Set && recentlyMoved.has(dasher.id);
@@ -7587,7 +7729,7 @@
                                                                     <div className={`${isEditing ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 hover:text-gray-300 cursor-move'}`} aria-label="Drag to reorder" style={{ pointerEvents: isEditing ? 'none' : 'auto' }}>
                                                                         <GripVertical size={14} />
                                                                     </div>
-                                                                    <button onClick={() => { setCollapsedDashers({ ...collapsedDashers, [dasher.id]: !isCollapsed }); requestPersist(); }} className="flex items-center gap-2 flex-1 text-left">
+                                                                    <button onClick={() => toggleBucketRowCollapsed('locked', dasher.id)} className="flex items-center gap-2 flex-1 text-left">
                                                                         {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
                                                                         <div className="flex-1 min-w-0">
                                                                             <h5 className="font-medium text-sm flex items-center gap-2 truncate">
@@ -7647,34 +7789,11 @@
                                         <span className="text-lg font-medium flex items-center gap-2">
                                             Deactivated {renderStableCount(filteredDeactivatedDashers.length, deactivatedDashers.length)}
                                         </span>
-                                        {isDeactivatedDashersOpen && deactivatedDashers.length > 0 && (
-                                            <div className="flex items-center gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        const all = {};
-                                                        deactivatedDashers.forEach(d => { all[d.id] = true; });
-                                                        setCollapsedDeactivatedDashers(all);
-                                                    }}
-                                                    className="text-gray-400 hover:text-gray-300 p-0.5"
-                                                    title="Collapse all deactivated dashers"
-                                                >
-                                                    <ChevronUp size={14} />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setCollapsedDeactivatedDashers({});
-                                                    }}
-                                                    className="text-gray-400 hover:text-gray-300 p-0.5"
-                                                    title="Expand all deactivated dashers"
-                                                >
-                                                    <ChevronDown size={14} />
-                                                </button>
-                                            </div>
-                                        )}
                                     </div>
-                                    {isDeactivatedDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                    <div className="flex items-center gap-2">
+                                        <BucketChevrons bucketKey="deactivated" isVisible={isDeactivatedDashersOpen && filteredDeactivatedDashers.length > 0} />
+                                        {isDeactivatedDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                    </div>
                                 </button>
                                 {isDeactivatedDashersOpen && (deactivatedRenderReady ? (
                                     <div className="p-4 pt-2 space-y-2">
@@ -7683,7 +7802,7 @@
                                         ) : (
                                             filteredDeactivatedDashers.map((dasher) => {
                                                 const isEditing = isDasherEditing('deactivated', dasher.id);
-                                                const isCollapsed = collapsedDeactivatedDashers[dasher.id];
+                                                const isCollapsed = !!collapsedDeactivatedDashers[dasher.id];
                                                 const timeStatus = calculateDasherTimeStatus(dasher.lastUsed);
                                                 const dasherTitle = getDasherTitle(dasher);
 
@@ -7720,7 +7839,7 @@
                                                                     <GripVertical size={14} />
                                                                 </div>
                                                                 <button
-                                                                    onClick={() => setCollapsedDeactivatedDashers(prev => ({ ...prev, [dasher.id]: !prev[dasher.id] }))}
+                                                                    onClick={() => toggleBucketRowCollapsed('deactivated', dasher.id)}
                                                                     className="flex items-center gap-2 flex-1 text-left"
                                                                 >
                                                                     {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
@@ -7843,32 +7962,11 @@
                                         <span className="text-lg font-medium flex items-center gap-2">
                                             Archived {renderStableCount(filteredArchivedDashers.length, archivedDashers.length)}
                                         </span>
-                                        {isArchivedDashersOpen && archivedDashers.length > 0 && (
-                                            <div className="flex items-center gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        collapseAllArchivedDashers();
-                                                    }}
-                                                    className="text-gray-400 hover:text-gray-300 p-0.5"
-                                                    title="Collapse all archived dashers"
-                                                >
-                                                    <ChevronUp size={14} />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        expandAllArchivedDashers();
-                                                    }}
-                                                    className="text-gray-400 hover:text-gray-300 p-0.5"
-                                                    title="Expand all archived dashers"
-                                                >
-                                                    <ChevronDown size={14} />
-                                                </button>
-                                            </div>
-                                        )}
                                     </div>
-                                    {isArchivedDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                    <div className="flex items-center gap-2">
+                                        <BucketChevrons bucketKey="archived" isVisible={isArchivedDashersOpen && filteredArchivedDashers.length > 0} />
+                                        {isArchivedDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                    </div>
                                 </button>
 
                                 {isArchivedDashersOpen && (archivedRenderReady ? (
