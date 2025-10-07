@@ -1910,9 +1910,22 @@
                     );
                 }
 
-                return React.createElement('div', { className: 'mt-2' }, [
+                return React.createElement('div', { className: 'mt-2 space-y-1' }, [
                     React.createElement('div', { key: 'label', className: 'text-[11px] text-gray-400' },
                         `${dasher.cashOutHistory.length} cash‑out${dasher.cashOutHistory.length>1?'s':''}`
+                    ),
+                    React.createElement('div', { key: 'list', className: 'space-y-1' },
+                        dasher.cashOutHistory.map((h, i) => (
+                            React.createElement('div', {
+                                key: h.id || i,
+                                className: 'flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] bg-gray-800/60 px-2 py-1 rounded border border-gray-700'
+                            }, [
+                                React.createElement('span', { key: 'a', className: 'font-mono text-green-300' }, `$${Number(h.amount||0).toFixed(2)}`),
+                                React.createElement('span', { key: 'm', className: 'text-gray-300' }, h.method || 'auto'),
+                                React.createElement('span', { key: 't', className: 'text-gray-400' }, h.at ? formatDateTime(h.at) : ''),
+                                (h.notes ? React.createElement('span', { key: 'n', className: 'text-gray-200' }, `— ${h.notes}`) : null)
+                            ])
+                        ))
                     )
                 ]);
             };
@@ -2070,10 +2083,22 @@
                 }
 
                 const effectiveSourceKey = categoryKey || sourceKey;
+                // Build contextual notes: selected cash-out + related info + source bucket
+                const sel = String((dasherFound?.selectedCashout || '')).toLowerCase();
+                let selLabel = '';
+                if (sel === 'crimson') selLabel = 'Crimson';
+                else if (sel === 'fastpay') selLabel = 'FastPay';
+                const extraInfo = sel === 'crimson'
+                    ? (dasherFound?.crimsonInfo ? ` (${dasherFound.crimsonInfo})` : '')
+                    : (sel === 'fastpay' ? (dasherFound?.fastPayInfo ? ` (${dasherFound.fastPayInfo})` : '') : '');
+                const bucketNote = categoryKey ? ` from ${categoryKey}` : '';
+                const autoNotes = selLabel ? `${selLabel}${extraInfo}${bucketNote}`.trim() : (bucketNote.trim() || undefined);
+
                 const historyEntry = {
                     amount: currentBalance,
                     method: normalizedMethod,
-                    at: new Date().toISOString()
+                    at: new Date().toISOString(),
+                    ...(autoNotes ? { notes: autoNotes } : {})
                 };
 
                 lastCashOutRef.current = {
