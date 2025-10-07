@@ -2146,230 +2146,341 @@
             const renderCashOutHistory = (dasher, isEditing) => {
                 if (!dasher) return null;
 
-                if (isEditing) {
-                    const cashScopeKey = `card-${safeFieldSegment('cashout')}-${safeFieldSegment(dasher?.id ?? dasher?.email ?? dasher?.phone ?? 'dash')}`;
-                    const draft = getDraftForKey(cashScopeKey);
-                    const setDraft = (updater) => setDraftForKey(cashScopeKey, updater);
-                    const amtStr = draft._addCashOutAmount || '';
-                    const amtNum = deriveNumericAmount(amtStr);
-                    const hasAmt = String(amtStr).trim() !== '';
-                    const validAmt = Number.isFinite(amtNum) && amtNum > 0;
-                    const err = draft._addCashOutError || '';
-                    const cashOutAmountInputId = `inline-cashout-${cashScopeKey}`;
-                    const cashOutErrorId = `${cashOutAmountInputId}-error`;
+                const historyEntries = ensureArray(dasher.cashOutHistory);
 
-                    return React.createElement('div', { className: 'space-y-2 mt-2' }, [
-                        React.createElement('div',{key:'histLabel',className:'text-xs uppercase tracking-wide text-gray-400'},'Cash‑Out History'),
-                        (dasher.cashOutHistory && dasher.cashOutHistory.length > 0) ?
-                            React.createElement('div',{key:'histList',className:'space-y-1'},
-                                dasher.cashOutHistory.map((h,i)=>
-                                    React.createElement('div',{
-                                        key:h.id||i,
-                                        className:'flex items-center gap-2 text-[11px] bg-gray-800/60 px-2 py-1 rounded border border-gray-700'
-                                    },[
-                                        React.createElement('input',{
-                                            key:'amt',
-                                            type:'number',
-                                            min:0,
-                                            step:'0.01',
-                                            value:h.amount,
-                                            onChange:e=>updateHistoryEntry(dasher.id,i,{amount:e.target.value}),
-                                            onKeyDown:(e)=>handleEditableKeyDown(e,false),
-                                            onBlur:commitDasherEdit,
-                                            className:'w-20 bg-gray-900 border border-gray-600 rounded px-1 py-0.5 text-xs'
-                                        }),
-                                        React.createElement('input',{
-                                            key:'method',
-                                            type:'text',
-                                            value:h.method||'',
-                                            onChange:e=>updateHistoryEntry(dasher.id,i,{method:e.target.value}),
-                                            onKeyDown:(e)=>handleEditableKeyDown(e,false),
-                                            onBlur:commitDasherEdit,
-                                            className:'w-28 bg-gray-900 border border-gray-600 rounded px-1 py-0.5 text-xs'
-                                        }),
-                                        React.createElement('input',{
-                                            key:'ts',
-                                            type:'datetime-local',
-                                            value: (()=> {
-                                                try {
-                                                    return h.at ? new Date(h.at).toISOString().slice(0,16) : '';
-                                                } catch { return '';}
-                                            })(),
-                                            onChange:e=>{
-                                                const iso = e.target.value ? new Date(e.target.value).toISOString() : h.at;
-                                                updateHistoryEntry(dasher.id,i,{at:iso});
-                                            },
-                                            onKeyDown:(e)=>handleEditableKeyDown(e,false),
-                                            onBlur:commitDasherEdit,
-                                            className:'bg-gray-900 border border-gray-600 rounded px-1 py-0.5 text-xs'
-                                        }),
-                                        React.createElement('textarea',{
-                                            key:'notes',
-                                            placeholder:'notes',
-                                            value:h.notes||'',
-                                            onChange:e=>updateHistoryEntry(dasher.id,i,{notes:e.target.value}),
-                                            onKeyDown:(e)=>handleEditableKeyDown(e,true),
-                                            onBlur:commitDasherEdit,
-                                            rows:2,
-                                            className:'flex-1 bg-gray-900 border border-gray-600 rounded px-1 py-0.5 text-xs min-w-0 resize-y'
-                                        }),
-                                        React.createElement('button',{
-                                            key:'del',
-                                            onClick:()=>deleteHistoryEntry(dasher.id,i),
-                                            className:'text-red-300 hover:text-red-200 px-1',
-                                            title:'Delete entry'
-                                        }, '✕')
+                const cashScopeKey = isEditing ? `card-${safeFieldSegment('cashout')}-${safeFieldSegment(dasher?.id ?? dasher?.email ?? dasher?.phone ?? 'dash')}` : '';
+
+                const draft = isEditing ? getDraftForKey(cashScopeKey) : {};
+
+                const setDraft = isEditing ? (updater) => setDraftForKey(cashScopeKey, updater) : () => {};
+
+                const amtStr = draft._addCashOutAmount || '';
+
+                const amtNum = deriveNumericAmount(amtStr);
+
+                const hasAmt = String(amtStr).trim() !== '';
+
+                const validAmt = Number.isFinite(amtNum) && amtNum > 0;
+
+                const err = draft._addCashOutError || '';
+
+                const cashOutAmountInputId = `inline-cashout-${cashScopeKey}`;
+
+                const cashOutErrorId = `${cashOutAmountInputId}-error`;
+
+                const handleDeleteEntry = isEditing ? (index) => {
+
+                    deleteHistoryEntry(dasher.id, index);
+
+                    announceSuccess('Cash-out entry removed');
+
+                } : () => {};
+
+                const addForm = React.createElement('div', { key: 'addRow', className: 'flex flex-wrap items-end gap-3 pt-3 border-t border-gray-700/80 mt-2' }, [
+
+                    React.createElement('div', { key: 'a1', className: 'flex flex-col' }, [
+
+                        React.createElement('label', { className: 'text-[10px] text-gray-400 uppercase tracking-wide' }, 'Amount'),
+
+                        React.createElement('input', {
+
+                            id: cashOutAmountInputId,
+
+                            type: 'number',
+
+                            min: 0,
+
+                            step: '0.01',
+
+                            value: amtStr,
+
+                            disabled: !isEditing,
+
+                            onChange: e => setDraft(d => ({ ...d, _addCashOutAmount: e.target.value, _addCashOutError: '' })),
+
+                            className: 'w-28 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400',
+
+                            'aria-invalid': err ? 'true' : (hasAmt && !validAmt ? 'true' : 'false'),
+
+                            'aria-describedby': err ? cashOutErrorId : undefined
+
+                        })
+
+                    ]),
+
+                    React.createElement('div', { key: 'a2', className: 'flex flex-col' }, [
+
+                        React.createElement('label', { className: 'text-[10px] text-gray-400 uppercase tracking-wide' }, 'Method'),
+
+                        React.createElement('input', {
+
+                            type: 'text',
+
+                            value: (draft._addCashOutMethod || ''),
+
+                            disabled: !isEditing,
+
+                            onChange: e => setDraft(d => ({ ...d, _addCashOutMethod: e.target.value })),
+
+                            className: 'w-32 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400'
+
+                        })
+
+                    ]),
+
+                    React.createElement('div', { key: 'a3', className: 'flex flex-col flex-1 min-w-[160px]' }, [
+
+                        React.createElement('label', { className: 'text-[10px] text-gray-400 uppercase tracking-wide' }, 'Notes'),
+
+                        React.createElement('textarea', {
+
+                            value: (draft._addCashOutNotes || ''),
+
+                            disabled: !isEditing,
+
+                            onChange: e => setDraft(d => ({ ...d, _addCashOutNotes: e.target.value })),
+
+                            rows: 2,
+
+                            className: 'bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white placeholder-gray-400 w-full resize-y min-h-[2.5rem] focus:outline-none focus:ring-1 focus:ring-gray-400'
+
+                        })
+
+                    ]),
+
+                    React.createElement('label', { key: 'adj', className: 'flex items-center gap-2 text-[11px] text-gray-300 mb-1' }, [
+
+                        React.createElement('input', {
+
+                            type: 'checkbox',
+
+                            checked: !!draft._addCashOutAdjust,
+
+                            disabled: !isEditing,
+
+                            onChange: e => setDraft(d => ({ ...d, _addCashOutAdjust: e.target.checked }))
+
+                        }),
+
+                        React.createElement('span', null, 'Adjust balance')
+
+                    ]),
+
+                    err && React.createElement('div', { key: 'err', id: cashOutErrorId, className: 'basis-full text-[11px] text-red-400', role: 'status', 'aria-live': 'polite' }, err),
+
+                    React.createElement('button', {
+
+                        key: 'addBtn',
+
+                        disabled: !isEditing || !hasAmt,
+
+                        onClick: () => {
+
+                            if (!isEditing) return;
+
+                            const amt = deriveNumericAmount(draft._addCashOutAmount);
+
+                            if (!Number.isFinite(amt) || amt <= 0) {
+
+                                const errMsg = 'Enter a valid positive amount.';
+
+                                setDraft(d => ({ ...d, _addCashOutError: errMsg }));
+
+                                setTimeout(() => {
+
+                                    const inputNode = document.getElementById(cashOutAmountInputId);
+
+                                    if (inputNode) {
+
+                                        inputNode.focus();
+
+                                        if (typeof inputNode.select === 'function') inputNode.select();
+
+                                    }
+
+                                }, 0);
+
+                                announceFailure(errMsg);
+
+                                return;
+
+                            }
+
+                            const nowIso = new Date().toISOString();
+
+                            const method = (draft._addCashOutMethod || 'custom').trim() || 'custom';
+
+                            const notes = (draft._addCashOutNotes || '').trim();
+
+                            const adjustBalance = !!draft._addCashOutAdjust;
+
+                            const targets = getDescriptorsForDasher(dasher, {
+
+                                fallbackHint: `cashout-${dasher?.id ?? dasher?.email ?? dasher?.phone ?? 'dash'}`
+
+                            });
+
+                            const applyCashOut = (existing) => {
+
+                                const base = {
+
+                                    id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `co-${Date.now()}`,
+
+                                    amount: amt.toFixed(2),
+
+                                    method,
+
+                                    notes,
+
+                                    at: nowIso
+
+                                };
+
+                                const history = ensureArray(existing.cashOutHistory);
+
+                                const nextHistory = [...history, base];
+
+                                let nextBalance = existing.balance;
+
+                                if (adjustBalance) {
+
+                                    const cur = parseBalanceValue(existing.balance || '0');
+
+                                    const updated = Math.max(0, cur - amt);
+
+                                    nextBalance = updated.toString();
+
+                                }
+
+                                return {
+
+                                    ...existing,
+
+                                    balance: nextBalance,
+
+                                    cashOutHistory: nextHistory,
+
+                                    lastCashOutRef: adjustBalance ? { id: base.id, index: nextHistory.length - 1 } : (existing.lastCashOutRef || null)
+
+                                };
+
+                            };
+
+                            if (targets.length === 0) {
+
+                                const errMsg = 'Couldn\'t locate matching dasher record.';
+
+                                setDraft(d => ({ ...d, _addCashOutError: errMsg }));
+
+                                setTimeout(() => {
+
+                                    const inputNode = document.getElementById(cashOutAmountInputId);
+
+                                    if (inputNode) {
+
+                                        inputNode.focus();
+
+                                        if (typeof inputNode.select === 'function') inputNode.select();
+
+                                    }
+
+                                }, 0);
+
+                                announceFailure(errMsg);
+
+                                return;
+
+                            }
+
+                            targets.forEach(descriptor => {
+
+                                mutateDasherByMeta(descriptor, applyCashOut);
+
+                            });
+
+                            requestPersist();
+
+                            setDraft(d => ({ _addCashOutAmount: '', _addCashOutMethod: '', _addCashOutNotes: '', _addCashOutAdjust: false, _addCashOutError: '' }));
+
+                            announceSuccess('Cash-out added');
+
+                            setTimeout(() => {
+
+                                const inputNode = document.getElementById(cashOutAmountInputId);
+
+                                if (inputNode) {
+
+                                    inputNode.focus();
+
+                                    if (typeof inputNode.select === 'function') inputNode.select();
+
+                                    }
+
+                                }, 50);
+
+                            }
+
+                        },
+
+                        className: 'px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-xs text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors'
+
+                    }, 'Add')
+
+                ]);
+
+                if (isEditing) {
+                    return React.createElement('div', { className: 'space-y-3 mt-2' }, [
+                        React.createElement('div', { key: 'histLabel', className: 'text-xs uppercase tracking-wide text-gray-400' }, 'Cash‑Out History'),
+                        historyEntries.length > 0
+                            ? React.createElement('div', { key: 'histList', className: 'space-y-1' }, [
+                                React.createElement('div', { key: 'tableWrap', className: 'overflow-x-auto' },
+                                    React.createElement('table', { className: 'w-full text-[11px] border-separate border-spacing-y-1' }, [
+                                        React.createElement('thead', { key: 'thead', className: 'text-gray-400' },
+                                            React.createElement('tr', null, [
+                                                React.createElement('th', { className: 'text-left font-medium px-2 py-1' }, 'Amount'),
+                                                React.createElement('th', { className: 'text-left font-medium px-2 py-1' }, 'Method'),
+                                                React.createElement('th', { className: 'text-left font-medium px-2 py-1' }, 'Notes'),
+                                                React.createElement('th', { className: 'text-left font-medium px-2 py-1' }, 'Time'),
+                                                React.createElement('th', { className: 'text-left font-medium px-2 py-1 w-20' }, 'Actions')
+                                            ])
+                                        ),
+                                        React.createElement('tbody', { key: 'tbody' },
+                                            historyEntries.map((h, i) => (
+                                                React.createElement('tr', { key: h.id || i, className: 'bg-gray-800/60 border border-gray-700 rounded' }, [
+                                                    React.createElement('td', { className: 'px-2 py-1 align-top font-mono text-green-300 whitespace-nowrap' }, `$${Number(h.amount || 0).toFixed(2)}`),
+                                                    React.createElement('td', { className: 'px-2 py-1 align-top text-gray-300 whitespace-nowrap' }, h.method || 'auto'),
+                                                    React.createElement('td', { className: 'px-2 py-1 align-top text-gray-200 break-words' }, h.notes || ''),
+                                                    React.createElement('td', { className: 'px-2 py-1 align-top text-gray-400 whitespace-nowrap' }, h.at ? formatDateTime(h.at) : ''),
+                                                    React.createElement('td', { className: 'px-2 py-1 align-top' },
+                                                        React.createElement('button', {
+                                                            onClick: () => handleDeleteEntry(i),
+                                                            className: 'text-red-300 hover:text-red-200 px-2 py-1 rounded bg-gray-900/70 border border-transparent hover:border-red-300/40 transition-colors',
+                                                            title: 'Delete entry'
+                                                        }, React.createElement(Trash2, { size: 12 }))
+                                                    )
+                                                ])
+                                            ))
+                                        )
                                     ])
                                 )
-                            )
-                            :
-                            React.createElement('div',{key:'emptyHist',className:'text-xs text-gray-500 italic'},'No history'),
-                        React.createElement('div',{key:'addRow',className:'flex flex-wrap items-end gap-2 pt-2 border-t border-gray-700 mt-2'},[
-                            React.createElement('div',{key:'a1',className:'flex flex-col'},[
-                                React.createElement('label',{className:'text-[10px] text-gray-400'},'Amount'),
-                                React.createElement('input',{
-                                    id: cashOutAmountInputId,
-                                    type:'number',min:0,step:'0.01',
-                                    value: amtStr,
-                                    onChange:e=>setDraft(d=>({...d,_addCashOutAmount:e.target.value,_addCashOutError:''})),
-                                    onKeyDown:(e)=>handleEditableKeyDown(e,false),
-                                    onBlur:commitDasherEdit,
-                                    className:'w-24 bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs',
-                                    'aria-invalid': err ? 'true' : (hasAmt && !validAmt ? 'true' : 'false'),
-                                    'aria-describedby': err ? cashOutErrorId : undefined
-                                })
-                            ]),
-                            React.createElement('div',{key:'a2',className:'flex flex-col'},[
-                                React.createElement('label',{className:'text-[10px] text-gray-400'},'Method'),
-                                React.createElement('input',{
-                                    type:'text',
-                                    value: (draft._addCashOutMethod || ''),
-                                    onChange:e=>setDraft(d=>({...d,_addCashOutMethod:e.target.value})),
-                                    onKeyDown:(e)=>handleEditableKeyDown(e,false),
-                                    onBlur:commitDasherEdit,
-                                    className:'w-28 bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs'
-                                })
-                            ]),
-                            React.createElement('div',{key:'a3',className:'flex flex-col flex-1 min-w-[140px]'},[
-                                React.createElement('label',{className:'text-[10px] text-gray-400'},'Notes'),
-                                React.createElement('textarea',{
-                                    value: (draft._addCashOutNotes || ''),
-                                    onChange:e=>setDraft(d=>({...d,_addCashOutNotes:e.target.value})),
-                                    onKeyDown:(e)=>handleEditableKeyDown(e,true),
-                                    onBlur:commitDasherEdit,
-                                    rows:2,
-                                    className:'bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs w-full resize-y min-h-[2.5rem]'
-                                })
-                            ]),
-                            React.createElement('label',{key:'adj',className:'flex items-center gap-1 text-[11px] text-gray-300 mb-1'},[
-                                React.createElement('input',{
-                                    type:'checkbox',
-                                    checked: !!draft._addCashOutAdjust,
-                                    onChange:e=>setDraft(d=>({...d,_addCashOutAdjust:e.target.checked}))
-                                }),
-                                'Adjust balance'
-                            ]),
-                            err && React.createElement('div',{key:'err',id:cashOutErrorId,className:'basis-full text-[11px] text-red-400',role:'status','aria-live':'polite'},err),
-                            React.createElement('button',{
-                                key:'addBtn',
-                                disabled: !hasAmt,
-                                onClick:()=>{
-                                    const amt = deriveNumericAmount(draft._addCashOutAmount);
-                                    if (!Number.isFinite(amt) || amt <= 0) {
-                                        const errMsg = 'Enter a valid positive amount.';
-                                        setDraft(d=>({...d,_addCashOutError:errMsg}));
-                                        setTimeout(() => {
-                                            const inputNode = document.getElementById(cashOutAmountInputId);
-                                            if (inputNode) {
-                                                inputNode.focus();
-                                                if (typeof inputNode.select === 'function') inputNode.select();
-                                            }
-                                        }, 0);
-                                        announceFailure(errMsg);
-                                        return;
-                                    }
-
-                                    // Identity-aware mutation across duplicates (earnings path parity)
-                                    const nowIso = new Date().toISOString();
-                                    const method = (draft._addCashOutMethod || 'custom').trim() || 'custom';
-                                    const notes = (draft._addCashOutNotes || '').trim();
-                                    const adjustBalance = !!draft._addCashOutAdjust;
-
-                                    // Find all matching descriptors by identity
-                                    const targets = getDescriptorsForDasher(dasher, {
-                                        fallbackHint: `cashout-${dasher?.id ?? dasher?.email ?? dasher?.phone ?? 'dash'}`
-                                    });
-
-                                    const applyCashOut = (existing) => {
-                                        const base = {
-                                            id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `co-${Date.now()}`,
-                                            amount: amt.toFixed(2),
-                                            method,
-                                            notes,
-                                            at: nowIso
-                                        };
-                                        const history = ensureArray(existing.cashOutHistory);
-                                        const nextHistory = [...history, base];
-                                        let nextBalance = existing.balance;
-                                        if (adjustBalance) {
-                                            const cur = parseBalanceValue(existing.balance || '0');
-                                            const updated = Math.max(0, cur - amt);
-                                            nextBalance = updated.toString();
-                                        }
-                                        return {
-                                            ...existing,
-                                            balance: nextBalance,
-                                            cashOutHistory: nextHistory,
-                                            lastCashOutRef: adjustBalance ? { id: base.id, index: nextHistory.length - 1 } : (existing.lastCashOutRef || null)
-                                        };
-                                    };
-
-                                    if (targets.length === 0) {
-                                        const errMsg = 'Couldn\'t locate matching dasher record.';
-                                        setDraft(d=>({...d,_addCashOutError:errMsg}));
-                                        setTimeout(() => {
-                                            const inputNode = document.getElementById(cashOutAmountInputId);
-                                            if (inputNode) {
-                                                inputNode.focus();
-                                                if (typeof inputNode.select === 'function') inputNode.select();
-                                            }
-                                        }, 0);
-                                        announceFailure(errMsg);
-                                        return;
-                                    }
-
-                                    targets.forEach(descriptor => {
-                                        mutateDasherByMeta(descriptor, applyCashOut);
-                                    });
-
-                                    requestPersist();
-                                    setDraft(d=>({ _addCashOutAmount:'', _addCashOutMethod:'', _addCashOutNotes:'', _addCashOutAdjust:false, _addCashOutError:'' }));
-                                    announceSuccess('Cash-out added');
-                                    setTimeout(() => {
-                                        const inputNode = document.getElementById(cashOutAmountInputId);
-                                        if (inputNode) {
-                                            inputNode.focus();
-                                            if (typeof inputNode.select === 'function') inputNode.select();
-                                        }
-                                    }, 50);
-                                },
-                                className:'px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-xs text-white disabled:opacity-40 disabled:cursor-not-allowed'
-                            },'Add')
-                        ])
+                            ])
+                            : React.createElement('div', { key: 'emptyHist', className: 'text-xs text-gray-500 italic' }, 'No history'),
+                        addForm
                     ]);
                 }
 
                 // READ-ONLY MODE
-                if (!dasher.cashOutHistory || dasher.cashOutHistory.length === 0) {
-                    return React.createElement('div', { className: 'mt-2' },
-                        React.createElement('div', { className: 'text-[11px] text-gray-500 italic' }, 'No cash‑outs')
-                    );
+                if (!historyEntries.length) {
+                    return React.createElement('div', { className: 'mt-2' }, [
+                        React.createElement('div', { className: 'text-[11px] text-gray-500 italic' }, 'No cash‑outs'),
+                        addForm
+                    ]);
                 }
 
                 const collapsed = isCashOutNotesCollapsed(dasher.id);
                 return React.createElement('div', { className: 'mt-2' }, [
                     React.createElement('div', { key: 'label', className: 'text-[11px] text-gray-400 mb-1' },
-                        `${dasher.cashOutHistory.length} cash‑out${dasher.cashOutHistory.length>1?'s':''}`
+                        `${historyEntries.length} cash‑out${historyEntries.length>1?'s':''}`
                     ),
                     React.createElement('div', { key:'controls', className:'flex items-center justify-end mb-1' },[
                         React.createElement('button',{
@@ -2390,7 +2501,7 @@
                                 ])
                             ),
                             React.createElement('tbody', { key: 'tbody' },
-                                dasher.cashOutHistory.map((h, i) => (
+                                historyEntries.map((h, i) => (
                                     React.createElement('tr', { key: h.id || i, className: 'bg-gray-800/60 border border-gray-700 rounded' }, [
                                         React.createElement('td', { className: 'px-2 py-1 align-top font-mono text-green-300 whitespace-nowrap' }, `$${Number(h.amount||0).toFixed(2)}`),
                                         React.createElement('td', { className: 'px-2 py-1 align-top text-gray-300 whitespace-nowrap' }, h.method || 'auto'),
@@ -2400,7 +2511,8 @@
                                 ))
                             )
                         ])
-                    )
+                    ),
+                    addForm
                 ]);
             };
 
@@ -4161,7 +4273,7 @@
                                     step: '0.01',
                                     value: inlineAmountValue,
                                     onChange: e => setDraftDasher(d => ({ ...d, _addEarningAmount: e.target.value, _addEarningError: '' })),
-                                    className: 'w-24 bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs',
+                                    className: 'w-24 bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-emerald-500',
                                     'aria-invalid': (inlineErrorMessage || (inlineHasAmount && !inlineAmountIsValid)) ? 'true' : 'false',
                                     'aria-describedby': inlineErrorMessage ? `${inlineAmountInputId}-error` : undefined
                                 })
@@ -4172,7 +4284,7 @@
                                     type: 'text',
                                     value: (draftDasher._addEarningSource || ''),
                                     onChange: e => setDraftDasher(d => ({ ...d, _addEarningSource: e.target.value })),
-                                    className: 'w-28 bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs'
+                                    className: 'w-28 bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-emerald-500'
                                 })
                             ]),
                             React.createElement('div', { key: 'e3', className: 'flex flex-col flex-1 min-w-[140px]' }, [
@@ -4181,7 +4293,7 @@
                                     type: 'text',
                                     value: (draftDasher._addEarningNotes || ''),
                                     onChange: e => setDraftDasher(d => ({ ...d, _addEarningNotes: e.target.value })),
-                                    className: 'bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs w-full'
+                                    className: 'bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-white placeholder-gray-400 w-full focus:outline-none focus:ring-1 focus:ring-emerald-500'
                                 })
                             ]),
                             React.createElement('label', { key: 'e4', className: 'flex items-center gap-1 text-[11px] text-gray-300 mb-1' }, [
