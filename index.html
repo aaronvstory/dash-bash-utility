@@ -20,7 +20,6 @@
 
     <!-- PWA Support -->
     <link rel="manifest" href="manifest.json?v=1.8.9">
-    <link rel="apple-touch-icon" href="icon-192.png?v=1.8.9">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
@@ -4084,7 +4083,7 @@
                                 React.createElement('input', {
                                     type: 'text', value: dasher.name || '',
                                     onChange: (e) => updateListField('name', e.target.value),
-                                    className: 'flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500'
+                                    className: 'flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-gray-400'
                                 })
                             ) : (
                                 React.createElement('div', { className: 'flex-1 text-xs text-gray-200' }, dasher.name || React.createElement('span', { className: 'italic text-gray-500' }, 'No name'))
@@ -4099,7 +4098,7 @@
                                 React.createElement('input', {
                                     type: 'email', value: dasher.email || '',
                                     onChange: (e) => updateListField('email', e.target.value),
-                                    className: 'flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500'
+                                    className: 'flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-gray-400'
                                 })
                             ) : (
                                 React.createElement('div', { className: 'flex-1 text-xs text-gray-200' }, dasher.email || React.createElement('span', { className: 'italic text-gray-500' }, 'No email'))
@@ -4111,7 +4110,7 @@
                         React.createElement('div', { key: 'emailPw', className: 'flex items-center gap-2' }, [
                             React.createElement('label', { className: 'text-xs text-gray-400 w-20' }, 'Email pw:'),
                             isEditing ? (
-                                React.createElement('input', { type: 'text', value: dasher.emailPw || '', onChange: (e) => updateListField('emailPw', e.target.value), className: 'flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500' })
+                                React.createElement('input', { type: 'text', value: dasher.emailPw || '', onChange: (e) => updateListField('emailPw', e.target.value), className: 'flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-gray-400' })
                             ) : (
                                 React.createElement('div', { className: 'flex-1 text-xs text-gray-200' }, dasher.emailPw ? '••••••••' : React.createElement('span', { className: 'italic text-gray-500' }, 'No password'))
                             ),
@@ -4122,7 +4121,7 @@
                         React.createElement('div', { key: 'dasherPw', className: 'flex items-center gap-2' }, [
                             React.createElement('label', { className: 'text-xs text-gray-400 w-20' }, 'Dasher pw:'),
                             isEditing ? (
-                                React.createElement('input', { type: 'text', value: dasher.dasherPw || '', onChange: (e) => updateListField('dasherPw', e.target.value), className: 'flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500' })
+                                React.createElement('input', { type: 'text', value: dasher.dasherPw || '', onChange: (e) => updateListField('dasherPw', e.target.value), className: 'flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-gray-400' })
                             ) : (
                                 React.createElement('div', { className: 'flex-1 text-xs text-gray-200' }, dasher.dasherPw ? '••••••••' : React.createElement('span', { className: 'italic text-gray-500' }, 'No password'))
                             ),
@@ -4133,7 +4132,7 @@
                         React.createElement('div', { key: 'phone', className: 'flex items-center gap-2' }, [
                             React.createElement('label', { className: 'text-xs text-gray-400 w-20' }, 'Phone:'),
                             isEditing ? (
-                                React.createElement('input', { type: 'tel', value: dasher.phone || '', onChange: (e) => updateListField('phone', e.target.value), className: 'flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500' })
+                                React.createElement('input', { type: 'tel', value: dasher.phone || '', onChange: (e) => updateListField('phone', e.target.value), className: 'flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-gray-400' })
                             ) : (
                                 React.createElement('div', { className: 'flex-1 text-xs text-gray-200' }, dasher.phone || React.createElement('span', { className: 'italic text-gray-500' }, 'No phone'))
                             ),
@@ -4144,7 +4143,7 @@
                         React.createElement('div', { key: 'balance', className: 'flex items-center gap-2' }, [
                             React.createElement('label', { className: 'text-xs text-gray-400 w-20' }, 'Balance:'),
                             isEditing ? (
-                                React.createElement('input', { type: 'text', value: dasher.balance || '', onChange: (e) => updateListField('balance', e.target.value), className: 'flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500' })
+                                React.createElement('input', { type: 'text', value: dasher.balance || '', onChange: (e) => updateListField('balance', e.target.value), className: 'flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-gray-400' })
                             ) : (
                                 React.createElement('div', { className: 'flex-1 text-xs text-gray-200' }, `$${parseBalanceValue(dasher.balance).toFixed(2)}`)
                             )
@@ -4298,7 +4297,7 @@
                                 React.createElement('textarea', {
                                     value: dasher.notes || '',
                                     onChange: (e) => updateListField('notes', e.target.value),
-                                    className: 'flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-xs text-white resize-y min-h-[2.5rem] focus:outline-none focus:ring-1 focus:ring-blue-500',
+                                    className: 'flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-xs text-white resize-y min-h-[2.5rem] focus:outline-none focus:ring-1 focus:ring-gray-400',
                                     rows: 2,
                                     placeholder: 'Any notes...',
                                     style: { minHeight: '2.5rem' }
@@ -4346,7 +4345,7 @@
                         // FastPay
                         React.createElement('div', { key: 'fastpayRow', className: 'flex items-center gap-2' }, [
                             React.createElement('label', { className: 'text-xs text-gray-400 w-20' }, 'FastPay:'),
-                            React.createElement('input', { type: 'checkbox', checked: !!dasher.fastPay, onChange: (e) => updateListField('fastPay', e.target.checked), disabled: !isEditing, className: 'h-3 w-3 text-blue-500 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-1 disabled:opacity-50' }),
+                            React.createElement('input', { type: 'checkbox', checked: !!dasher.fastPay, onChange: (e) => updateListField('fastPay', e.target.checked), disabled: !isEditing, className: 'h-3 w-3 text-blue-500 bg-gray-700 border-gray-600 rounded focus:ring-gray-400 focus:ring-1 disabled:opacity-50' }),
                             React.createElement('span', { className: 'text-xs text-gray-400' }, dasher.fastPay ? 'Yes' : 'No')
                         ]),
                         React.createElement('div', { key: 'fastpayInfo', className: 'flex items-center gap-2' }, [
@@ -4355,7 +4354,7 @@
                                 React.createElement('input', {
                                     type: 'text', value: dasher.fastPayInfo || '',
                                     onChange: (e) => updateTextField('fastPayInfo', e.target.value),
-                                    className: 'flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500',
+                                    className: 'flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-gray-400',
                                     placeholder: 'Optional details about FastPay…'
                                 })
                             ) : (
@@ -5635,7 +5634,7 @@
                                                         value={customTarget}
                                                         onChange={(e) => setCustomTarget(e.target.value)}
                                                         onKeyPress={handleTargetKeyPress}
-                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-base font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-base font-mono focus:outline-none focus:ring-2 focus:ring-gray-400"
                                                         placeholder="Enter custom amount"
                                                         autoFocus
                                                     />
@@ -5667,7 +5666,7 @@
                                                     value={currentPrice}
                                                     onChange={(e) => setCurrentPrice(e.target.value)}
                                                     onKeyPress={handleKeyPress}
-                                                    className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-base font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-base font-mono focus:outline-none focus:ring-2 focus:ring-gray-400"
                                                     placeholder="2.75"
                                                 />
                                                 <button
@@ -5835,7 +5834,7 @@
                                                             <textarea
                                                                 value={editText}
                                                                 onChange={(e) => setEditText(e.target.value)}
-                                                                className="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-base text-white resize-y min-h-[3rem] focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                className="w-full bg-gray-600 border border-gray-500 rounded px-2 py-1 text-base text-white resize-y min-h-[3rem] focus:outline-none focus:ring-1 focus:ring-gray-400"
                                                                 rows={Math.max(1, editText.split('\n').length)}
                                                                 autoFocus
                                                             />
@@ -5882,7 +5881,7 @@
                                                     <textarea
                                                         value={newMessageText}
                                                         onChange={(e) => setNewMessageText(e.target.value)}
-                                                        className="flex-1 bg-gray-600 border border-gray-500 rounded px-2 py-1 text-base text-white resize-y min-h-[3rem] focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                        className="flex-1 bg-gray-600 border border-gray-500 rounded px-2 py-1 text-base text-white resize-y min-h-[3rem] focus:outline-none focus:ring-1 focus:ring-gray-400"
                                                         rows={2}
                                                         autoFocus
                                                         placeholder="Enter your new message..."
@@ -5976,7 +5975,7 @@
                                                                     type="text"
                                                                     value={category.name}
                                                                     onChange={(e) => updateCategory(category.id, e.target.value)}
-                                                                    className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                    className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-gray-400"
                                                                     onBlur={() => setEditingCategory(-1)}
                                                                     onKeyPress={(e) => e.key === 'Enter' && setEditingCategory(-1)}
                                                                     onClick={(e) => e.stopPropagation()}
@@ -6133,7 +6132,7 @@
                                                                                             type="text"
                                                                                             value={store.address}
                                                                                             onChange={(e) => updateStore(category.id, store.id, 'address', e.target.value)}
-                                                                                            className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                                            className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-gray-400"
                                                                                             placeholder="Enter address..."
                                                                                         />
                                                                                     ) : (
@@ -6163,7 +6162,7 @@
                                                                                                 type="text"
                                                                                                 value={store.openTime}
                                                                                                 onChange={(e) => updateStore(category.id, store.id, 'openTime', e.target.value)}
-                                                                                                className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-xs text-white font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                                                className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-xs text-white font-mono focus:outline-none focus:ring-1 focus:ring-gray-400"
                                                                                                 placeholder="0800"
                                                                                                 maxLength={4}
                                                                                             />
@@ -6180,7 +6179,7 @@
                                                                                                 type="text"
                                                                                                 value={store.closeTime}
                                                                                                 onChange={(e) => updateStore(category.id, store.id, 'closeTime', e.target.value)}
-                                                                                                className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-xs text-white font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                                                className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-xs text-white font-mono focus:outline-none focus:ring-1 focus:ring-gray-400"
                                                                                                 placeholder="2100"
                                                                                                 maxLength={4}
                                                                                             />
@@ -6199,7 +6198,7 @@
                                                                                         <textarea
                                                                                             value={store.notes}
                                                                                             onChange={(e) => updateStore(category.id, store.id, 'notes', e.target.value)}
-                                                                                            className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-xs text-white resize-y min-h-[2rem] focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                                            className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-xs text-white resize-y min-h-[2rem] focus:outline-none focus:ring-1 focus:ring-gray-400"
                                                                                             rows={1}
                                                                                             placeholder="Any notes..."
                                                                                         />
@@ -6243,7 +6242,7 @@
                                                         type="text"
                                                         value={newCategoryName}
                                                         onChange={(e) => setNewCategoryName(e.target.value)}
-                                                        className="flex-1 bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                        className="flex-1 bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-gray-400"
                                                         placeholder="Category name (e.g., Walgreens)"
                                                         autoFocus
                                                     />
@@ -6424,7 +6423,7 @@
                                                                                         <textarea
                                                                                             value={note}
                                                                                             onChange={(e) => updateNote(category.id, noteIndex, e.target.value)}
-                                                                                            className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-sm text-white resize-y min-h-[4rem] focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                                            className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-sm text-white resize-y min-h-[4rem] focus:outline-none focus:ring-1 focus:ring-gray-400"
                                                                                             rows={3}
                                                                                             autoFocus
                                                                                             placeholder="Enter your note..."
@@ -6660,7 +6659,7 @@
                                                                         toggleCategorySelection('dashers', category.id, category.dashers.map(d => d.id));
                                                                     }}
                                                                     onClick={(e) => e.stopPropagation()}
-                                                                    className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-500 rounded focus:ring-blue-500 focus:ring-2"
+                                                                    className="w-4 h-4 text-gray-300 bg-gray-700 border-gray-500 rounded focus:ring-gray-400 focus:ring-2"
                                                                 />
                                                             )}
                                                             <button
@@ -6805,7 +6804,7 @@
                                                                                             toggleItemSelection('dashers', dasher.id);
                                                                                         }}
                                                                                         onClick={(e) => e.stopPropagation()}
-                                                                                        className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-500 rounded focus:ring-blue-500 focus:ring-2"
+                                                                                        className="w-4 h-4 text-gray-300 bg-gray-700 border-gray-500 rounded focus:ring-gray-400 focus:ring-2"
                                                                                     />
                                                                                 )}
                                                                                 <div
@@ -6919,298 +6918,20 @@
                                                                         {/* Dasher Details */}
                                                                         {!isCollapsed && (
                                                                             <div className="space-y-2 p-3 pt-0 border-t border-gray-600/30">
-                                                                            {/* Name */}
-                                                                            <div className="flex items-center gap-2">
-                                                                                <label className="text-xs text-gray-400 w-20">Name:</label>
-                                                                                {isEditing ? (
-                                                                                    <input
-                                                                                        type="text"
-                                                                                        value={dasher.name}
-                                                                                        onChange={(e) => updateDasher(category.id, dasher.id, 'name', e.target.value)}
-                                                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                                                        placeholder="Enter name..."
-                                                                                    />
-                                                                                ) : (
-                                                                                    <React.Fragment>
-                                                                                        <div className="flex-1 text-xs text-gray-200">
-                                                                                            {dasher.name || <span className="italic text-gray-500">No name</span>}
-                                                                                        </div>
-                                                                                        {dasher.name && (
-                                                                                            <button
-                                                                                                onClick={() => copyToClipboard(dasher.name)}
-                                                                                                className="text-blue-400 hover:text-blue-300 p-1"
-                                                                                                title="Copy name"
-                                                                                            >
-                                                                                                <Copy size={12} />
-                                                                                            </button>
-                                                                                        )}
-                                                                                    </React.Fragment>
+                                                                                {renderDasherDetails(
+                                                                                    dasher,
+                                                                                    category.dashers,
+                                                                                    (updater) => setDasherCategories(prev => prev.map(cat => {
+                                                                                        if (cat.id !== category.id) return cat;
+                                                                                        const nextDashers = (typeof updater === 'function') ? updater(cat.dashers) : updater;
+                                                                                        return { ...cat, dashers: nextDashers };
+                                                                                    })),
+                                                                                    saveAllToLocalStorage,
+                                                                                    copyToClipboard,
+                                                                                    timeStatus,
+                                                                                    isEditing,
+                                                                                    category.id
                                                                                 )}
-                                                                            </div>
-
-                                                                            {/* Email */}
-                                                                            <div className="flex items-center gap-2">
-                                                                                <label className="text-xs text-gray-400 w-20">Email:</label>
-                                                                                {isEditing ? (
-                                                                                    <input
-                                                                                        type="email"
-                                                                                        value={dasher.email}
-                                                                                        onChange={(e) => updateDasher(category.id, dasher.id, 'email', e.target.value)}
-                                                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                                                        placeholder="Enter email..."
-                                                                                    />
-                                                                                ) : (
-                                                                                    <React.Fragment>
-                                                                                        <div className="flex-1 text-xs text-gray-200">
-                                                                                            {dasher.email || <span className="italic text-gray-500">No email</span>}
-                                                                                        </div>
-                                                                                        {dasher.email && (
-                                                                                            <button
-                                                                                                onClick={() => copyToClipboard(dasher.email)}
-                                                                                                className="text-blue-400 hover:text-blue-300 p-1"
-                                                                                                title="Copy email"
-                                                                                            >
-                                                                                                <Copy size={12} />
-                                                                                            </button>
-                                                                                        )}
-                                                                                    </React.Fragment>
-                                                                                )}
-                                                                            </div>
-
-                                                                            {/* Email Password */}
-                                                                            <div className="flex items-center gap-2">
-                                                                                <label className="text-xs text-gray-400 w-20">Email pw:</label>
-                                                                                {isEditing ? (
-                                                                                    <input
-                                                                                        type="text"
-                                                                                        value={dasher.emailPw || ''}
-                                                                                        onChange={(e) => updateDasher(category.id, dasher.id, 'emailPw', e.target.value)}
-                                                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                                                        placeholder="Enter email password..."
-                                                                                    />
-                                                                                ) : (
-                                                                                    <React.Fragment>
-                                                                                        <div className="flex-1 text-xs text-gray-200">
-                                                                                            {dasher.emailPw ? '••••••••' : <span className="italic text-gray-500">No password</span>}
-                                                                                        </div>
-                                                                                        {dasher.emailPw && (
-                                                                                            <button
-                                                                                                onClick={() => copyToClipboard(dasher.emailPw)}
-                                                                                                className="text-blue-400 hover:text-blue-300 p-1"
-                                                                                                title="Copy email password"
-                                                                                            >
-                                                                                                <Copy size={12} />
-                                                                                            </button>
-                                                                                        )}
-                                                                                    </React.Fragment>
-                                                                                )}
-                                                                            </div>
-
-                                                                            {/* Dasher Password */}
-                                                                            <div className="flex items-center gap-2">
-                                                                                <label className="text-xs text-gray-400 w-20">Dasher pw:</label>
-                                                                                {isEditing ? (
-                                                                                    <input
-                                                                                        type="text"
-                                                                                        value={dasher.dasherPw || ''}
-                                                                                        onChange={(e) => updateDasher(category.id, dasher.id, 'dasherPw', e.target.value)}
-                                                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                                                        placeholder="Enter dasher password..."
-                                                                                    />
-                                                                                ) : (
-                                                                                    <React.Fragment>
-                                                                                        <div className="flex-1 text-xs text-gray-200">
-                                                                                            {dasher.dasherPw ? '••••••••' : <span className="italic text-gray-500">No password</span>}
-                                                                                        </div>
-                                                                                        {dasher.dasherPw && (
-                                                                                            <button
-                                                                                                onClick={() => copyToClipboard(dasher.dasherPw)}
-                                                                                                className="text-blue-400 hover:text-blue-300 p-1"
-                                                                                                title="Copy dasher password"
-                                                                                            >
-                                                                                                <Copy size={12} />
-                                                                                            </button>
-                                                                                        )}
-                                                                                    </React.Fragment>
-                                                                                )}
-                                                                            </div>
-
-                                                                            {/* Phone */}
-                                                                            <div className="flex items-center gap-2">
-                                                                                <label className="text-xs text-gray-400 w-20">Phone:</label>
-                                                                                {isEditing ? (
-                                                                                    <input
-                                                                                        type="tel"
-                                                                                        value={dasher.phone || ''}
-                                                                                        onChange={(e) => updateDasher(category.id, dasher.id, 'phone', e.target.value)}
-                                                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                                                        placeholder="Enter phone number..."
-                                                                                    />
-                                                                                ) : (
-                                                                                    <React.Fragment>
-                                                                                        <div className="flex-1 text-xs text-gray-200">
-                                                                                            {dasher.phone || <span className="italic text-gray-500">No phone</span>}
-                                                                                        </div>
-                                                                                        {dasher.phone && (
-                                                                                            <button
-                                                                                                onClick={() => copyToClipboard(dasher.phone)}
-                                                                                                className="text-blue-400 hover:text-blue-300 p-1"
-                                                                                                title="Copy phone"
-                                                                                            >
-                                                                                                <Copy size={12} />
-                                                                                            </button>
-                                                                                        )}
-                                                                                    </React.Fragment>
-                                                                                )}
-                                                                            </div>
-
-                                                                            {/* Balance */}
-                                                                            <div className="flex items-center gap-2">
-                                                                                <label className="text-xs text-gray-400 w-20">Balance:</label>
-                                                                                {isEditing ? (
-                                                                                    <input
-                                                                                        type="text"
-                                                                                        value={dasher.balance || ''}
-                                                                                        onChange={(e) => updateDasher(category.id, dasher.id, 'balance', e.target.value)}
-                                                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                                                        placeholder="Enter balance..."
-                                                                                    />
-                                                                                ) : (
-                                                                                    <React.Fragment>
-                                                                                        <div className="flex-1 text-xs text-gray-200">
-                                                                                            {dasher.balance || <span className="italic text-gray-500">No balance</span>}
-                                                                                        </div>
-                                                                                        {dasher.balance && (
-                                                                                            <button
-                                                                                                onClick={() => copyToClipboard(dasher.balance)}
-                                                                                                className="text-blue-400 hover:text-blue-300 p-1"
-                                                                                                title="Copy balance"
-                                                                                            >
-                                                                                                <Copy size={12} />
-                                                                                            </button>
-                                                                                        )}
-                                                                                    </React.Fragment>
-                                                                                )}
-                                                                            </div>
-
-                                                                            {/* Crimson Checkbox */}
-                                                                            <div className="flex items-center gap-2">
-                                                                                <label className="text-xs text-gray-400 w-20">Crimson:</label>
-                                                                                <input
-                                                                                    type="checkbox"
-                                                                                    checked={dasher.crimson || false}
-                                                                                    onChange={(e) => updateDasher(category.id, dasher.id, 'crimson', e.target.checked)}
-                                                                                    disabled={!isEditing}
-                                                                                    className="h-3 w-3 text-purple-500 bg-gray-700 border-gray-600 rounded focus:ring-purple-500 focus:ring-1 disabled:opacity-50"
-                                                                                />
-                                                                                <span className="text-xs text-gray-400">{dasher.crimson ? 'Yes' : 'No'}</span>
-                                                                            </div>
-
-                                                                            {/* Red Card Checkbox */}
-                                                                            <div className="flex items-center gap-2">
-                                                                                <label className="text-xs text-gray-400 w-20">Red card:</label>
-                                                                                <input
-                                                                                    type="checkbox"
-                                                                                    checked={dasher.redCard || false}
-                                                                                    onChange={(e) => updateDasher(category.id, dasher.id, 'redCard', e.target.checked)}
-                                                                                    disabled={!isEditing}
-                                                                                    className="h-3 w-3 text-red-500 bg-gray-700 border-gray-600 rounded focus:ring-red-500 focus:ring-1 disabled:opacity-50"
-                                                                                />
-                                                                                <span className="text-xs text-gray-400">{dasher.redCard ? 'Yes' : 'No'}</span>
-                                                                            </div>
-
-                                                                            {/* Appealed Checkbox */}
-                                                                            <div className="flex items-center gap-2">
-                                                                                <label className="text-xs text-gray-400 w-20">Appealed:</label>
-                                                                                <input
-                                                                                    type="checkbox"
-                                                                                    checked={dasher.appealed || false}
-                                                                                    onChange={(e) => updateDasher(category.id, dasher.id, 'appealed', e.target.checked)}
-                                                                                    disabled={!isEditing}
-                                                                                    className="h-3 w-3 text-yellow-500 bg-gray-700 border-gray-600 rounded focus:ring-yellow-500 focus:ring-1 disabled:opacity-50"
-                                                                                />
-                                                                                <span className="text-xs text-gray-400">{dasher.appealed ? 'Yes' : 'No'}</span>
-                                                                            </div>
-
-                                                                            {/* Appealed Timer */}
-                                                                            {dasher.appealed && dasher.appealedAt && (
-                                                                                <div className="flex items-center gap-2">
-                                                                                    <label className="text-xs text-gray-400 w-20">Appealed at:</label>
-                                                                                    <div className="flex-1 text-xs">
-                                                                                        {(() => {
-                                                                                            const appealedStatus = calculateAppealedTimeStatus(dasher.appealedAt);
-                                                                                            return appealedStatus ? (
-                                                                                                <span className="flex items-center gap-1">
-                                                                                                    <span className={appealedStatus.color} title={appealedStatus.fullDate}>
-                                                                                                        {appealedStatus.text}
-                                                                                                    </span>
-                                                                                                    <button
-                                                                                                        onClick={() => resetAppealedTimer(category.id, dasher.id)}
-                                                                                                        className="text-purple-400 hover:text-purple-300 p-0.5"
-                                                                                                        title="Reset appealed timer"
-                                                                                                        disabled={!isEditing}
-                                                                                                    >
-                                                                                                        <TimerOff size={12} />
-                                                                                                    </button>
-                                                                                                </span>
-                                                                                            ) : (
-                                                                                                <span className="text-gray-400">Not tracked</span>
-                                                                                            );
-                                                                                        })()}
-                                                                                    </div>
-                                                                                </div>
-                                                                            )}
-
-                                                                            {/* Last Used Timer */}
-                                                                            <div className="flex items-center gap-2">
-                                                                                <label className="text-xs text-gray-400 w-20">Last used:</label>
-                                                                                <div className="flex-1 text-xs">
-                                                                                    {timeStatus ? (
-                                                                                        <div>
-                                                                                            <span className={`font-mono ${timeStatus.color}`}>
-                                                                                                {timeStatus.text}
-                                                                                            </span>
-                                                                                            <div className="text-gray-500 text-[10px] mt-1">
-                                                                                                {timeStatus.fullDateTime}
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    ) : (
-                                                                                        <span className="italic text-gray-500">Timer not started</span>
-                                                                                    )}
-                                                                                </div>
-                                                                            </div>
-
-                                                                            {/* Notes - Expandable */}
-                                                                            <div className="flex items-start gap-2">
-                                                                                <label className="text-xs text-gray-400 w-20 mt-1">Notes:</label>
-                                                                                {isEditing ? (
-                                                                                    <textarea
-                                                                                        value={dasher.notes || ''}
-                                                                                        onChange={(e) => updateDasher(category.id, dasher.id, 'notes', e.target.value)}
-                                                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-xs text-white resize-y min-h-[2.5rem] focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                                                        rows={2}
-                                                                                        placeholder="Any notes..."
-                                                                                        style={{ minHeight: '2.5rem' }}
-                                                                                    />
-                                                                                ) : (
-                                                                                    <React.Fragment>
-                                                                                        <div className="flex-1 text-xs text-gray-200 whitespace-pre-wrap">
-                                                                                            {dasher.notes || <span className="italic text-gray-500">No notes</span>}
-                                                                                        </div>
-                                                                                        {dasher.notes && (
-                                                                                            <button
-                                                                                                onClick={() => copyToClipboard(dasher.notes)}
-                                                                                                className="text-blue-400 hover:text-blue-300 p-1 self-start"
-                                                                                                title="Copy notes"
-                                                                                            >
-                                                                                                <Copy size={12} />
-                                                                                            </button>
-                                                                                        )}
-                                                                                    </React.Fragment>
-                                                                                )}
-                                                                            </div>
-
-                                                                            {renderCashOutHistory(dasher)}
                                                                             </div>
                                                                         )}
                                                                     </div>
@@ -7292,7 +7013,7 @@
                                                                                 setSelectedItems({ ...selectedItems, readyDashers: next });
                                                                             }}
                                                                             onClick={(e) => e.stopPropagation()}
-                                                                            className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-500 rounded focus:ring-blue-500 focus:ring-2"
+                                                                            className="w-4 h-4 text-gray-300 bg-gray-700 border-gray-500 rounded focus:ring-gray-400 focus:ring-2"
                                                                         />
                                                                     )}
                                                                     <div className={`${isEditing ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 hover:text-gray-300 cursor-move'}`} aria-label="Drag to reorder" style={{ pointerEvents: isEditing ? 'none' : 'auto' }}>
@@ -7399,7 +7120,7 @@
                                                                             const set = new Set(selectedItems.currentlyUsingDashers);
                                                                             isSelected ? set.delete(dasher.id) : set.add(dasher.id);
                                                                             setSelectedItems({ ...selectedItems, currentlyUsingDashers: set });
-                                                                        }} onClick={(e)=>e.stopPropagation()} className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-500 rounded focus:ring-blue-500" />
+                                                                        }} onClick={(e)=>e.stopPropagation()} className="w-4 h-4 text-gray-300 bg-gray-700 border-gray-500 rounded focus:ring-gray-400" />
                                                                     )}
                                                                     <div className={`${isEditing ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 hover:text-gray-300 cursor-move'}`} aria-label="Drag to reorder" style={{ pointerEvents: isEditing ? 'none' : 'auto' }}>
                                                                         <GripVertical size={14} />
@@ -7501,7 +7222,7 @@
                                                                             const set = new Set(selectedItems.appealedDashers);
                                                                             isSelected ? set.delete(dasher.id) : set.add(dasher.id);
                                                                             setSelectedItems({ ...selectedItems, appealedDashers: set });
-                                                                        }} onClick={(e)=>e.stopPropagation()} className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-500 rounded focus:ring-blue-500" />
+                                                                        }} onClick={(e)=>e.stopPropagation()} className="w-4 h-4 text-gray-300 bg-gray-700 border-gray-500 rounded focus:ring-gray-400" />
                                                                     )}
                                                                     <div className={`${isEditing ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 hover:text-gray-300 cursor-move'}`} aria-label="Drag to reorder" style={{ pointerEvents: isEditing ? 'none' : 'auto' }}>
                                                                         <GripVertical size={14} />
@@ -7597,7 +7318,7 @@
                                                                             const set = new Set(selectedItems.appliedPendingDashers);
                                                                             isSelected ? set.delete(dasher.id) : set.add(dasher.id);
                                                                             setSelectedItems({ ...selectedItems, appliedPendingDashers: set });
-                                                                        }} onClick={(e)=>e.stopPropagation()} className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-500 rounded focus:ring-blue-500" />
+                                                                        }} onClick={(e)=>e.stopPropagation()} className="w-4 h-4 text-gray-300 bg-gray-700 border-gray-500 rounded focus:ring-gray-400" />
                                                                     )}
                                                                     <div className={`${isEditing ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 hover:text-gray-300 cursor-move'}`} aria-label="Drag to reorder" style={{ pointerEvents: isEditing ? 'none' : 'auto' }}>
                                                                         <GripVertical size={14} />
@@ -7688,7 +7409,7 @@
                                                                             const set = new Set(selectedItems.reverifDashers || []);
                                                                             isSelected ? set.delete(dasher.id) : set.add(dasher.id);
                                                                             setSelectedItems({ ...selectedItems, reverifDashers: set });
-                                                                        }} onClick={(e)=>e.stopPropagation()} className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-500 rounded focus:ring-blue-500" />
+                                                                        }} onClick={(e)=>e.stopPropagation()} className="w-4 h-4 text-gray-300 bg-gray-700 border-gray-500 rounded focus:ring-gray-400" />
                                                                     )}
                                                                     <div className={`${isEditing ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 hover:text-gray-300 cursor-move'}`} aria-label="Drag to reorder" style={{ pointerEvents: isEditing ? 'none' : 'auto' }}>
                                                                         <GripVertical size={14} />
@@ -7779,7 +7500,7 @@
                                                                             const set = new Set(selectedItems.lockedDashers);
                                                                             isSelected ? set.delete(dasher.id) : set.add(dasher.id);
                                                                             setSelectedItems({ ...selectedItems, lockedDashers: set });
-                                                                        }} onClick={(e)=>e.stopPropagation()} className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-500 rounded focus:ring-blue-500" />
+                                                                        }} onClick={(e)=>e.stopPropagation()} className="w-4 h-4 text-gray-300 bg-gray-700 border-gray-500 rounded focus:ring-gray-400" />
                                                                     )}
                                                                     <div className={`${isEditing ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 hover:text-gray-300 cursor-move'}`} aria-label="Drag to reorder" style={{ pointerEvents: isEditing ? 'none' : 'auto' }}>
                                                                         <GripVertical size={14} />
@@ -7906,7 +7627,7 @@
                                                                             toggleItemSelection('deactivatedDashers', dasher.id);
                                                                         }}
                                                                         onClick={(e) => e.stopPropagation()}
-                                                                        className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-500 rounded focus:ring-blue-500 focus:ring-2"
+                                                                        className="w-4 h-4 text-gray-300 bg-gray-700 border-gray-500 rounded focus:ring-gray-400 focus:ring-2"
                                                                     />
                                                                 )}
                                                                 <div
@@ -8011,7 +7732,7 @@
                                                                         type="text"
                                                                         value={dasher.name}
                                                                         onChange={(e) => updateDasher('deactivated', dasher.id, 'name', e.target.value)}
-                                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-gray-400"
                                                                         placeholder="Enter name..."
                                                                     />
                                                                 ) : (
@@ -8040,7 +7761,7 @@
                                                                         type="email"
                                                                         value={dasher.email}
                                                                         onChange={(e) => updateDasher('deactivated', dasher.id, 'email', e.target.value)}
-                                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-gray-400"
                                                                         placeholder="Enter email..."
                                                                     />
                                                                 ) : (
@@ -8069,7 +7790,7 @@
                                                                         type="text"
                                                                         value={dasher.emailPw || ''}
                                                                         onChange={(e) => updateDasher('deactivated', dasher.id, 'emailPw', e.target.value)}
-                                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-gray-400"
                                                                         placeholder="Enter email password..."
                                                                     />
                                                                 ) : (
@@ -8098,7 +7819,7 @@
                                                                         type="text"
                                                                         value={dasher.dasherPw || ''}
                                                                         onChange={(e) => updateDasher('deactivated', dasher.id, 'dasherPw', e.target.value)}
-                                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-gray-400"
                                                                         placeholder="Enter dasher password..."
                                                                     />
                                                                 ) : (
@@ -8127,7 +7848,7 @@
                                                                         type="tel"
                                                                         value={dasher.phone || ''}
                                                                         onChange={(e) => updateDasher('deactivated', dasher.id, 'phone', e.target.value)}
-                                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-gray-400"
                                                                         placeholder="Enter phone number..."
                                                                     />
                                                                 ) : (
@@ -8156,7 +7877,7 @@
                                                                         type="text"
                                                                         value={dasher.balance || ''}
                                                                         onChange={(e) => updateDasher('deactivated', dasher.id, 'balance', e.target.value)}
-                                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-gray-400"
                                                                         placeholder="Enter balance..."
                                                                     />
                                                                 ) : (
@@ -8271,7 +7992,7 @@
                                                                     <textarea
                                                                         value={dasher.notes || ''}
                                                                         onChange={(e) => updateDasher('deactivated', dasher.id, 'notes', e.target.value)}
-                                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-xs text-white resize-y min-h-[2.5rem] focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                        className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-xs text-white resize-y min-h-[2.5rem] focus:outline-none focus:ring-1 focus:ring-gray-400"
                                                                         rows={2}
                                                                         placeholder="Add notes..."
                                                                     />
@@ -8300,7 +8021,6 @@
                                                                 )}
                                                             </div>
 
-                                                            {renderCashOutHistory(dasher, isEditing)}
                                                             </div>
                                                         )}
                                                     </div>
@@ -8385,7 +8105,7 @@
                                                                             toggleItemSelection('archivedDashers', dasher.id);
                                                                         }}
                                                                         onClick={(e) => e.stopPropagation()}
-                                                                        className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-500 rounded focus:ring-blue-500 focus:ring-2"
+                                                                        className="w-4 h-4 text-gray-300 bg-gray-700 border-gray-500 rounded focus:ring-gray-400 focus:ring-2"
                                                                     />
                                                                 )}
                                                                 <button
@@ -8663,7 +8383,6 @@
                                                                 </button>
                                                             </div>
 
-                                                            {renderCashOutHistory(dasher, false)}
                                                             </div>
                                                         )}
                                                     </div>
@@ -9461,3 +9180,5 @@
     </script>
 </body>
 </html>
+
+

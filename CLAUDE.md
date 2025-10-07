@@ -6,12 +6,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Dash Bash Utility is a React-based Progressive Web App (PWA) designed for delivery service drivers (primarily DoorDash). It's a **single-file application** that runs directly in the browser without any build process required.
 
+**Current Version**: 1.8.9 (October 2025)
+
 **Core Features:**
 - **Target Calculator**: Calculates optimal quantities to reach target dollar amounts ($99/$120/custom)
 - **Quick Messages**: Customer service templates with drag-and-drop reordering
 - **Address Book**: Store locations with hours tracking and real-time open/closed status
-- **Notes**: Multi-category note-taking with drag-and-drop organization
-- **Dashers**: Driver management with 24-hour countdown timers, inline editing, Red Card tracking
+- **Notes**: Multi-category note-taking with drag-and-drop organization and resizable textareas
+- **Dashers**: Driver management with 24-hour countdown timers, inline editing, earnings tracking
+  - Status flags: Crimson, FastPay, Red Card, Appealed
+  - Cash-out history with auto-populated notes
+  - Inline earnings and cash-out forms with accessibility support
 - **Statistics**: Real-time analytics showing dasher counts and balance breakdowns
 
 ## Commands
@@ -40,15 +45,13 @@ python serve-pwa.py
 ```
 
 ### Testing Specific Features
-```bash
-# Start server
-python serve-pwa.py
+The main app includes all features. Historical test files are archived in `archives/test-files/`.
 
-# Navigate to test files
-http://localhost:8443/test-redcard.html          # Red Card feature
-http://localhost:8443/test-dashers-enhancement.html  # Dasher enhancements
-http://localhost:8443/test-collapsible-dashers.html  # Collapsible UI
-```
+To test specific functionality:
+1. Start server: `python serve-pwa.py`
+2. Open `http://localhost:8443/index.html`
+3. Use browser DevTools to inspect state in localStorage (`dashBashState`)
+4. Check service worker status in DevTools > Application > Service Workers
 
 ### Deployment to GitHub Pages
 
@@ -88,11 +91,16 @@ Single-file React application using functional components and hooks. No build pr
 ### ⚠️ CRITICAL: TSX to HTML Compilation
 **IMPORTANT**: Changes made to `enhanced-calculator-addressbook.tsx` are NOT automatically reflected in the app. The TSX file is the source component, but `index.html` contains the actual served inline JavaScript that runs in the browser.
 
-**When modifying the application:**
+**Development Workflow:**
 1. Make changes to `enhanced-calculator-addressbook.tsx` (source component)
 2. **MUST manually update** corresponding code in `index.html` (served file)
-3. The JavaScript in `index.html` is between `<script type="text/babel">` tags
-4. Test locally with `python serve-pwa.py` before deploying
+   - Find the `<script type="text/babel">` tag (around line 120+)
+   - Update the React component code to match TSX changes
+3. Test locally with `python serve-pwa.py` before deploying
+4. Open `http://localhost:8443/index.html` and verify changes
+5. Check browser console for any errors
+
+**Common Mistake**: Editing only the TSX file and expecting changes to appear. The browser only reads `index.html`!
 
 ### Icon Implementation Pattern
 The app uses Lucide icons via CDN with a custom wrapper pattern:
@@ -187,14 +195,27 @@ Dynamic title generation with high-contrast color coding (v1.5.0+):
 - Status indicators shown as separate pill badges (see Flag Badges section)
 - Returns JSX/React.Fragment with styled spans
 
-### Flag Badge System (v1.5.0+)
+### Earnings & Cash-out System (v1.8.x+)
+Inline forms for recording earnings and cash-outs:
+- **Inline Earning Form**: Add earnings with amount, optional notes, validation
+- **Inline Cash-out Form**: Record cash-outs with amount, method (Crimson/FastPay/other), bucket selection, notes
+- **Cash-out History**: Read-only table showing Amount/Method/Notes/Time
+  - Auto-populates notes from selected cash-out (method + source bucket info)
+  - Toggleable visibility with collapse state persistence
+- **Balance Synchronization**: Automatic balance updates with clamping/normalization
+- **Accessibility**: Aria-labels for all buttons, aria-live announcements for success/error
+- **Data Integrity**: Memoized dasher descriptor maps, deduplication of history entries
+
+### Flag Badge System (v1.5.0+, enhanced v1.8.x)
 Status indicators displayed as modern pill badges with unique colors:
-- **Crimson (C)**: Bright red background (#ef4444) with white text when active
-- **Red Card (RC)**: Bright orange background (#f97316) with white text when active
-- **Appealed (AP)**: Bright yellow background (#eab308) with dark text when active
+- **Crimson (CRIMSON)**: Bright red background (#ef4444) with white text when active
+- **FastPay (FastPay)**: White text label with tooltip, positioned after Crimson
+- **Red Card (RED CARD)**: Bright orange background (#f97316) with white text when active
+- **Appealed (APPEALED)**: Bright yellow background (#eab308) with dark text when active
 - **Inactive state**: Gray background (#4b5563) with 60% opacity for visibility
-- All pills have excellent contrast ratios for accessibility
+- All pills have excellent contrast ratios for accessibility (WCAG AA compliant)
 - Positioned as inline badges after dasher name/email/balance
+- Selected badge shows glow effect (2px white ring + soft blur)
 
 ## localStorage Structure
 
@@ -206,13 +227,16 @@ Status indicators displayed as modern pill badges with unique colors:
   "prices": [...],
   "messages": [...],
   "categories": [...],        // Address book
-  "noteCategories": [...],    // Notes sections  
-  "dasherCategories": [...],  // Dashers with timers
+  "noteCategories": [...],    // Notes sections
+  "dasherCategories": [...],  // Dashers with timers, earnings, cash-out history
   "collapsedCategories": {...},     // Address book collapse states
   "collapsedStores": {...},         // Individual store collapse states
-  "collapsedDashers": {...},        // Individual dasher collapse states  
+  "collapsedDashers": {...},        // Individual dasher collapse states
   "collapsedDasherCategories": {...}, // Dasher category collapse states
   "collapsedNoteCategories": {...},   // Note category collapse states
+  "collapsedNotesInStores": {...},    // Per-store notes collapse states (v1.8.x+)
+  "collapsedNotesInDashers": {...},   // Per-dasher notes collapse states (v1.8.x+)
+  "collapsedCashOutHistory": {...},   // Cash-out history collapse states (v1.8.x+)
   "timestamp": "2025-01-01T00:00:00.000Z",
   "schemaVersion": 3           // Schema version for data migration (v1.6.2+)
 }
@@ -255,27 +279,27 @@ const [editingNoteCategory, setEditingNoteCategory] = useState(-1);
 ## Version Management & Cache Busting
 
 ### Version Update Process
-When releasing a new version, update the version number in **4 locations**:
+When releasing a new version, update the version number in **3 locations**:
 
 1. **service-worker.js** (Line 2):
    ```javascript
-   const CACHE_NAME = 'dashbash-v2'; // Update version in cache name
+   const APP_VERSION = "1.8.9"; // Update this version
    ```
 
 2. **index.html - Meta tag** (Line 9):
    ```html
-   <meta name="app-version" content="1.4.0">
+   <meta name="app-version" content="1.8.9">
    ```
 
-3. **index.html - JavaScript constant** (Line 54):
+3. **index.html - JavaScript constant** (Line 55):
    ```javascript
-   const APP_VERSION = '1.6.2'; // Update this with each release
+   const APP_VERSION = '1.8.9'; // Update this with each release
    ```
 
-4. **index.html - State Management section** (around Line 7325):
-   ```html
-   <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.6.2</span></span>
-   ```
+**Important**: Update all resource version parameters in index.html:
+- `favicon.svg?v=1.8.9`
+- `manifest.json?v=1.8.9`
+- `styles.css?v=1.8.9`
 
 ### Cache Busting Implementation
 The application implements several cache-busting strategies to ensure users always get the latest version:
@@ -457,6 +481,44 @@ From `styles.css`, use these classes for consistent UI:
 - `.draggable` - Drag-and-drop items
 - `.copy-btn` - Copy to clipboard buttons
 
+## Accessibility Guidelines (WCAG AA - v1.8.x+)
+
+### Aria-live Announcements
+All user actions should provide screen reader feedback:
+- **Success messages**: Use shared aria-live region with `role="status"`, `aria-live="polite"`
+- **Error messages**: Use assertive announcements for validation errors
+- **State changes**: Announce copy actions, save confirmations, export/import results
+
+### Aria-labels for Icon Buttons
+All icon-only buttons require descriptive aria-labels:
+```javascript
+<button aria-label="Copy name to clipboard">
+  <Copy size={16} />
+</button>
+<button aria-label="Show cash-out history">
+  <ChevronDown size={16} />
+</button>
+```
+
+### Collapsible Sections
+Use `aria-expanded` attribute on all collapsible headers:
+```javascript
+<div
+  onClick={toggle}
+  aria-expanded={isOpen}
+  role="button"
+  tabIndex={0}
+>
+  {isOpen ? <ChevronUp /> : <ChevronDown />}
+</div>
+```
+
+### Focus Management
+- All interactive elements must be keyboard accessible
+- Inline edit inputs should auto-focus when entering edit mode
+- Tab order should follow visual layout
+- Focus indicators must be visible (outline styles)
+
 ## UI/UX Design Guidelines
 
 ### Critical CSS Cascade Rules
@@ -584,18 +646,31 @@ The application uses a unified JSON format (v2.1) for state export/import:
 
 ## Recent Updates
 
+### v1.8.9 (October 2025)
+- **Accessibility**: Unified aria-live announcements for copy, save, export, import actions
+- **Version Management**: Bumped app version ahead of gh-pages release
+- **Bug Fixes**: Improved cache-busting consistency across resources
+
+### v1.8.7 (October 2025)
+- **Accessibility**: Shared aria-live announcer for earnings and cash-out success messages
+- **Bug Fixes**: Fixed crash from undefined `safeFieldSegment` by hoisting helper to shared scope
+- **Cache Management**: Unified version parameters across all resources
+
+### v1.8.6 (October 2025)
+- **Earnings & Cash-out**: Inline forms with validation and accessibility semantics
+- **Data Integrity**: Memoized dasher descriptor maps, balance synchronization with clamping
+- **UX**: Actionable feedback for missing records instead of silent fallbacks
+
+### v1.8.x Series (September-October 2025)
+- **Cash-out History**: Read-only tables with Amount/Method/Notes/Time, auto-populated from selected cash-out
+- **Notes UX**: Resizable textareas, per-item show/collapse toggles, persistent state
+- **FastPay Integration**: FastPay flag with tooltips, reordered status badges
+- **UI Polish**: Selected badge glow effects, improved visual hierarchy
+
 ### v1.6.2 (January 2025) - Phase 8: Accessibility & Performance
-- **Accessibility Enhancements (WCAG AA Compliance)**:
-  - Comprehensive aria-labels added to all icon-only buttons (Copy, Timer, Edit/Save, Cash Out, Delete)
-  - Toast notifications enhanced with `role="status"`, `aria-live="polite"`, `aria-atomic="true"`
-  - All collapsible sections with `aria-expanded` attribute for screen reader announcements
-- **Performance Optimization**:
-  - Added `useCallback` and `useMemo` to React imports (foundation for future memoization)
-  - Prepared infrastructure for extracting and memoizing `getDasherTitle` and `renderDasherDetails`
-- **Data Integrity**:
-  - Schema versioning system (`schemaVersion: 3`) with migration logic
-  - Balance input validation with clamping (-1,000,000 to 1,000,000 range)
-  - Console logging for migration tracking and debugging
+- Comprehensive WCAG AA compliance with aria-labels
+- Schema versioning system (`schemaVersion: 3`) with migration logic
+- Balance validation with clamping (-1,000,000 to 1,000,000)
 
 ### v1.5.0 (January 2025)
 - **Modern Typography**: Added Inter font family via Google Fonts for professional appearance
@@ -726,17 +801,28 @@ To add new themes:
 
 ## Testing
 
-### Test Files
-The repository includes test HTML files for validating specific features:
-- `test-redcard.html` - Tests Red Card checkbox feature
-- `test-dashers-enhancement.html` - Tests dasher enhancements
-- `test-collapsible-dashers.html` - Tests collapsible UI
+### Current Test Files
+Test files in root directory (as of v1.8.9):
+- `test-simple.js` - Basic smoke test script
+- `test-smoke.js` - Smoke test for core functionality
+- `test-console.html` - Console-based testing interface
+
+Historical test files are in `archives/test-files/`:
+- `test-redcard.html` - Red Card checkbox feature
+- `test-dashers-enhancement.html` - Dasher enhancements
+- `test-collapsible-dashers.html` - Collapsible UI
 
 ### Running Tests
 ```bash
-# Open test files directly in browser
+# Start development server
 python serve-pwa.py
-# Then navigate to http://localhost:8443/test-redcard.html
+
+# Open main app
+http://localhost:8443/index.html
+
+# Run smoke tests (if implemented)
+node test-simple.js
+node test-smoke.js
 ```
 
 ### Testing Checklist
@@ -762,5 +848,11 @@ When making changes, verify:
 - [ ] Chevron icons rotate smoothly on expand/collapse
 - [ ] External stylesheet loads with version parameter
 - [ ] CSS variables apply correctly to all components
-- [ ] Text areas support vertical resizing
+- [ ] Text areas support vertical resizing (all notes fields)
 - [ ] Print styles hide appropriate elements
+- [ ] Earnings and cash-out forms validate input correctly
+- [ ] Cash-out history auto-populates notes from selection
+- [ ] Balance synchronization works after earnings/cash-outs
+- [ ] Aria-live announcements work for success/error messages
+- [ ] FastPay badge shows tooltip on hover
+- [ ] Per-item notes collapse states persist in localStorage

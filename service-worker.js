@@ -6,8 +6,6 @@ const PRECACHE_URLS = [
   "./",
   `./favicon.svg?v=${APP_VERSION}`,
   `./manifest.json?v=${APP_VERSION}`,
-  `./icon-192.png?v=${APP_VERSION}`,
-  `./icon-512.png?v=${APP_VERSION}`,
   // Intentionally exclude index.html & styles.css from precache to force network-first each load
 ];
 
@@ -15,12 +13,25 @@ const PRECACHE_URLS = [
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
-      const cache = await caches.open(CORE_CACHE);
-      await Promise.all(
-        PRECACHE_URLS.map((u) =>
-          cache.add(u).catch((err) => console.warn("Precache miss", u, err))
-        )
-      );
+      try {
+        const cache = await caches.open(CORE_CACHE);
+        await Promise.all(
+          PRECACHE_URLS.map(async (u) => {
+            try {
+              const response = await fetch(u, { cache: "no-store" });
+              if (response && response.ok) {
+                await cache.put(u, response);
+              } else {
+                console.info("[SW] Skipping precache", u, response?.status);
+              }
+            } catch (err) {
+              console.info("[SW] Skipping precache", u, err?.message ?? err);
+            }
+          })
+        );
+      } catch (err) {
+        console.warn("[SW] Precache setup failed", err);
+      }
     })()
   );
   self.skipWaiting();
