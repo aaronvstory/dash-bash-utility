@@ -1910,22 +1910,31 @@
                     );
                 }
 
-                return React.createElement('div', { className: 'mt-2 space-y-1' }, [
-                    React.createElement('div', { key: 'label', className: 'text-[11px] text-gray-400' },
+                return React.createElement('div', { className: 'mt-2' }, [
+                    React.createElement('div', { key: 'label', className: 'text-[11px] text-gray-400 mb-1' },
                         `${dasher.cashOutHistory.length} cash‑out${dasher.cashOutHistory.length>1?'s':''}`
                     ),
-                    React.createElement('div', { key: 'list', className: 'space-y-1' },
-                        dasher.cashOutHistory.map((h, i) => (
-                            React.createElement('div', {
-                                key: h.id || i,
-                                className: 'flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] bg-gray-800/60 px-2 py-1 rounded border border-gray-700'
-                            }, [
-                                React.createElement('span', { key: 'a', className: 'font-mono text-green-300' }, `$${Number(h.amount||0).toFixed(2)}`),
-                                React.createElement('span', { key: 'm', className: 'text-gray-300' }, h.method || 'auto'),
-                                React.createElement('span', { key: 't', className: 'text-gray-400' }, h.at ? formatDateTime(h.at) : ''),
-                                (h.notes ? React.createElement('span', { key: 'n', className: 'text-gray-200' }, `— ${h.notes}`) : null)
-                            ])
-                        ))
+                    React.createElement('div', { key: 'tablewrap', className: 'overflow-x-auto' },
+                        React.createElement('table', { className: 'w-full text-[11px] border-separate border-spacing-y-1' }, [
+                            React.createElement('thead', { key: 'thead', className: 'text-gray-400' },
+                                React.createElement('tr', null, [
+                                    React.createElement('th', { className: 'text-left font-medium px-2 py-1' }, 'Amount'),
+                                    React.createElement('th', { className: 'text-left font-medium px-2 py-1' }, 'Method'),
+                                    React.createElement('th', { className: 'text-left font-medium px-2 py-1' }, 'Notes'),
+                                    React.createElement('th', { className: 'text-left font-medium px-2 py-1' }, 'Time')
+                                ])
+                            ),
+                            React.createElement('tbody', { key: 'tbody' },
+                                dasher.cashOutHistory.map((h, i) => (
+                                    React.createElement('tr', { key: h.id || i, className: 'bg-gray-800/60 border border-gray-700 rounded' }, [
+                                        React.createElement('td', { className: 'px-2 py-1 align-top font-mono text-green-300 whitespace-nowrap' }, `$${Number(h.amount||0).toFixed(2)}`),
+                                        React.createElement('td', { className: 'px-2 py-1 align-top text-gray-300 whitespace-nowrap' }, h.method || 'auto'),
+                                        React.createElement('td', { className: 'px-2 py-1 align-top text-gray-200 break-words' }, h.notes || ''),
+                                        React.createElement('td', { className: 'px-2 py-1 align-top text-gray-400 whitespace-nowrap' }, h.at ? formatDateTime(h.at) : '')
+                                    ])
+                                ))
+                            )
+                        ])
                     )
                 ]);
             };
@@ -2091,12 +2100,22 @@
                 const extraInfo = sel === 'crimson'
                     ? (dasherFound?.crimsonInfo ? ` (${dasherFound.crimsonInfo})` : '')
                     : (sel === 'fastpay' ? (dasherFound?.fastPayInfo ? ` (${dasherFound.fastPayInfo})` : '') : '');
-                const bucketNote = categoryKey ? ` from ${categoryKey}` : '';
+                const bucketMap = {
+                    'ready': 'Ready',
+                    'currently-using': 'Currently Using',
+                    'appealed': 'Appealed',
+                    'applied-pending': 'Applied Pending',
+                    'locked': 'Locked',
+                    'deactivated': 'Deactivated',
+                    'archived': 'Archived'
+                };
+                const bucketLabel = categoryKey ? (bucketMap[categoryKey] || categoryKey) : '';
+                const bucketNote = bucketLabel ? ` from ${bucketLabel}` : '';
                 const autoNotes = selLabel ? `${selLabel}${extraInfo}${bucketNote}`.trim() : (bucketNote.trim() || undefined);
 
                 const historyEntry = {
                     amount: currentBalance,
-                    method: normalizedMethod,
+                    method: selLabel || normalizedMethod,
                     at: new Date().toISOString(),
                     ...(autoNotes ? { notes: autoNotes } : {})
                 };
