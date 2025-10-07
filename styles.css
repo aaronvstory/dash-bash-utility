@@ -1,6 +1,6 @@
 /**
  * Dash Bash Utility - Comprehensive Stylesheet
- * Version: 1.8.9
+ * Version: 1.8.10
  *
  * This stylesheet is designed for easy theming and maintainability.
  * Update CSS variables in :root to change the entire app's appearance.
@@ -1620,6 +1620,14 @@ body.dragging {
 .theme-jp .db-input-sm {
   --db-input-height: 36px;
   --db-input-py: 6px;
+}
+
+/* Ensure textareas using the compact input start the same height */
+.theme-jp textarea.db-input-sm {
+  height: var(--db-input-height) !important;
+  min-height: var(--db-input-height) !important;
+  line-height: 1.25 !important;
+  padding: var(--db-input-py) var(--db-input-px) !important;
 }
 
 /* Keep selects visually consistent (no native arrow styling color issues) */

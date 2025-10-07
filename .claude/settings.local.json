@@ -3,7 +3,8 @@
     "allow": [
       "mcp__sequential-thinking__sequentialthinking",
       "Bash(powershell:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(git log:*)"
     ],
     "deny": [],
     "ask": []

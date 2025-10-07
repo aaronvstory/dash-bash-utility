@@ -133,19 +133,19 @@ This comprehensive style guide ensures consistent visual design and interaction 
 /* Standard Input */
 <input
   type="text"
-  class="w-full px-3 py-2 bg-gray-700 text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+  class="w-full px-3 py-2 bg-gray-700 text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
   placeholder="Placeholder text..."
 />
 
 /* Small Input */
 <input
   type="text"
-  class="px-2 py-1 bg-gray-700 text-gray-100 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+  class="px-2 py-1 bg-gray-700 text-gray-100 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
 />
 
 /* Textarea */
 <textarea
-  class="w-full px-3 py-2 bg-gray-700 text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+  class="w-full px-3 py-2 bg-gray-700 text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none"
   rows={3}
 />
 ```
@@ -177,7 +177,7 @@ This comprehensive style guide ensures consistent visual design and interaction 
 - **Always include**: `transition-colors` for smooth transitions
 
 ### Focus States
-- **Inputs/Textareas**: `focus:outline-none focus:ring-2 focus:ring-blue-500`
+- **Inputs/Textareas**: `focus:outline-none focus:ring-2 focus:ring-gray-400`
 - **Buttons**: Browser default or custom ring
 - **Accessibility**: Never remove focus indicators completely
 

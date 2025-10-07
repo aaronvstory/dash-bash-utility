@@ -1178,6 +1178,22 @@
                 return '';
             };
 
+            // Utility: simple debounce keyed by string to allow per-entry coalescing
+            const debounceMap = new Map();
+            const debounceKeyed = (key, fn, delay = 200) => {
+                if (debounceMap.has(key)) {
+                    clearTimeout(debounceMap.get(key));
+                }
+                const t = setTimeout(fn, delay);
+                debounceMap.set(key, t);
+            };
+            const cancelDebounceForKey = (key) => {
+                if (debounceMap.has(key)) {
+                    clearTimeout(debounceMap.get(key));
+                    debounceMap.delete(key);
+                }
+            };
+
             // Cash-out history helpers
             const updateHistoryEntry = (dasherId, idx, patch) => {
                 setDasherCategories(cats => cats.map(cat => ({
@@ -1212,6 +1228,12 @@
                     }));
                 });
                 requestPersist();
+            };
+
+            // Debounced updater for inline edits: batches rapid keystrokes per entry
+            const debouncedUpdateHistoryEntry = (dasherId, idx, patch, delay = 200) => {
+                const key = `${dasherId}:${idx}`;
+                debounceKeyed(key, () => updateHistoryEntry(dasherId, idx, patch), delay);
             };
 
             const deleteHistoryEntry = (dasherId, idx) => {
@@ -2309,11 +2331,11 @@
 
                         React.createElement('label', { className: 'text-[10px] text-gray-400 uppercase tracking-wide' }, 'Notes'),
 
-                        React.createElement('input', {
-                            type: 'text',
+                        React.createElement('textarea', {
                             value: (draft._addCashOutNotes || ''),
                             onChange: e => setDraft(d => ({ ...d, _addCashOutNotes: e.target.value })),
-                            className: 'db-input-sm w-full placeholder-gray-400'
+                            rows: 1,
+                            className: 'db-input-sm w-full resize-y placeholder-gray-400'
                         })
 
                     ]),
@@ -2371,10 +2393,13 @@
                                                             min: 0,
                                                             className: 'db-input-sm w-24 text-green-200 font-mono',
                                                             value: (typeof h.amount === 'string' || typeof h.amount === 'number') ? String(h.amount) : '',
-                                                            onChange: (e) => updateHistoryEntry(dasher.id, i, { amount: e.target.value }),
+                                                            onChange: (e) => debouncedUpdateHistoryEntry(dasher.id, i, { amount: e.target.value }),
                                                             onBlur: (e) => {
                                                                 const v = parseFloat(e.target.value);
+                                                                const key = `${dasher.id}:${i}`;
                                                                 if (!isNaN(v) && v >= 0) updateHistoryEntry(dasher.id, i, { amount: v.toFixed(2) });
+                                                                // Cancel any pending debounce after immediate commit
+                                                                cancelDebounceForKey(key);
                                                             }
                                                         })
                                                     ),
@@ -2383,7 +2408,12 @@
                                                             type: 'text',
                                                             className: 'db-input-sm w-32',
                                                             value: h.method || '',
-                                                            onChange: (e) => updateHistoryEntry(dasher.id, i, { method: e.target.value })
+                                                            onChange: (e) => debouncedUpdateHistoryEntry(dasher.id, i, { method: e.target.value }),
+                                                            onBlur: (e) => {
+                                                                const key = `${dasher.id}:${i}`;
+                                                                updateHistoryEntry(dasher.id, i, { method: e.target.value });
+                                                                cancelDebounceForKey(key);
+                                                            }
                                                         })
                                                     ),
                                                     React.createElement('td', { className: 'px-2 py-1 align-top min-w-[200px]' },
@@ -2391,7 +2421,12 @@
                                                             type: 'text',
                                                             className: 'db-input-sm w-full',
                                                             value: h.notes || '',
-                                                            onChange: (e) => updateHistoryEntry(dasher.id, i, { notes: e.target.value })
+                                                            onChange: (e) => debouncedUpdateHistoryEntry(dasher.id, i, { notes: e.target.value }),
+                                                            onBlur: (e) => {
+                                                                const key = `${dasher.id}:${i}`;
+                                                                updateHistoryEntry(dasher.id, i, { notes: e.target.value });
+                                                                cancelDebounceForKey(key);
+                                                            }
                                                         })
                                                     ),
                                                     React.createElement('td', { className: 'px-2 py-1 align-top text-gray-400 whitespace-nowrap' }, h.at ? formatDateTime(h.at) : ''),
@@ -4370,7 +4405,7 @@
                         // Flags
                         React.createElement('div', { key: 'flagsC', className: 'flex items-center gap-2' }, [
                             React.createElement('label', { className: 'text-xs text-gray-400 w-20' }, 'Crimson:'),
-                            React.createElement('input', { type: 'checkbox', checked: !!dasher.crimson, onChange: (e) => updateFlag('crimson', e.target.checked), disabled: !isEditing, className: 'h-3 w-3 text-purple-500 bg-gray-700 border-gray-600 rounded focus:ring-purple-500 focus:ring-1 disabled:opacity-50' }),
+                            React.createElement('input', { type: 'checkbox', checked: !!dasher.crimson, onChange: (e) => updateFlag('crimson', e.target.checked), disabled: !isEditing, className: 'h-3 w-3 bg-gray-700 border-gray-600 rounded disabled:opacity-50' }),
                             React.createElement('span', { className: 'text-xs text-gray-400' }, dasher.crimson ? 'Yes' : 'No')
                         ]),
                         // Crimson Info
@@ -4380,7 +4415,7 @@
                                 React.createElement('input', {
                                     type: 'text', value: dasher.crimsonInfo || '',
                                     onChange: (e) => updateTextField('crimsonInfo', e.target.value),
-                                    className: 'flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-purple-500',
+                                    className: 'flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white',
                                     placeholder: 'Optional details about Crimson…'
                                 })
                             ) : (
@@ -4389,12 +4424,12 @@
                         ]),
                         React.createElement('div', { key: 'flagsR', className: 'flex items-center gap-2' }, [
                             React.createElement('label', { className: 'text-xs text-gray-400 w-20' }, 'Red Card:'),
-                            React.createElement('input', { type: 'checkbox', checked: !!dasher.redCard, onChange: (e) => updateFlag('redCard', e.target.checked), disabled: !isEditing, className: 'h-3 w-3 text-orange-500 bg-gray-700 border-gray-600 rounded focus:ring-orange-500 focus:ring-1 disabled:opacity-50' }),
+                            React.createElement('input', { type: 'checkbox', checked: !!dasher.redCard, onChange: (e) => updateFlag('redCard', e.target.checked), disabled: !isEditing, className: 'h-3 w-3 bg-gray-700 border-gray-600 rounded disabled:opacity-50' }),
                             React.createElement('span', { className: 'text-xs text-gray-400' }, dasher.redCard ? 'Yes' : 'No')
                         ]),
                         React.createElement('div', { key: 'flagsA', className: 'flex items-center gap-2' }, [
                             React.createElement('label', { className: 'text-xs text-gray-400 w-20' }, 'Appealed:'),
-                            React.createElement('input', { type: 'checkbox', checked: !!dasher.appealed, onChange: (e) => updateFlag('appealed', e.target.checked), disabled: !isEditing, className: 'h-3 w-3 text-yellow-500 bg-gray-700 border-gray-600 rounded focus:ring-yellow-500 focus:ring-1 disabled:opacity-50' }),
+                            React.createElement('input', { type: 'checkbox', checked: !!dasher.appealed, onChange: (e) => updateFlag('appealed', e.target.checked), disabled: !isEditing, className: 'h-3 w-3 bg-gray-700 border-gray-600 rounded disabled:opacity-50' }),
                             React.createElement('span', { className: 'text-xs text-gray-400' }, dasher.appealed ? 'Yes' : 'No')
                         ]),
 
@@ -4425,7 +4460,7 @@
                                 React.createElement('select', {
                                     value: (dasher.selectedCashout || '').toLowerCase(),
                                     onChange: (e) => updateSelectedCashout(e.target.value),
-                                    className: 'bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500'
+                                    className: 'bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white'
                                 }, [
                                     React.createElement('option', { key: 'none', value: '' }, 'None'),
                                     React.createElement('option', { key: 'crimson', value: 'crimson' }, 'Crimson'),
@@ -6407,7 +6442,7 @@
                                                                         type="text"
                                                                         value={category.name}
                                                                         onChange={(e) => updateNoteCategory(category.id, e.target.value)}
-                                                                        className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                                                        className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm text-white focus:outline-none"
                                                                         onBlur={() => setEditingNoteCategory(-1)}
                                                                         onKeyPress={(e) => e.key === 'Enter' && setEditingNoteCategory(-1)}
                                                                         onClick={(e) => e.stopPropagation()}
@@ -6728,7 +6763,7 @@
                                                                         type="text"
                                                                         value={category.name}
                                                                         onChange={(e) => updateDasherCategory(category.id, e.target.value)}
-                                                                        className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                                                        className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm text-white focus:outline-none"
                                                                         onBlur={() => setEditingDasherCategory(-1)}
                                                                         onKeyPress={(e) => e.key === 'Enter' && setEditingDasherCategory(-1)}
                                                                         onClick={(e) => e.stopPropagation()}
