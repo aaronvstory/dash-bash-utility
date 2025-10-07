@@ -4990,7 +4990,7 @@
                                                                 return (
                                                                     <div
                                                                         key={store.id}
-                                                                        className={`bg-gray-600/50 rounded-lg overflow-hidden border border-gray-500/30 transition-opacity ${
+                                                                        className={`bg-gray-600/50 rounded-lg overflow-visible border border-gray-500/30 transition-opacity ${
                                                                             draggedStore.categoryId === category.id && draggedStore.storeIndex === storeIndex ? 'opacity-50' : ''
                                                                         }`}
                                                                         draggable={!isEditing}
@@ -5746,17 +5746,17 @@
                                                                                                 >CRIMSON</span>
                                                                                                 <span
                                                                                                     className="flag-badge"
-                                                                                                    data-flag="RC"
-                                                                                                    data-active={dasher.redCard ? 'true' : 'false'}
-                                                                                                    title={dasher.redCard ? (dasher.redCardAt ? `Red Card since ${new Date(dasher.redCardAt).toLocaleString()}` : 'Red Card active') : 'Red Card inactive'}
-                                                                                                >RED CARD</span>
-                                                                                                <span
-                                                                                                    className="flag-badge"
                                                                                                     data-flag="FP"
                                                                                                     data-active={dasher.fastPay ? 'true' : 'false'}
                                                                                                     data-selected={(dasher.selectedCashout||'').toLowerCase()==='fastpay' ? 'true' : 'false'}
                                                                                                     title={dasher.fastPay ? (dasher.fastPayInfo ? `FastPay: ${dasher.fastPayInfo}` : 'FastPay active') : 'FastPay inactive'}
-                                                                                                >FP</span>
+                                                                                                >FastPay</span>
+                                                                                                <span
+                                                                                                    className="flag-badge"
+                                                                                                    data-flag="RC"
+                                                                                                    data-active={dasher.redCard ? 'true' : 'false'}
+                                                                                                    title={dasher.redCard ? (dasher.redCardAt ? `Red Card since ${new Date(dasher.redCardAt).toLocaleString()}` : 'Red Card active') : 'Red Card inactive'}
+                                                                                                >RED CARD</span>
                                                                                                 <span
                                                                                                     className="flag-badge"
                                                                                                     data-flag="AP"
@@ -6217,8 +6217,8 @@
                                                                                 {dasherTitle}
                                                                                 <span className="flag-badges" aria-label="Dasher status flags (Crimson, Red Card, Appealed, FastPay)">
                                                                                     <span className="flag-badge" data-flag="C" data-active={dasher.crimson ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='crimson' ? 'true' : 'false'}>CRIMSON</span>
+                                                                                    <span className="flag-badge" data-flag="FP" data-active={dasher.fastPay ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='fastpay' ? 'true' : 'false'} title={dasher.fastPay ? (dasher.fastPayInfo ? `FastPay: ${dasher.fastPayInfo}` : 'FastPay active') : 'FastPay inactive'}>FastPay</span>
                                                                                     <span className="flag-badge" data-flag="RC" data-active={dasher.redCard ? 'true' : 'false'}>RED CARD</span>
-                                                                                    <span className="flag-badge" data-flag="FP" data-active={dasher.fastPay ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='fastpay' ? 'true' : 'false'} title={dasher.fastPay ? (dasher.fastPayInfo ? `FastPay: ${dasher.fastPayInfo}` : 'FastPay active') : 'FastPay inactive'}>FP</span>
                                                                                     <span className="flag-badge" data-flag="AP" data-active={dasher.appealed ? 'true' : 'false'}>APPEALED</span>
                                                                                 </span>
                                                                             </h5>
@@ -6303,7 +6303,7 @@
                                                     const movedNote = dasher.currentlyUsingAt ? `Using: ${formatRelativeTime(dasher.currentlyUsingAt)}` : null;
 
                                                     return (
-                                                        <div key={dasher.id} className={`bg-gray-600/50 rounded-lg overflow-hidden border border-gray-500/30 transition-opacity ${cardRecentlyMoved ? 'ring-2 ring-amber-400/80 animate-pulse' : ''}`}>
+                                                        <div key={dasher.id} className={`bg-gray-600/50 rounded-lg overflow-visible border border-gray-500/30 transition-opacity ${cardRecentlyMoved ? 'ring-2 ring-amber-400/80 animate-pulse' : ''}`}>
                                                             <div className="flex items-center justify-between p-3">
                                                                 <div className="flex items-center gap-2 flex-1">
                                                                     {isEditMode && (
@@ -6323,8 +6323,8 @@
                                                                                 {dasherTitle}
                                                                                 <span className="flag-badges" aria-label="Dasher status flags (Crimson, Red Card, Appealed, FastPay)">
                                                                                     <span className="flag-badge" data-flag="C" data-active={dasher.crimson ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='crimson' ? 'true' : 'false'}>CRIMSON</span>
+                                                                                    <span className="flag-badge" data-flag="FP" data-active={dasher.fastPay ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='fastpay' ? 'true' : 'false'} title={dasher.fastPay ? (dasher.fastPayInfo ? `FastPay: ${dasher.fastPayInfo}` : 'FastPay active') : 'FastPay inactive'}>FastPay</span>
                                                                                     <span className="flag-badge" data-flag="RC" data-active={dasher.redCard ? 'true' : 'false'}>RED CARD</span>
-                                                                                    <span className="flag-badge" data-flag="FP" data-active={dasher.fastPay ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='fastpay' ? 'true' : 'false'} title={dasher.fastPay ? (dasher.fastPayInfo ? `FastPay: ${dasher.fastPayInfo}` : 'FastPay active') : 'FastPay inactive'}>FP</span>
                                                                                     <span className="flag-badge" data-flag="AP" data-active={dasher.appealed ? 'true' : 'false'}>APPEALED</span>
                                                                                 </span>
                                                                             </h5>
@@ -6405,7 +6405,7 @@
                                                     const movedNote = dasher.appealedAt ? `Appealed: ${formatRelativeTime(dasher.appealedAt)}` : null;
 
                                                     return (
-                                                        <div key={dasher.id} className={`bg-gray-600/50 rounded-lg overflow-hidden border border-gray-500/30 transition-opacity ${cardRecentlyMoved ? 'ring-2 ring-amber-400/80 animate-pulse' : ''}`}>
+                                                        <div key={dasher.id} className={`bg-gray-600/50 rounded-lg overflow-visible border border-gray-500/30 transition-opacity ${cardRecentlyMoved ? 'ring-2 ring-amber-400/80 animate-pulse' : ''}`}>
                                                             <div className="flex items-center justify-between p-3">
                                                                 <div className="flex items-center gap-2 flex-1">
                                                                     {isEditMode && (
@@ -6425,8 +6425,8 @@
                                                                                 {dasherTitle}
                                                                                 <span className="flag-badges" aria-label="Dasher status flags (Crimson, Red Card, Appealed, FastPay)">
                                                                                     <span className="flag-badge" data-flag="C" data-active={dasher.crimson ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='crimson' ? 'true' : 'false'}>CRIMSON</span>
+                                                                                    <span className="flag-badge" data-flag="FP" data-active={dasher.fastPay ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='fastpay' ? 'true' : 'false'} title={dasher.fastPay ? (dasher.fastPayInfo ? `FastPay: ${dasher.fastPayInfo}` : 'FastPay active') : 'FastPay inactive'}>FastPay</span>
                                                                                     <span className="flag-badge" data-flag="RC" data-active={dasher.redCard ? 'true' : 'false'}>RED CARD</span>
-                                                                                    <span className="flag-badge" data-flag="FP" data-active={dasher.fastPay ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='fastpay' ? 'true' : 'false'} title={dasher.fastPay ? (dasher.fastPayInfo ? `FastPay: ${dasher.fastPayInfo}` : 'FastPay active') : 'FastPay inactive'}>FP</span>
                                                                                     <span className="flag-badge" data-flag="AP" data-active={dasher.appealed ? 'true' : 'false'}>APPEALED</span>
                                                                                 </span>
                                                                             </h5>
@@ -6501,7 +6501,7 @@
                                                     const movedNote = dasher.appliedPendingAt ? `Applied Pending: ${formatRelativeTime(dasher.appliedPendingAt)}` : null;
 
                                                     return (
-                                                        <div key={dasher.id} className={`bg-gray-600/50 rounded-lg overflow-hidden border border-gray-500/30 transition-opacity ${cardRecentlyMoved ? 'ring-2 ring-amber-400/80 animate-pulse' : ''}`}>
+                                                        <div key={dasher.id} className={`bg-gray-600/50 rounded-lg overflow-visible border border-gray-500/30 transition-opacity ${cardRecentlyMoved ? 'ring-2 ring-amber-400/80 animate-pulse' : ''}`}>
                                                             <div className="flex items-center justify-between p-3">
                                                                 <div className="flex items-center gap-2 flex-1">
                                                                     {isEditMode && (
@@ -6521,8 +6521,8 @@
                                                                                 {dasherTitle}
                                                                                 <span className="flag-badges" aria-label="Dasher status flags (Crimson, Red Card, Appealed, FastPay)">
                                                                                     <span className="flag-badge" data-flag="C" data-active={dasher.crimson ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='crimson' ? 'true' : 'false'}>CRIMSON</span>
+                                                                                    <span className="flag-badge" data-flag="FP" data-active={dasher.fastPay ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='fastpay' ? 'true' : 'false'} title={dasher.fastPay ? (dasher.fastPayInfo ? `FastPay: ${dasher.fastPayInfo}` : 'FastPay active') : 'FastPay inactive'}>FastPay</span>
                                                                                     <span className="flag-badge" data-flag="RC" data-active={dasher.redCard ? 'true' : 'false'}>RED CARD</span>
-                                                                                    <span className="flag-badge" data-flag="FP" data-active={dasher.fastPay ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='fastpay' ? 'true' : 'false'} title={dasher.fastPay ? (dasher.fastPayInfo ? `FastPay: ${dasher.fastPayInfo}` : 'FastPay active') : 'FastPay inactive'}>FP</span>
                                                                                     <span className="flag-badge" data-flag="AP" data-active={dasher.appealed ? 'true' : 'false'}>APPEALED</span>
                                                                                 </span>
                                                                             </h5>
@@ -6592,7 +6592,7 @@
                                                     const movedNote = dasher.lockedAt ? `Locked: ${formatRelativeTime(dasher.lockedAt)}` : null;
 
                                                     return (
-                                                        <div key={dasher.id} className={`bg-gray-600/50 rounded-lg overflow-hidden border border-gray-500/30 transition-opacity ${cardRecentlyMoved ? 'ring-2 ring-amber-400/80 animate-pulse' : ''}`}>
+                                                        <div key={dasher.id} className={`bg-gray-600/50 rounded-lg overflow-visible border border-gray-500/30 transition-opacity ${cardRecentlyMoved ? 'ring-2 ring-amber-400/80 animate-pulse' : ''}`}>
                                                             <div className="flex items-center justify-between p-3">
                                                                 <div className="flex items-center gap-2 flex-1">
                                                                     {isEditMode && (
@@ -6612,8 +6612,8 @@
                                                                                 {dasherTitle}
                                                                                 <span className="flag-badges" aria-label="Dasher status flags (Crimson, Red Card, Appealed, FastPay)">
                                                                                     <span className="flag-badge" data-flag="C" data-active={dasher.crimson ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='crimson' ? 'true' : 'false'}>CRIMSON</span>
+                                                                                    <span className="flag-badge" data-flag="FP" data-active={dasher.fastPay ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='fastpay' ? 'true' : 'false'} title={dasher.fastPay ? (dasher.fastPayInfo ? `FastPay: ${dasher.fastPayInfo}` : 'FastPay active') : 'FastPay inactive'}>FastPay</span>
                                                                                     <span className="flag-badge" data-flag="RC" data-active={dasher.redCard ? 'true' : 'false'}>RED CARD</span>
-                                                                                    <span className="flag-badge" data-flag="FP" data-active={dasher.fastPay ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='fastpay' ? 'true' : 'false'} title={dasher.fastPay ? (dasher.fastPayInfo ? `FastPay: ${dasher.fastPayInfo}` : 'FastPay active') : 'FastPay inactive'}>FP</span>
                                                                                     <span className="flag-badge" data-flag="AP" data-active={dasher.appealed ? 'true' : 'false'}>APPEALED</span>
                                                                                 </span>
                                                                             </h5>
@@ -6708,7 +6708,7 @@
                                                 return (
                                                     <div
                                                         key={dasher.id}
-                                                        className={`bg-gray-600/50 rounded-lg overflow-hidden border border-gray-500/30 transition-opacity dasher-card--deactivated ${
+                                                        className={`bg-gray-600/50 rounded-lg overflow-visible border border-gray-500/30 transition-opacity dasher-card--deactivated ${
                                                             dasher.ready ? 'dasher-card--ready' : ''
                                                         } ${
                                                             dasher.appealed ? 'dasher-card--appealed' : ''
@@ -6756,17 +6756,17 @@
                                                                                 >CRIMSON</span>
                                                                                 <span
                                                                                     className="flag-badge"
-                                                                                    data-flag="RC"
-                                                                                    data-active={dasher.redCard ? 'true' : 'false'}
-                                                                                    title={dasher.redCard ? (dasher.redCardAt ? `Red Card since ${new Date(dasher.redCardAt).toLocaleString()}` : 'Red Card active') : 'Red Card inactive'}
-                                                                                >RED CARD</span>
-                                                                                <span
-                                                                                    className="flag-badge"
                                                                                     data-flag="FP"
                                                                                     data-active={dasher.fastPay ? 'true' : 'false'}
                                                                                     data-selected={(dasher.selectedCashout||'').toLowerCase()==='fastpay' ? 'true' : 'false'}
                                                                                     title={dasher.fastPay ? (dasher.fastPayInfo ? `FastPay: ${dasher.fastPayInfo}` : 'FastPay active') : 'FastPay inactive'}
-                                                                                >FP</span>
+                                                                                >FastPay</span>
+                                                                                <span
+                                                                                    className="flag-badge"
+                                                                                    data-flag="RC"
+                                                                                    data-active={dasher.redCard ? 'true' : 'false'}
+                                                                                    title={dasher.redCard ? (dasher.redCardAt ? `Red Card since ${new Date(dasher.redCardAt).toLocaleString()}` : 'Red Card active') : 'Red Card inactive'}
+                                                                                >RED CARD</span>
                                                                                 <span
                                                                                     className="flag-badge"
                                                                                     data-flag="AP"
@@ -7184,7 +7184,7 @@
                                                 return (
                                                     <div
                                                         key={dasher.id}
-                                                        className="bg-gray-600/50 rounded-lg overflow-hidden border border-gray-500/30"
+                                                        className="bg-gray-600/50 rounded-lg overflow-visible border border-gray-500/30"
                                                     >
                                                         {/* Archived Dasher Header */}
                                                         <div className="flex items-center justify-between p-3">
@@ -7212,8 +7212,8 @@
                                                                             {dasherTitle}
                                                                             <span className="flag-badges" aria-label="Dasher status flags (Crimson, Red Card, Appealed, FastPay)">
                                                                                 <span className="flag-badge" data-flag="C" data-active={dasher.crimson ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='crimson' ? 'true' : 'false'}>CRIMSON</span>
+                                                                                <span className="flag-badge" data-flag="FP" data-active={dasher.fastPay ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='fastpay' ? 'true' : 'false'} title={dasher.fastPay ? (dasher.fastPayInfo ? `FastPay: ${dasher.fastPayInfo}` : 'FastPay active') : 'FastPay inactive'}>FastPay</span>
                                                                                 <span className="flag-badge" data-flag="RC" data-active={dasher.redCard ? 'true' : 'false'}>RED CARD</span>
-                                                                                <span className="flag-badge" data-flag="FP" data-active={dasher.fastPay ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='fastpay' ? 'true' : 'false'} title={dasher.fastPay ? (dasher.fastPayInfo ? `FastPay: ${dasher.fastPayInfo}` : 'FastPay active') : 'FastPay inactive'}>FP</span>
                                                                                 <span className="flag-badge" data-flag="AP" data-active={dasher.appealed ? 'true' : 'false'}>APPEALED</span>
                                                                             </span>
                                                                             {dasher.lastUsed && (
