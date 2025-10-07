@@ -2279,12 +2279,10 @@
                     }, 50);
                 };
 
-                const addForm = React.createElement('div', { key: 'addRow', className: 'db-field-row db-align-center flex-wrap gap-3 pt-3 border-t border-gray-700/80 mt-2' }, [
+                const addForm = React.createElement('div', { key: 'addRow', className: 'db-field-row db-align-center gap-3 pt-3 border-t border-gray-700/80 mt-2' }, [
 
-                    React.createElement('div', { key: 'a1', className: 'db-col-amount flex flex-col' }, [
-
-                        React.createElement('label', { className: 'text-[10px] text-gray-400 uppercase tracking-wide' }, 'Amount'),
-
+                    React.createElement('div', { key: 'a1', className: 'db-col-amount' }, [
+                        React.createElement('label', { className: 'sr-only', htmlFor: cashOutAmountInputId }, 'Amount'),
                         React.createElement('input', {
 
                             id: cashOutAmountInputId,
@@ -2296,9 +2294,8 @@
                             step: '0.01',
 
                             value: amtStr,
-
                             onChange: e => setDraft(d => ({ ...d, _addCashOutAmount: e.target.value, _addCashOutError: '' })),
-
+                            placeholder: 'Amount',
                             className: 'db-input-sm w-28 placeholder-gray-400',
 
                             'aria-invalid': err ? 'true' : (hasAmt && !validAmt ? 'true' : 'false'),
@@ -2309,38 +2306,29 @@
 
                     ]),
 
-                    React.createElement('div', { key: 'a2', className: 'db-col-source flex flex-col' }, [
-
-                        React.createElement('label', { className: 'text-[10px] text-gray-400 uppercase tracking-wide' }, 'Method'),
-
+                    React.createElement('div', { key: 'a2', className: 'db-col-source' }, [
+                        React.createElement('label', { className: 'sr-only' }, 'Method'),
                         React.createElement('input', {
-
                             type: 'text',
-
                             value: (draft._addCashOutMethod || ''),
-
                             onChange: e => setDraft(d => ({ ...d, _addCashOutMethod: e.target.value })),
-
+                            placeholder: 'Method',
                             className: 'db-input-sm w-32 placeholder-gray-400'
-
                         })
-
                     ]),
 
-                    React.createElement('div', { key: 'a3', className: 'db-col-notes flex flex-col' }, [
-
-                        React.createElement('label', { className: 'text-[10px] text-gray-400 uppercase tracking-wide' }, 'Notes'),
-
-                        React.createElement('textarea', {
+                    React.createElement('div', { key: 'a3', className: 'db-col-notes' }, [
+                        React.createElement('label', { className: 'sr-only' }, 'Notes'),
+                        React.createElement('input', {
+                            type: 'text',
                             value: (draft._addCashOutNotes || ''),
                             onChange: e => setDraft(d => ({ ...d, _addCashOutNotes: e.target.value })),
-                            rows: 1,
-                            className: 'db-input-sm w-full resize-y placeholder-gray-400'
+                            placeholder: 'Notes',
+                            className: 'db-input-sm w-full placeholder-gray-400'
                         })
-
                     ]),
 
-                    React.createElement('label', { key: 'adj', className: 'flex items-center gap-2 text-[11px] text-gray-300 mb-1' }, [
+                    React.createElement('label', { key: 'adj', className: 'flex items-center gap-2 text-[11px] text-gray-300' }, [
 
                         React.createElement('input', {
 
@@ -4241,9 +4229,9 @@
                         ]),
 
                         // Add Earning (inline)
-                        React.createElement('div', { key: 'addEarning', className: 'db-field-row db-align-center flex-wrap gap-2 pt-1' }, [
-                            React.createElement('div', { key: 'e1', className: 'db-col-amount flex flex-col' }, [
-                                React.createElement('label', { className: 'text-[10px] text-gray-400' }, 'Amount'),
+                        React.createElement('div', { key: 'addEarning', className: 'db-field-row db-align-center gap-2 pt-1' }, [
+                            React.createElement('div', { key: 'e1', className: 'db-col-amount' }, [
+                                React.createElement('label', { className: 'sr-only', htmlFor: inlineAmountInputId }, 'Amount'),
                                 React.createElement('input', {
                                     id: inlineAmountInputId,
                                     type: 'number',
@@ -4252,30 +4240,33 @@
                                     step: '0.01',
                                     value: inlineAmountValue,
                                     onChange: e => setDraftDasher(d => ({ ...d, _addEarningAmount: e.target.value, _addEarningError: '' })),
+                                    placeholder: 'Amount',
                                     className: 'db-input-sm w-24 placeholder-gray-400',
                                     'aria-invalid': (inlineErrorMessage || (inlineHasAmount && !inlineAmountIsValid)) ? 'true' : 'false',
                                     'aria-describedby': inlineErrorMessage ? `${inlineAmountInputId}-error` : undefined
                                 })
                             ]),
-                            React.createElement('div', { key: 'e2', className: 'db-col-source flex flex-col' }, [
-                                React.createElement('label', { className: 'text-[10px] text-gray-400' }, 'Source'),
+                            React.createElement('div', { key: 'e2', className: 'db-col-source' }, [
+                                React.createElement('label', { className: 'sr-only' }, 'Source'),
                                 React.createElement('input', {
                                     type: 'text',
                                     value: (draftDasher._addEarningSource || ''),
                                     onChange: e => setDraftDasher(d => ({ ...d, _addEarningSource: e.target.value })),
+                                    placeholder: 'Source',
                                     className: 'db-input-sm w-28 placeholder-gray-400'
                                 })
                             ]),
-                            React.createElement('div', { key: 'e3', className: 'db-col-notes flex flex-col' }, [
-                                React.createElement('label', { className: 'text-[10px] text-gray-400' }, 'Notes'),
+                            React.createElement('div', { key: 'e3', className: 'db-col-notes' }, [
+                                React.createElement('label', { className: 'sr-only' }, 'Notes'),
                                 React.createElement('input', {
                                     type: 'text',
                                     value: (draftDasher._addEarningNotes || ''),
                                     onChange: e => setDraftDasher(d => ({ ...d, _addEarningNotes: e.target.value })),
+                                    placeholder: 'Notes',
                                     className: 'db-input-sm w-full placeholder-gray-400'
                                 })
                             ]),
-                            React.createElement('label', { key: 'e4', className: 'flex items-center gap-1 text-[11px] text-gray-300 mb-1' }, [
+                            React.createElement('label', { key: 'e4', className: 'flex items-center gap-1 text-[11px] text-gray-300' }, [
                                 React.createElement('input', {
                                     type: 'checkbox',
                                     checked: inlineApplyBalance,
