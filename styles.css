@@ -1880,16 +1880,15 @@ h1, h2, h3 {
 
 /* Selected cash-out glow (applies to Crimson or FastPay when chosen) */
 .flag-badge[data-selected="true"] {
-  /* Subtle, blended white glow without a harsh outline */
   box-shadow:
-    0 0 0 1px rgba(255,255,255,0.18),
-    0 0 10px 3px rgba(255,255,255,0.28);
+    0 0 0 2px rgba(255,255,255,0.85),
+    0 0 8px rgba(255,255,255,0.55);
+  border-color: #ffffff !important;
 }
 
 /* Tone down glow for deactivated cards */
 .dasher-card--deactivated .flag-badge[data-selected="true"] {
-  /* Even gentler glow for deactivated cards */
   box-shadow:
-    0 0 0 1px rgba(255,255,255,0.12),
-    0 0 8px 2px rgba(255,255,255,0.18);
+    0 0 0 2px rgba(255,255,255,0.5),
+    0 0 6px rgba(255,255,255,0.35);
 }
