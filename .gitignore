@@ -64,3 +64,7 @@ archives/
 
 # User exports in root (should be in exports/ folder)
 dashbash-export-*.json
+
+# Local test helpers
+test-*.js
+test-*.html
