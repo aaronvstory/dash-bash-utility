@@ -1647,7 +1647,7 @@ body.dragging {
 }
 
 /* Alignment helpers for rows with inline inputs */
-.theme-jp .db-field-row { display: flex; align-items: center; gap: 12px; }
+.theme-jp .db-field-row { display: flex; align-items: center; gap: 12px; flex-wrap: nowrap; }
 .theme-jp .db-align-center { align-items: center !important; }
 .theme-jp .db-col-amount { flex: 0 0 112px; }
 .theme-jp .db-col-source { flex: 0 0 160px; }
