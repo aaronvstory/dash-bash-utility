@@ -5,26 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dash Bash Utility</title>
 
-    <!-- Version 1.8.6 - Update this version with each release -->
-    <meta name="app-version" content="1.8.6">
+    <!-- Version 1.8.9 - Update this version with each release -->
+    <meta name="app-version" content="1.8.9">
 
     <!-- Cache Control Headers -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
 
-    <link rel="icon" type="image/svg+xml" href="favicon.svg?v=1.2.0">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg?v=1.8.9">
     <link rel="alternate icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%231f2937'/%3E%3Ctext x='16' y='22' font-family='Arial, sans-serif' font-size='18' font-weight='bold' text-anchor='middle' fill='%23fbbf24'%3E$%3C/text%3E%3Crect x='6' y='8' width='6' height='2' fill='%2360a5fa' opacity='0.8'/%3E%3Crect x='20' y='8' width='6' height='2' fill='%2360a5fa' opacity='0.8'/%3E%3Crect x='6' y='22' width='6' height='2' fill='%23a78bfa' opacity='0.8'/%3E%3Crect x='20' y='22' width='6' height='2' fill='%23a78bfa' opacity='0.8'/%3E%3C/svg%3E" />
     <meta name="description" content="Target Calculator & Address Book Utility with Dashers Management">
     <meta name="theme-color" content="#111827">
 
     <!-- PWA Support -->
-    <link rel="manifest" href="manifest.json?v=1.2.0">
-    <link rel="apple-touch-icon" href="icon-192.png?v=1.2.0">
+    <link rel="manifest" href="manifest.json?v=1.8.9">
+    <link rel="apple-touch-icon" href="icon-192.png?v=1.8.9">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
-    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiRGFzaCBCYXNoIFV0aWxpdHkiLCJzaG9ydF9uYW1lIjoiRGFzaEJhc2giLCJzdGFydF91cmwiOiIvIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiIzExMTgyNyIsInRoZW1lX2NvbG9yIjoiIzExMTgyNyIsImljb25zIjpbeyJzcmMiOiJkYXRhOmltYWdlL3BuZztiYXNlNjQsaVZCT1J3MEtHZ29BQUFBTlNVaEVVZ0FBQUlBQUFBQ0FDQVlBQUFDUVhaUjBBQUFBQVhOU1IwSUFyczRjNlFBQUFFeFJRVmgxbGRTWHJUVEJBUEFBQUFBQkpSVTVFcmtKZ2dnPT0iLCJzaXplcyI6IjEyOHgxMjgiLCJ0eXBlIjoiaW1hZ2UvcG5nIn1dfQ==">
+    
 
     <!-- React and Dependencies -->
     <!-- BUILD STAMP: injected at 2025-09-30T08:05Z for version 1.4.3 (badge wiring, flag badges + icon-btn) -->
@@ -41,7 +41,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- External Stylesheets (MUST load after Tailwind to override defaults) -->
-    <link rel="stylesheet" href="styles.css?v=1.8.6">
+    <link rel="stylesheet" href="styles.css?v=1.8.9">
 
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@0.545.0/dist/umd/lucide.min.js"></script>
@@ -51,8 +51,96 @@
 
     <!-- Service Worker Registration with Version Check -->
     <script>
-    console.log('%cDash Bash Utility build 1.8.6 (Phase 9 - Global Mgmt & Fixes) loaded','background:#222;color:#f39ac5;padding:4px 8px;border-radius:4px');
-    const APP_VERSION = '1.8.6'; // Update this with each release
+    console.log('%cDash Bash Utility build 1.8.9 (Accessible alerts & release prep) loaded','background:#222;color:#f39ac5;padding:4px 8px;border-radius:4px');
+    const APP_VERSION = '1.8.9'; // Update this with each release
+    const versionState = {
+        registration: null,
+        banner: null,
+        lastSeenVersion: null,
+        lastMismatchAt: null
+    };
+    const ensureVersionBanner = (message, { tone = 'warn' } = {}) => {
+        const bg = tone === 'error' ? '#dc2626' : '#f97316';
+        const fg = '#ffffff';
+        if (!versionState.banner) {
+            const wrapper = document.createElement('div');
+            wrapper.id = 'version-mismatch-banner';
+            wrapper.setAttribute('role', 'alert');
+            wrapper.setAttribute('aria-live', 'assertive');
+            wrapper.style.position = 'fixed';
+            wrapper.style.top = '16px';
+            wrapper.style.left = '50%';
+            wrapper.style.transform = 'translateX(-50%)';
+            wrapper.style.zIndex = '10000';
+            wrapper.style.padding = '12px 18px';
+            wrapper.style.borderRadius = '10px';
+            wrapper.style.boxShadow = '0 10px 30px rgba(0,0,0,0.35)';
+            wrapper.style.display = 'flex';
+            wrapper.style.flexWrap = 'wrap';
+            wrapper.style.alignItems = 'center';
+            wrapper.style.gap = '12px';
+
+            const text = document.createElement('span');
+            text.id = 'version-mismatch-text';
+            text.style.fontWeight = '600';
+            text.style.fontSize = '15px';
+            wrapper.appendChild(text);
+
+            const reloadBtn = document.createElement('button');
+            reloadBtn.type = 'button';
+            reloadBtn.textContent = 'Reload now';
+            reloadBtn.style.background = '#ffffff';
+            reloadBtn.style.color = '#111827';
+            reloadBtn.style.padding = '8px 14px';
+            reloadBtn.style.borderRadius = '6px';
+            reloadBtn.style.border = 'none';
+            reloadBtn.style.cursor = 'pointer';
+            reloadBtn.style.fontWeight = '600';
+            reloadBtn.addEventListener('click', () => window.location.reload(true));
+            wrapper.appendChild(reloadBtn);
+
+            const forceBtn = document.createElement('button');
+            forceBtn.type = 'button';
+            forceBtn.textContent = 'Force update';
+            forceBtn.style.background = 'transparent';
+            forceBtn.style.border = '1px solid rgba(255,255,255,0.6)';
+            forceBtn.style.padding = '8px 14px';
+            forceBtn.style.borderRadius = '6px';
+            forceBtn.style.cursor = 'pointer';
+            forceBtn.style.color = fg;
+            forceBtn.style.fontWeight = '600';
+            forceBtn.addEventListener('click', () => {
+                if (versionState.registration?.waiting) {
+                    versionState.registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                }
+                navigator.serviceWorker?.controller?.postMessage?.({ type: 'VERSION_CHECK', expected: APP_VERSION });
+                versionState.registration?.update();
+            });
+            wrapper.appendChild(forceBtn);
+
+            versionState.banner = wrapper;
+            document.body.appendChild(wrapper);
+        }
+        versionState.banner.style.background = bg;
+        versionState.banner.style.color = fg;
+        const textEl = versionState.banner.querySelector('#version-mismatch-text');
+        if (textEl) textEl.textContent = message;
+    };
+    const dismissVersionBanner = () => {
+        if (versionState.banner && versionState.banner.parentNode) {
+            versionState.banner.parentNode.removeChild(versionState.banner);
+        }
+        versionState.banner = null;
+    };
+    const requestVersionCheck = (reason = 'manual') => {
+        if (navigator.serviceWorker?.controller?.postMessage) {
+            navigator.serviceWorker.controller.postMessage({
+                type: 'VERSION_CHECK',
+                expected: APP_VERSION,
+                reason,
+            });
+        }
+    };
         // Log active stylesheets for debugging theme cascade
         window.addEventListener('load', () => {
             const sheets = [...document.styleSheets].map(s => s.href && s.href.split('/').pop());
@@ -61,67 +149,82 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                // Register service worker with cache bust parameter
                 navigator.serviceWorker.register(`service-worker.js?v=${APP_VERSION}`)
                     .then(registration => {
-                        console.log('ServiceWorker registered for version', APP_VERSION);
+                        versionState.registration = registration;
+                        console.log('[DashBash] ServiceWorker registered for version', APP_VERSION);
 
-                        // Check for updates every hour
-                        setInterval(() => {
+                        const hourlyUpdate = setInterval(() => {
                             registration.update();
+                            requestVersionCheck('hourly');
                         }, 3600000);
 
-                        // Handle updates
+                        const versionPoll = setInterval(() => requestVersionCheck('interval'), 300000);
+
+                        const cleanup = () => {
+                            clearInterval(hourlyUpdate);
+                            clearInterval(versionPoll);
+                        };
+                        window.addEventListener('beforeunload', cleanup, { once: true });
+
                         registration.addEventListener('updatefound', () => {
                             const newWorker = registration.installing;
+                            if (!newWorker) return;
                             newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    // New version available
-                                    console.log('New version available!');
-                                    // Create update notification
-                                    const updateBanner = document.createElement('div');
-                                    updateBanner.innerHTML = `
-                                        <div style="position: fixed; top: 10px; right: 10px; background: #059669; color: white; padding: 12px 20px; border-radius: 8px; z-index: 9999; box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 10px;">
-                                            <span>New version available!</span>
-                                            <button onclick="window.location.reload(true)" style="background: white; color: #059669; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">
-                                                Update Now
-                                            </button>
-                                        </div>
-                                    `;
-                                    document.body.appendChild(updateBanner);
-
-                                    // Auto-hide after 30 seconds
-                                    setTimeout(() => {
-                                        if (updateBanner.parentNode) {
-                                            updateBanner.remove();
+                                if (newWorker.state === 'installed') {
+                                    if (navigator.serviceWorker.controller) {
+                                        console.log('[DashBash] New service worker installed - awaiting activation');
+                                        ensureVersionBanner('A new update is ready. Reload to finish applying it.', { tone: 'warn' });
+                                        if (registration.waiting) {
+                                            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
                                         }
-                                    }, 30000);
+                                    } else {
+                                        console.log('[DashBash] Service worker installed for first load');
+                                        requestVersionCheck('post-install');
+                                    }
                                 }
                             });
                         });
 
-                        // Immediate update check
                         registration.update();
+                        requestVersionCheck('post-register');
                     })
                     .catch(err => console.log('ServiceWorker registration failed:', err));
             });
 
-            // Handle controller change (new service worker activated)
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                const data = event.data || {};
+                if (data.type === 'VERSION_INFO') {
+                    versionState.lastSeenVersion = data.version;
+                    console.log('[DashBash] Service worker version info', data);
+                    if (data.version !== APP_VERSION) {
+                        versionState.lastMismatchAt = Date.now();
+                        ensureVersionBanner(`App shell expects ${APP_VERSION} but worker is ${data.version}. Reload to apply the latest fixes.`, { tone: 'error' });
+                        versionState.registration?.update();
+                    } else {
+                        dismissVersionBanner();
+                    }
+                }
+            });
+
             let refreshing = false;
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 if (!refreshing) {
                     refreshing = true;
+                    dismissVersionBanner();
                     window.location.reload(true);
                 }
             });
+
+            navigator.serviceWorker.ready.then(() => requestVersionCheck('ready'));
         }
 
-        // Version check on visibility change
         document.addEventListener('visibilitychange', () => {
-            if (!document.hidden && navigator.serviceWorker && navigator.serviceWorker.controller) {
-                navigator.serviceWorker.controller.postMessage({ type: 'VERSION_CHECK', version: APP_VERSION });
+            if (!document.hidden) {
+                requestVersionCheck('visibilitychange');
             }
         });
+        window.addEventListener('focus', () => requestVersionCheck('focus'));
     </script>
 
     <script type="text/babel">
@@ -193,6 +296,38 @@
     const ShieldCheck = (props) => React.createElement(Icon, { ...props, name: 'shield-check' });
 
         const ensureArray = (value) => Array.isArray(value) ? value : [];
+        // Shared announcers
+        const ensureLiveRegion = (id, mode = 'polite') => {
+            let el = document.getElementById(id);
+            if (!el) {
+                el = document.createElement('div');
+                el.id = id;
+                el.setAttribute('role', mode === 'assertive' ? 'alert' : 'status');
+                el.setAttribute('aria-live', mode);
+                el.style.position = 'fixed';
+                el.style.left = '-9999px';
+                el.style.top = 'auto';
+                el.style.width = '1px';
+                el.style.height = '1px';
+                document.body.appendChild(el);
+            }
+            return el;
+        };
+        const announceSuccess = (msg) => {
+            try {
+                const el = ensureLiveRegion('live-success', 'polite');
+                el.textContent = msg || '';
+                // Clear after short delay to allow subsequent announcements
+                setTimeout(()=>{ if (el) el.textContent=''; }, 1500);
+            } catch {}
+        };
+        const announceFailure = (msg) => {
+            try {
+                const el = ensureLiveRegion('live-error', 'assertive');
+                el.textContent = msg || '';
+                setTimeout(()=>{ if (el) el.textContent=''; }, 2000);
+            } catch {}
+        };
         const methodLabel = (s) => {
             const t = String(s ?? 'unspecified').trim().toLowerCase().replace(/[_-]+/g, ' ');
             return t.replace(/\b\w/g, (c) => c.toUpperCase());
@@ -931,6 +1066,7 @@
                 } catch (err) {
                     console.error('Failed to copy text: ', err);
                     setCopyNotification('❌ Failed to copy');
+                    announceFailure('Failed to copy to clipboard');
                     setTimeout(() => setCopyNotification(''), 3000);
                 }
             };
@@ -1210,6 +1346,7 @@
                     }
                 } catch (e) {
                     setSaveNotification('Failed to save data');
+                    announceFailure('Failed to save data');
                     setTimeout(() => setSaveNotification(''), 3000);
                 }
             };
@@ -1358,10 +1495,12 @@
                         setTimeout(() => setSaveNotification(''), 3000);
                     } else {
                         setSaveNotification('⚠️ No saved data found');
+                        announceFailure('No saved data found in storage');
                         setTimeout(() => setSaveNotification(''), 3000);
                     }
                 } catch (e) {
                     setSaveNotification('❌ Failed to load data');
+                    announceFailure('Failed to load saved data');
                     setTimeout(() => setSaveNotification(''), 3000);
                 }
             };
@@ -1425,6 +1564,7 @@
                     setTimeout(() => setSaveNotification(''), 3000);
                 } catch (e) {
                     setSaveNotification('❌ Failed to export data');
+                    announceFailure('Failed to export data');
                     setTimeout(() => setSaveNotification(''), 3000);
                 }
             };
@@ -1592,6 +1732,7 @@
                 } catch (error) {
                     console.error('Export error:', error);
                     setSaveNotification('⚠️ Export failed!');
+                    announceFailure('Export failed');
                     setTimeout(() => setSaveNotification(''), 3000);
                 }
             };
@@ -1898,6 +2039,7 @@
                     } catch (err) {
                         console.error('Import error:', err);
                         setImportNotification('❌ Failed to import - invalid file format');
+                        announceFailure('Failed to import data. Invalid file format');
                         setTimeout(() => setImportNotification(''), 3000);
                     }
                 };
@@ -1953,6 +2095,8 @@
                 // Clamp parsed value to prevent extreme balances
                 return Math.max(-1000000, Math.min(1000000, n));
             };
+
+            const safeFieldSegment = (value) => String(value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
             // Global filter/sort helper (replaces useFilteredSortedDashers)
             function filterAndSortDashers(list) {
@@ -2133,7 +2277,8 @@
                                 onClick:()=>{
                                     const amt = deriveNumericAmount(draft._addCashOutAmount);
                                     if (!Number.isFinite(amt) || amt <= 0) {
-                                        setDraft(d=>({...d,_addCashOutError:'Enter a valid positive amount.'}));
+                                        const errMsg = 'Enter a valid positive amount.';
+                                        setDraft(d=>({...d,_addCashOutError:errMsg}));
                                         setTimeout(() => {
                                             const inputNode = document.getElementById(cashOutAmountInputId);
                                             if (inputNode) {
@@ -2141,6 +2286,7 @@
                                                 if (typeof inputNode.select === 'function') inputNode.select();
                                             }
                                         }, 0);
+                                        announceFailure(errMsg);
                                         return;
                                     }
 
@@ -2180,7 +2326,8 @@
                                     };
 
                                     if (targets.length === 0) {
-                                        setDraft(d=>({...d,_addCashOutError:'Couldn\'t locate matching dasher record.'}));
+                                        const errMsg = 'Couldn\'t locate matching dasher record.';
+                                        setDraft(d=>({...d,_addCashOutError:errMsg}));
                                         setTimeout(() => {
                                             const inputNode = document.getElementById(cashOutAmountInputId);
                                             if (inputNode) {
@@ -2188,6 +2335,7 @@
                                                 if (typeof inputNode.select === 'function') inputNode.select();
                                             }
                                         }, 0);
+                                        announceFailure(errMsg);
                                         return;
                                     }
 
@@ -2197,6 +2345,7 @@
 
                                     requestPersist();
                                     setDraft(d=>({ _addCashOutAmount:'', _addCashOutMethod:'', _addCashOutNotes:'', _addCashOutAdjust:false, _addCashOutError:'' }));
+                                    announceSuccess('Cash-out added');
                                     setTimeout(() => {
                                         const inputNode = document.getElementById(cashOutAmountInputId);
                                         if (inputNode) {
@@ -3220,6 +3369,7 @@
             const deleteNoteCategory = (categoryId) => {
                 if (noteCategories.length === 1) {
                     setSaveNotification('❌ Cannot delete the last category');
+                    announceFailure('Cannot delete the last note category');
                     setTimeout(() => setSaveNotification(''), 3000);
                     return;
                 }
@@ -3484,6 +3634,7 @@
                     if (isDuplicate) {
                         // Show a toast or alert for duplicate email
                         setSaveNotification('⚠️ A dasher with this email already exists');
+                        announceFailure('A dasher with this email already exists');
                         setTimeout(() => setSaveNotification(''), 3000);
                         return; // Don't update if duplicate email
                     }
@@ -3906,7 +4057,6 @@
                     requestPersist();
                 };
 
-                const safeFieldSegment = (value) => String(value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
                 const scopeKey = `card-${safeFieldSegment(categoryId ?? 'bucket')}-${safeFieldSegment(dasher?.id ?? dasher?.email ?? dasher?.phone ?? 'dash')}`;
                 const draftDasher = getDraftForKey(scopeKey);
                 const setDraftDasher = (updater) => setDraftForKey(scopeKey, updater);
@@ -4050,7 +4200,8 @@
                                 onClick: () => {
                                     const amt = deriveNumericAmount(draftDasher._addEarningAmount);
                                     if (!Number.isFinite(amt) || amt <= 0) {
-                                        setDraftDasher(prev => ({ ...prev, _addEarningError: 'Enter a valid positive amount.' }));
+                                        const errMsg = 'Enter a valid positive amount.';
+                                        setDraftDasher(prev => ({ ...prev, _addEarningError: errMsg }));
                                         setTimeout(() => {
                                             const inputNode = document.getElementById(inlineAmountInputId);
                                             if (inputNode) {
@@ -4058,6 +4209,7 @@
                                                 if (typeof inputNode.select === 'function') inputNode.select();
                                             }
                                         }, 0);
+                                        announceFailure(errMsg);
                                         return;
                                     }
 
@@ -4068,7 +4220,9 @@
                                     const targets = gatherDescriptorsForDasher();
 
                                     if (!targets || targets.length === 0) {
-                                        setDraftDasher(prev => ({ ...prev, _addEarningError: 'Couldn\'t locate matching dasher record.' }));
+                                        const errMsg = 'Couldn\'t locate matching dasher record.';
+                                        setDraftDasher(prev => ({ ...prev, _addEarningError: errMsg }));
+                                        announceFailure(errMsg);
                                         return;
                                     }
 
@@ -4108,6 +4262,7 @@
                                         _addEarningApply: true,
                                         _addEarningError: ''
                                     }));
+                                    announceSuccess('Earning added');
 
                                     setTimeout(() => {
                                         const inputNode = document.getElementById(inlineAmountInputId);
@@ -9070,7 +9225,7 @@
                                 >
                                     <div className="flex items-center gap-3">
                                         <Settings size={20} className="text-purple-400" />
-                                        <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.8.6</span></span>
+                                        <span className="text-lg font-medium">State Management <span className="text-sm text-gray-400 ml-2">v1.8.9</span></span>
                                     </div>
                                     {isStateManagementOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                 </button>

@@ -1,11 +1,13 @@
 // Service Worker for Dash Bash Utility PWA (network-first shell with versioned cache)
-const APP_VERSION = "1.8.6";
+const APP_VERSION = "1.8.9";
 const CORE_CACHE = `dashbash-core-${APP_VERSION}`;
 const RUNTIME_CACHE = `dashbash-runtime-${APP_VERSION}`;
 const PRECACHE_URLS = [
   "./",
-  "./favicon.svg",
-  "./manifest.json",
+  `./favicon.svg?v=${APP_VERSION}`,
+  `./manifest.json?v=${APP_VERSION}`,
+  `./icon-192.png?v=${APP_VERSION}`,
+  `./icon-512.png?v=${APP_VERSION}`,
   // Intentionally exclude index.html & styles.css from precache to force network-first each load
 ];
 
@@ -84,4 +86,23 @@ self.addEventListener("fetch", (event) => {
       return cached || fetchPromise;
     })()
   );
+});
+
+self.addEventListener("message", (event) => {
+  const data = event.data || {};
+  if (data.type === "VERSION_CHECK") {
+    const respond = async () => {
+      const client = event.source || (await self.clients.get(data.clientId));
+      if (client && client.postMessage) {
+        client.postMessage({
+          type: "VERSION_INFO",
+          version: APP_VERSION,
+          cacheKeys: await caches.keys(),
+        });
+      }
+    };
+    event.waitUntil(respond());
+  } else if (data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
