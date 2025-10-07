@@ -508,6 +508,12 @@
                             redCard: false,
                             appealed: false,
                             appealedAt: null,
+                            crimsonAt: null,
+                            redCardAt: null,
+                            fastPay: false,
+                            fastPayInfo: '',
+                            crimsonInfo: '',
+                            selectedCashout: '',
                             deactivated: false,
                             lastUsed: null,
                             notes: 'This is a sample dasher for testing. Feel free to edit or delete!'
@@ -523,6 +529,12 @@
                         email: 'test@version.check',
                         crimson: false,
                         redCard: false,
+                        crimsonAt: null,
+                        redCardAt: null,
+                        fastPay: false,
+                        fastPayInfo: '',
+                        crimsonInfo: '',
+                        selectedCashout: '',
                         lastUsed: null,
                         notes: 'TEST DASHER - Added to verify GitHub Pages deployment'
                     }] }
@@ -1917,6 +1929,23 @@
                     });
                 };
 
+                // Ensure new cash-out related fields exist on every dasher
+                const ensureNewCashoutFields = (list) => {
+                    if (!Array.isArray(list)) return;
+                    list.forEach((dasher) => {
+                        if (dasher.fastPay === undefined) dasher.fastPay = false;
+                        if (typeof dasher.fastPayInfo !== 'string') dasher.fastPayInfo = '';
+                        if (typeof dasher.crimsonInfo !== 'string') dasher.crimsonInfo = '';
+                        if (typeof dasher.selectedCashout !== 'string') dasher.selectedCashout = '';
+                        // Normalize selectedCashout values
+                        const sc = String(dasher.selectedCashout || '').toLowerCase();
+                        if (sc !== 'crimson' && sc !== 'fastpay') dasher.selectedCashout = '';
+                        // Backfill timestamp fields to explicit nulls if missing (optional, stable)
+                        if (dasher.crimson && !('crimsonAt' in dasher)) dasher.crimsonAt = null;
+                        if (dasher.redCard && !('redCardAt' in dasher)) dasher.redCardAt = null;
+                    });
+                };
+
                 if (!stateObj.deactivatedDashers && Array.isArray(stateObj.dasherCategories)) {
                     const legacyDeactivated = stateObj.dasherCategories.find((cat) => cat.id === 'deactivated');
                     if (legacyDeactivated && Array.isArray(legacyDeactivated.dashers)) {
@@ -1961,14 +1990,15 @@
                         return acc;
                     }, []);
                     ensureHistoryArray(collected);
+                    ensureNewCashoutFields(collected);
                 }
-                ensureHistoryArray(stateObj.deactivatedDashers);
-                ensureHistoryArray(stateObj.archivedDashers);
-                ensureHistoryArray(stateObj.readyDashers);
-                ensureHistoryArray(stateObj.currentlyUsingDashers);
-                ensureHistoryArray(stateObj.appealedDashers);
-                ensureHistoryArray(stateObj.lockedDashers);
-                ensureHistoryArray(stateObj.appliedPendingDashers);
+                ensureHistoryArray(stateObj.deactivatedDashers); ensureNewCashoutFields(stateObj.deactivatedDashers);
+                ensureHistoryArray(stateObj.archivedDashers); ensureNewCashoutFields(stateObj.archivedDashers);
+                ensureHistoryArray(stateObj.readyDashers); ensureNewCashoutFields(stateObj.readyDashers);
+                ensureHistoryArray(stateObj.currentlyUsingDashers); ensureNewCashoutFields(stateObj.currentlyUsingDashers);
+                ensureHistoryArray(stateObj.appealedDashers); ensureNewCashoutFields(stateObj.appealedDashers);
+                ensureHistoryArray(stateObj.lockedDashers); ensureNewCashoutFields(stateObj.lockedDashers);
+                ensureHistoryArray(stateObj.appliedPendingDashers); ensureNewCashoutFields(stateObj.appliedPendingDashers);
             };
 
             // Cash out helper - records cash out entry, zeros balance, and saves
@@ -2763,6 +2793,10 @@
                     appealedAt: null,
                     crimsonAt: null,
                     redCardAt: null,
+                    fastPay: false,
+                    fastPayInfo: '',
+                    crimsonInfo: '',
+                    selectedCashout: '',
                     deactivated: false,
                     deactivatedAt: null,
                     ready: false,
@@ -3135,6 +3169,19 @@
 
                 const appealedStatus = dasher.appealed && dasher.appealedAt ? calculateAppealedTimeStatus(dasher.appealedAt) : null;
 
+                // Local helpers for cash-out selection & info fields
+                const updateSelectedCashout = (value) => {
+                    const normalized = (value || '').toLowerCase();
+                    const allowed = ['', 'crimson', 'fastpay'];
+                    const next = allowed.includes(normalized) ? normalized : '';
+                    setList(prev => prev.map(d => d.id === dasher.id ? { ...d, selectedCashout: next } : d));
+                    requestPersist();
+                };
+                const updateTextField = (field, value) => {
+                    setList(prev => prev.map(d => d.id === dasher.id ? { ...d, [field]: value } : d));
+                    requestPersist();
+                };
+
                 return (
                     React.createElement('div', { className: 'space-y-2 text-xs' }, [
                         // Name
@@ -3251,6 +3298,20 @@
                             React.createElement('input', { type: 'checkbox', checked: !!dasher.crimson, onChange: (e) => updateFlag('crimson', e.target.checked), disabled: !isEditing, className: 'h-3 w-3 text-purple-500 bg-gray-700 border-gray-600 rounded focus:ring-purple-500 focus:ring-1 disabled:opacity-50' }),
                             React.createElement('span', { className: 'text-xs text-gray-400' }, dasher.crimson ? 'Yes' : 'No')
                         ]),
+                        // Crimson Info
+                        React.createElement('div', { key: 'crimsonInfo', className: 'flex items-center gap-2' }, [
+                            React.createElement('label', { className: 'text-xs text-gray-400 w-20' }, 'Crimson info:'),
+                            isEditing ? (
+                                React.createElement('input', {
+                                    type: 'text', value: dasher.crimsonInfo || '',
+                                    onChange: (e) => updateTextField('crimsonInfo', e.target.value),
+                                    className: 'flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-purple-500',
+                                    placeholder: 'Optional details about Crimson…'
+                                })
+                            ) : (
+                                React.createElement('div', { className: 'flex-1 text-xs text-gray-300' }, dasher.crimsonInfo || React.createElement('span', { className: 'italic text-gray-500' }, 'No info'))
+                            )
+                        ]),
                         React.createElement('div', { key: 'flagsR', className: 'flex items-center gap-2' }, [
                             React.createElement('label', { className: 'text-xs text-gray-400 w-20' }, 'Red Card:'),
                             React.createElement('input', { type: 'checkbox', checked: !!dasher.redCard, onChange: (e) => updateFlag('redCard', e.target.checked), disabled: !isEditing, className: 'h-3 w-3 text-orange-500 bg-gray-700 border-gray-600 rounded focus:ring-orange-500 focus:ring-1 disabled:opacity-50' }),
@@ -3260,6 +3321,44 @@
                             React.createElement('label', { className: 'text-xs text-gray-400 w-20' }, 'Appealed:'),
                             React.createElement('input', { type: 'checkbox', checked: !!dasher.appealed, onChange: (e) => updateFlag('appealed', e.target.checked), disabled: !isEditing, className: 'h-3 w-3 text-yellow-500 bg-gray-700 border-gray-600 rounded focus:ring-yellow-500 focus:ring-1 disabled:opacity-50' }),
                             React.createElement('span', { className: 'text-xs text-gray-400' }, dasher.appealed ? 'Yes' : 'No')
+                        ]),
+
+                        // FastPay
+                        React.createElement('div', { key: 'fastpayRow', className: 'flex items-center gap-2' }, [
+                            React.createElement('label', { className: 'text-xs text-gray-400 w-20' }, 'FastPay:'),
+                            React.createElement('input', { type: 'checkbox', checked: !!dasher.fastPay, onChange: (e) => updateListField('fastPay', e.target.checked), disabled: !isEditing, className: 'h-3 w-3 text-blue-500 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-1 disabled:opacity-50' }),
+                            React.createElement('span', { className: 'text-xs text-gray-400' }, dasher.fastPay ? 'Yes' : 'No')
+                        ]),
+                        React.createElement('div', { key: 'fastpayInfo', className: 'flex items-center gap-2' }, [
+                            React.createElement('label', { className: 'text-xs text-gray-400 w-20' }, 'FastPay info:'),
+                            isEditing ? (
+                                React.createElement('input', {
+                                    type: 'text', value: dasher.fastPayInfo || '',
+                                    onChange: (e) => updateTextField('fastPayInfo', e.target.value),
+                                    className: 'flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500',
+                                    placeholder: 'Optional details about FastPay…'
+                                })
+                            ) : (
+                                React.createElement('div', { className: 'flex-1 text-xs text-gray-300' }, dasher.fastPayInfo || React.createElement('span', { className: 'italic text-gray-500' }, 'No info'))
+                            )
+                        ]),
+
+                        // Selected cash-out method
+                        React.createElement('div', { key: 'selectedCashout', className: 'flex items-center gap-2' }, [
+                            React.createElement('label', { className: 'text-xs text-gray-400 w-20' }, 'Selected cash-out:'),
+                            isEditing ? (
+                                React.createElement('select', {
+                                    value: (dasher.selectedCashout || '').toLowerCase(),
+                                    onChange: (e) => updateSelectedCashout(e.target.value),
+                                    className: 'bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500'
+                                }, [
+                                    React.createElement('option', { key: 'none', value: '' }, 'None'),
+                                    React.createElement('option', { key: 'crimson', value: 'crimson' }, 'Crimson'),
+                                    React.createElement('option', { key: 'fastpay', value: 'fastpay' }, 'FastPay')
+                                ])
+                            ) : (
+                                React.createElement('div', { className: 'text-xs text-gray-300' }, (dasher.selectedCashout ? (dasher.selectedCashout === 'crimson' ? 'Crimson' : 'FastPay') : 'None'))
+                            )
                         ]),
 
                         // Cash-out history (edit-aware)
@@ -5637,11 +5736,12 @@
                                                                                         <h5 className="font-medium text-sm flex items-center gap-2 truncate">
                                                                                             {dasherTitle}
                                                                                             {/* Status Badges */}
-                                                                                            <span className="flag-badges" aria-label="Dasher status flags (Crimson, Red Card, Appealed)">
+                                                                                            <span className="flag-badges" aria-label="Dasher status flags (Crimson, Red Card, Appealed, FastPay)">
                                                                                                 <span
                                                                                                     className="flag-badge"
                                                                                                     data-flag="C"
                                                                                                     data-active={dasher.crimson ? 'true' : 'false'}
+                                                                                                    data-selected={(dasher.selectedCashout||'').toLowerCase()==='crimson' ? 'true' : 'false'}
                                                                                                     title={dasher.crimson ? (dasher.crimsonAt ? `Crimson since ${new Date(dasher.crimsonAt).toLocaleString()}` : 'Crimson active') : 'Crimson inactive'}
                                                                                                 >CRIMSON</span>
                                                                                                 <span
@@ -5650,6 +5750,13 @@
                                                                                                     data-active={dasher.redCard ? 'true' : 'false'}
                                                                                                     title={dasher.redCard ? (dasher.redCardAt ? `Red Card since ${new Date(dasher.redCardAt).toLocaleString()}` : 'Red Card active') : 'Red Card inactive'}
                                                                                                 >RED CARD</span>
+                                                                                                <span
+                                                                                                    className="flag-badge"
+                                                                                                    data-flag="FP"
+                                                                                                    data-active={dasher.fastPay ? 'true' : 'false'}
+                                                                                                    data-selected={(dasher.selectedCashout||'').toLowerCase()==='fastpay' ? 'true' : 'false'}
+                                                                                                    title={dasher.fastPay ? (dasher.fastPayInfo ? `FastPay: ${dasher.fastPayInfo}` : 'FastPay active') : 'FastPay inactive'}
+                                                                                                >FP</span>
                                                                                                 <span
                                                                                                     className="flag-badge"
                                                                                                     data-flag="AP"
@@ -6108,9 +6215,10 @@
                                                                         <div className="flex-1 min-w-0">
                                                                             <h5 className="font-medium text-sm flex items-center gap-2 truncate">
                                                                                 {dasherTitle}
-                                                                                <span className="flag-badges">
-                                                                                    <span className="flag-badge" data-flag="C" data-active={dasher.crimson ? 'true' : 'false'}>CRIMSON</span>
+                                                                                <span className="flag-badges" aria-label="Dasher status flags (Crimson, Red Card, Appealed, FastPay)">
+                                                                                    <span className="flag-badge" data-flag="C" data-active={dasher.crimson ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='crimson' ? 'true' : 'false'}>CRIMSON</span>
                                                                                     <span className="flag-badge" data-flag="RC" data-active={dasher.redCard ? 'true' : 'false'}>RED CARD</span>
+                                                                                    <span className="flag-badge" data-flag="FP" data-active={dasher.fastPay ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='fastpay' ? 'true' : 'false'} title={dasher.fastPay ? (dasher.fastPayInfo ? `FastPay: ${dasher.fastPayInfo}` : 'FastPay active') : 'FastPay inactive'}>FP</span>
                                                                                     <span className="flag-badge" data-flag="AP" data-active={dasher.appealed ? 'true' : 'false'}>APPEALED</span>
                                                                                 </span>
                                                                             </h5>
@@ -6213,9 +6321,10 @@
                                                                         <div className="flex-1 min-w-0">
                                                                             <h5 className="font-medium text-sm flex items-center gap-2 truncate">
                                                                                 {dasherTitle}
-                                                                                <span className="flag-badges">
-                                                                                    <span className="flag-badge" data-flag="C" data-active={dasher.crimson ? 'true' : 'false'}>CRIMSON</span>
+                                                                                <span className="flag-badges" aria-label="Dasher status flags (Crimson, Red Card, Appealed, FastPay)">
+                                                                                    <span className="flag-badge" data-flag="C" data-active={dasher.crimson ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='crimson' ? 'true' : 'false'}>CRIMSON</span>
                                                                                     <span className="flag-badge" data-flag="RC" data-active={dasher.redCard ? 'true' : 'false'}>RED CARD</span>
+                                                                                    <span className="flag-badge" data-flag="FP" data-active={dasher.fastPay ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='fastpay' ? 'true' : 'false'} title={dasher.fastPay ? (dasher.fastPayInfo ? `FastPay: ${dasher.fastPayInfo}` : 'FastPay active') : 'FastPay inactive'}>FP</span>
                                                                                     <span className="flag-badge" data-flag="AP" data-active={dasher.appealed ? 'true' : 'false'}>APPEALED</span>
                                                                                 </span>
                                                                             </h5>
@@ -6314,9 +6423,10 @@
                                                                         <div className="flex-1 min-w-0">
                                                                             <h5 className="font-medium text-sm flex items-center gap-2 truncate">
                                                                                 {dasherTitle}
-                                                                                <span className="flag-badges">
-                                                                                    <span className="flag-badge" data-flag="C" data-active={dasher.crimson ? 'true' : 'false'}>CRIMSON</span>
+                                                                                <span className="flag-badges" aria-label="Dasher status flags (Crimson, Red Card, Appealed, FastPay)">
+                                                                                    <span className="flag-badge" data-flag="C" data-active={dasher.crimson ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='crimson' ? 'true' : 'false'}>CRIMSON</span>
                                                                                     <span className="flag-badge" data-flag="RC" data-active={dasher.redCard ? 'true' : 'false'}>RED CARD</span>
+                                                                                    <span className="flag-badge" data-flag="FP" data-active={dasher.fastPay ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='fastpay' ? 'true' : 'false'} title={dasher.fastPay ? (dasher.fastPayInfo ? `FastPay: ${dasher.fastPayInfo}` : 'FastPay active') : 'FastPay inactive'}>FP</span>
                                                                                     <span className="flag-badge" data-flag="AP" data-active={dasher.appealed ? 'true' : 'false'}>APPEALED</span>
                                                                                 </span>
                                                                             </h5>
@@ -6409,9 +6519,10 @@
                                                                         <div className="flex-1 min-w-0">
                                                                             <h5 className="font-medium text-sm flex items-center gap-2 truncate">
                                                                                 {dasherTitle}
-                                                                                <span className="flag-badges">
-                                                                                    <span className="flag-badge" data-flag="C" data-active={dasher.crimson ? 'true' : 'false'}>CRIMSON</span>
+                                                                                <span className="flag-badges" aria-label="Dasher status flags (Crimson, Red Card, Appealed, FastPay)">
+                                                                                    <span className="flag-badge" data-flag="C" data-active={dasher.crimson ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='crimson' ? 'true' : 'false'}>CRIMSON</span>
                                                                                     <span className="flag-badge" data-flag="RC" data-active={dasher.redCard ? 'true' : 'false'}>RED CARD</span>
+                                                                                    <span className="flag-badge" data-flag="FP" data-active={dasher.fastPay ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='fastpay' ? 'true' : 'false'} title={dasher.fastPay ? (dasher.fastPayInfo ? `FastPay: ${dasher.fastPayInfo}` : 'FastPay active') : 'FastPay inactive'}>FP</span>
                                                                                     <span className="flag-badge" data-flag="AP" data-active={dasher.appealed ? 'true' : 'false'}>APPEALED</span>
                                                                                 </span>
                                                                             </h5>
@@ -6499,9 +6610,10 @@
                                                                         <div className="flex-1 min-w-0">
                                                                             <h5 className="font-medium text-sm flex items-center gap-2 truncate">
                                                                                 {dasherTitle}
-                                                                                <span className="flag-badges">
-                                                                                    <span className="flag-badge" data-flag="C" data-active={dasher.crimson ? 'true' : 'false'}>CRIMSON</span>
+                                                                                <span className="flag-badges" aria-label="Dasher status flags (Crimson, Red Card, Appealed, FastPay)">
+                                                                                    <span className="flag-badge" data-flag="C" data-active={dasher.crimson ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='crimson' ? 'true' : 'false'}>CRIMSON</span>
                                                                                     <span className="flag-badge" data-flag="RC" data-active={dasher.redCard ? 'true' : 'false'}>RED CARD</span>
+                                                                                    <span className="flag-badge" data-flag="FP" data-active={dasher.fastPay ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='fastpay' ? 'true' : 'false'} title={dasher.fastPay ? (dasher.fastPayInfo ? `FastPay: ${dasher.fastPayInfo}` : 'FastPay active') : 'FastPay inactive'}>FP</span>
                                                                                     <span className="flag-badge" data-flag="AP" data-active={dasher.appealed ? 'true' : 'false'}>APPEALED</span>
                                                                                 </span>
                                                                             </h5>
@@ -6634,11 +6746,12 @@
                                                                         <h5 className="font-medium text-sm flex items-center gap-2 truncate">
                                                                             {dasherTitle}
                                                                             {/* Status Badges */}
-                                                                            <span className="flag-badges" aria-label="Dasher status flags (Crimson, Red Card, Appealed)">
+                                                                            <span className="flag-badges" aria-label="Dasher status flags (Crimson, Red Card, Appealed, FastPay)">
                                                                                 <span
                                                                                     className="flag-badge"
                                                                                     data-flag="C"
                                                                                     data-active={dasher.crimson ? 'true' : 'false'}
+                                                                                    data-selected={(dasher.selectedCashout||'').toLowerCase()==='crimson' ? 'true' : 'false'}
                                                                                     title={dasher.crimson ? (dasher.crimsonAt ? `Crimson since ${new Date(dasher.crimsonAt).toLocaleString()}` : 'Crimson active') : 'Crimson inactive'}
                                                                                 >CRIMSON</span>
                                                                                 <span
@@ -6647,6 +6760,13 @@
                                                                                     data-active={dasher.redCard ? 'true' : 'false'}
                                                                                     title={dasher.redCard ? (dasher.redCardAt ? `Red Card since ${new Date(dasher.redCardAt).toLocaleString()}` : 'Red Card active') : 'Red Card inactive'}
                                                                                 >RED CARD</span>
+                                                                                <span
+                                                                                    className="flag-badge"
+                                                                                    data-flag="FP"
+                                                                                    data-active={dasher.fastPay ? 'true' : 'false'}
+                                                                                    data-selected={(dasher.selectedCashout||'').toLowerCase()==='fastpay' ? 'true' : 'false'}
+                                                                                    title={dasher.fastPay ? (dasher.fastPayInfo ? `FastPay: ${dasher.fastPayInfo}` : 'FastPay active') : 'FastPay inactive'}
+                                                                                >FP</span>
                                                                                 <span
                                                                                     className="flag-badge"
                                                                                     data-flag="AP"
@@ -7090,6 +7210,12 @@
                                                                     <div className="flex-1 min-w-0">
                                                                         <h5 className="font-medium text-sm flex items-center gap-2 truncate">
                                                                             {dasherTitle}
+                                                                            <span className="flag-badges" aria-label="Dasher status flags (Crimson, Red Card, Appealed, FastPay)">
+                                                                                <span className="flag-badge" data-flag="C" data-active={dasher.crimson ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='crimson' ? 'true' : 'false'}>CRIMSON</span>
+                                                                                <span className="flag-badge" data-flag="RC" data-active={dasher.redCard ? 'true' : 'false'}>RED CARD</span>
+                                                                                <span className="flag-badge" data-flag="FP" data-active={dasher.fastPay ? 'true' : 'false'} data-selected={(dasher.selectedCashout||'').toLowerCase()==='fastpay' ? 'true' : 'false'} title={dasher.fastPay ? (dasher.fastPayInfo ? `FastPay: ${dasher.fastPayInfo}` : 'FastPay active') : 'FastPay inactive'}>FP</span>
+                                                                                <span className="flag-badge" data-flag="AP" data-active={dasher.appealed ? 'true' : 'false'}>APPEALED</span>
+                                                                            </span>
                                                                             {dasher.lastUsed && (
                                                                                 <button
                                                                                     onClick={(e) => {
