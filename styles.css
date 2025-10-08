@@ -2040,10 +2040,11 @@ h1, h2, h3 {
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.1;
-  /* Keep existing clamp size but allow slightly larger on wide screens */
-  font-size: clamp(2.25rem, 5.5vw, 3.6rem);
+  /* Match existing baseline sizing to avoid layout shifts */
+  font-size: clamp(2.25rem, 4.6vw, 3.2rem);
 
   /* Animated gradient text fill */
+  color: var(--jp-text-hi, #e6e9ef); /* solid fallback before gradient */
   background: linear-gradient(
     120deg,
     var(--jp-accent-indigo, #6d7dff) 0%,
@@ -2059,7 +2060,7 @@ h1, h2, h3 {
 }
 
 /* Metadata badges: subtle glass and hover lift within hero only */
-.hero-meta .badge {
+.header-container .metadata-badge {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: var(--jp-text-med, #a0aec0);
@@ -2076,7 +2077,7 @@ h1, h2, h3 {
     color var(--jp-trans-fast, 160ms) ease;
 }
 
-.hero-meta .badge:hover {
+.header-container .metadata-badge:hover {
   transform: translateY(-1px);
   color: #ffffff;
   border-color: var(--jp-ring, rgba(243, 154, 197, 0.55));
@@ -2086,4 +2087,53 @@ h1, h2, h3 {
 /* Respect reduced motion preferences */
 @media (prefers-reduced-motion: reduce) {
   .hero-title.animated-gradient-text { animation: none !important; }
+}
+
+/* High-contrast and non-support fallbacks for legibility */
+@media (prefers-contrast: more) {
+  .hero-title.animated-gradient-text {
+    background: none !important;
+    -webkit-text-fill-color: initial !important;
+    color: var(--jp-text-hi, #e6e9ef) !important;
+    text-shadow: none !important;
+  }
+}
+
+@supports not (-webkit-background-clip: text) {
+  .hero-title.animated-gradient-text {
+    background: none;
+    -webkit-text-fill-color: initial;
+    color: var(--jp-text-hi, #e6e9ef);
+  }
+}
+
+/* Header container glass gradient (non-destructive; pairs with existing .app-hero) */
+.header-container {
+  background: linear-gradient(
+    135deg,
+    rgba(34, 209, 238, 0.05) 0%,
+    rgba(71, 119, 244, 0.08) 25%,
+    rgba(30, 125, 146, 0.06) 50%,
+    rgba(41, 65, 114, 0.09) 75%,
+    rgba(34, 209, 238, 0.05) 100%
+  );
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(34, 209, 238, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* If both app-hero and header-container exist, disable older overlays to avoid stacking */
+.app-hero.header-container::before,
+.app-hero.header-container::after {
+  content: none !important;
+}
+
+/* Optional lite visuals mode: reduce blur and disable heavy animations */
+[data-visuals="lite"] .header-container {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+[data-visuals="lite"] .hero-title.animated-gradient-text {
+  animation: none;
 }

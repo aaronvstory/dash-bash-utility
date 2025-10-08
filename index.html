@@ -5791,21 +5791,21 @@
                     )}
 
                     <div className="max-w-[1600px] xl:max-w-[1720px] mx-auto">
-                        {/* Gradient Hero Header - v1.7.0 */}
-                        <div className="app-hero" role="banner" aria-label="Dash Bash Utility header">
+                        {/* Gradient Hero Header - v2 */}
+                        <header className="app-hero header-container" role="banner" aria-label="Dash Bash Utility header">
                             <div className="hero-inner">
                                 <h1 className="hero-title animated-gradient-text">Dash Bash Utility</h1>
                                 <div className="hero-meta">
-                                    <span className="badge">
+                                    <span className="badge metadata-badge">
                                         {currentTime.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
                                         &nbsp;•&nbsp;
                                         {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </span>
-                                    <span className="badge" aria-label="Application version">v{APP_VERSION}</span>
-                                    <span className="badge" aria-label="Schema version">schema 4</span>
+                                    <span className="badge metadata-badge" aria-label="Application version">v{APP_VERSION}</span>
+                                    <span className="badge metadata-badge" aria-label="Schema version">schema 4</span>
                                 </div>
                             </div>
-                        </div>
+                        </header>
 
                         <div className="space-y-4">
                             {/* Target Calculator Section */}
