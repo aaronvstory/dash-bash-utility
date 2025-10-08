@@ -4518,6 +4518,164 @@
           dasherLocationIndex,
         ]);
 
+        // Results-only sort and filters (independent of bucket sort)
+        const RESULTS_CONTROLS_STORAGE_KEY = "dashBashResultsControls";
+
+        const readStoredResultsControls = () => {
+          if (typeof window === "undefined") return null;
+          try {
+            const raw = window.localStorage.getItem(
+              RESULTS_CONTROLS_STORAGE_KEY,
+            );
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            return parsed && typeof parsed === "object" ? parsed : null;
+          } catch {
+            return null;
+          }
+        };
+
+        const sanitizeResultsSort = (value) => {
+          const validKeys = new Set(["balance", "name", "bucket", "none"]);
+          const key = validKeys.has(value?.key) ? value.key : "balance";
+          const dir = value?.dir === "asc" ? "asc" : "desc";
+          return { key, dir };
+        };
+
+        const sanitizeFlagFilters = (value) => ({
+          appealed: !!value?.appealed,
+          crimson: !!value?.crimson,
+          fastPay: !!value?.fastPay,
+          redCard: !!value?.redCard,
+        });
+
+        const sanitizeBucketFilter = (value) => {
+          const allowed = new Set([
+            "any",
+            "main",
+            "ready",
+            "currently-using",
+            "appealed",
+            "applied-pending",
+            "reverif",
+            "locked",
+            "deactivated",
+            "archived",
+          ]);
+          return allowed.has(value) ? value : "any";
+        };
+
+        const storedResultsControls = readStoredResultsControls();
+
+        const [resultsSort, setResultsSort] = useState(() =>
+          sanitizeResultsSort(storedResultsControls?.sort),
+        );
+        // keys: 'balance' | 'name' | 'bucket' | 'none'
+        const [resultsBucketFilter, setResultsBucketFilter] = useState(() =>
+          sanitizeBucketFilter(storedResultsControls?.bucketFilter),
+        );
+        // 'any' | 'main' | 'ready' | 'currently-using' | 'appealed' | 'applied-pending' | 'reverif' | 'locked' | 'deactivated' | 'archived'
+        const [resultsFlagFilters, setResultsFlagFilters] = useState(() =>
+          sanitizeFlagFilters(storedResultsControls?.flags),
+        );
+
+        useEffect(() => {
+          if (typeof window === "undefined") return;
+          const payload = {
+            sort: resultsSort,
+            bucketFilter: resultsBucketFilter,
+            flags: resultsFlagFilters,
+          };
+          try {
+            window.localStorage.setItem(
+              RESULTS_CONTROLS_STORAGE_KEY,
+              JSON.stringify(payload),
+            );
+          } catch {}
+        }, [resultsSort, resultsBucketFilter, resultsFlagFilters]);
+
+        const getResultsAriaSort = (key) =>
+          resultsSort.key === key
+            ? resultsSort.dir === "asc"
+              ? "ascending"
+              : "descending"
+            : "none";
+
+        const toggleResultsFlag = (key) =>
+          setResultsFlagFilters((prev) => ({ ...prev, [key]: !prev[key] }));
+
+        const matchesFlagFilters = (dasher) => {
+          if (resultsFlagFilters.appealed && !dasher?.appealed) return false;
+          if (resultsFlagFilters.crimson && !dasher?.crimson) return false;
+          if (resultsFlagFilters.fastPay && !dasher?.fastPay) return false;
+          if (resultsFlagFilters.redCard && !dasher?.redCard) return false;
+          return true;
+        };
+
+        const matchesBucketFilter = (primary, alternates) => {
+          if (resultsBucketFilter === "any") return true;
+          const all = [primary, ...(alternates || [])].filter(Boolean);
+          return all.some((loc) => loc.bucketKey === resultsBucketFilter);
+        };
+
+        const filteredResultsDashers = useMemo(() => {
+          return (resultsDashers || []).filter(
+            ({ dasher, primaryLocation, alternateLocations }) =>
+              matchesFlagFilters(dasher) &&
+              matchesBucketFilter(primaryLocation, alternateLocations),
+          );
+        }, [resultsDashers, resultsFlagFilters, resultsBucketFilter]);
+
+        const sortedResultsDashers = useMemo(() => {
+          const list = [...filteredResultsDashers];
+          const dir = resultsSort.dir === "asc" ? 1 : -1;
+          const safeStr = (v) =>
+            String(v || "")
+              .trim()
+              .toLowerCase();
+          const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+
+          list.sort((A, B) => {
+            const a = A.dasher || {};
+            const b = B.dasher || {};
+            if (resultsSort.key === "balance") {
+              const av = parseBalanceValue(a.balance);
+              const bv = parseBalanceValue(b.balance);
+              return dir * cmp(av, bv);
+            }
+            if (resultsSort.key === "name") {
+              return dir * cmp(safeStr(a.name), safeStr(b.name));
+            }
+            if (resultsSort.key === "bucket") {
+              const al = A.primaryLocation?.bucketLabel || "";
+              const bl = B.primaryLocation?.bucketLabel || "";
+              return dir * cmp(safeStr(al), safeStr(bl));
+            }
+            return 0;
+          });
+
+          return list;
+        }, [filteredResultsDashers, resultsSort]);
+
+        const setResultsSortKey = (key) => {
+          setResultsSort((prev) =>
+            prev.key === key
+              ? { key, dir: prev.dir === "asc" ? "desc" : "asc" }
+              : { key, dir: "desc" },
+          );
+        };
+
+        const resetResultsControls = () => {
+          setResultsSort({ key: "balance", dir: "desc" });
+          setResultsBucketFilter("any");
+          setResultsFlagFilters({
+            appealed: false,
+            crimson: false,
+            fastPay: false,
+            redCard: false,
+          });
+        };
+
         const getDescriptorsForDasher = useCallback(
           (candidate, options = {}) => {
             if (!candidate) return [];
@@ -10177,166 +10335,421 @@
                             className="bg-gray-700/40 border border-indigo-500/20 rounded-lg p-3 space-y-3"
                             data-testid="dashers-search-results"
                           >
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <h3 className="text-base font-semibold text-gray-100">
-                                Results
-                              </h3>
-                              <div className="text-xs text-gray-400 flex flex-wrap items-center gap-2">
-                                <span>
-                                  {resultsDashers.length} match
-                                  {resultsDashers.length === 1 ? "" : "es"}
-                                </span>
-                                {globalQueryActive && globalQuery.trim() && (
-                                  <span>Query: “{globalQuery.trim()}”</span>
-                                )}
-                                {showNonZeroOnly && (
-                                  <span>Non-zero balances only</span>
+                            {/* Header + controls */}
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                              <div className="flex items-center gap-3">
+                                <h3 className="text-base font-semibold text-gray-100">
+                                  Results
+                                </h3>
+                                <div className="text-xs text-gray-400">
+                                  {sortedResultsDashers.length} match
+                                  {sortedResultsDashers.length === 1
+                                    ? ""
+                                    : "es"}
+                                  {globalQueryActive && globalQuery.trim() && (
+                                    <> • Query: “{globalQuery.trim()}”</>
+                                  )}
+                                  {showNonZeroOnly && <> • Non-zero only</>}
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                                <button
+                                  type="button"
+                                  className={`px-2 py-1 rounded border ${resultsFlagFilters.appealed ? "bg-amber-500/20 text-amber-300 border-amber-400/40" : "border-gray-600 text-gray-300 hover:text-gray-100"}`}
+                                  onClick={() => toggleResultsFlag("appealed")}
+                                  title="Filter: Appealed flag"
+                                  aria-pressed={resultsFlagFilters.appealed}
+                                >
+                                  Appealed
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`px-2 py-1 rounded border ${resultsFlagFilters.crimson ? "bg-red-500/20 text-red-300 border-red-400/40" : "border-gray-600 text-gray-300 hover:text-gray-100"}`}
+                                  onClick={() => toggleResultsFlag("crimson")}
+                                  title="Filter: Crimson flag"
+                                  aria-pressed={resultsFlagFilters.crimson}
+                                >
+                                  Crimson
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`px-2 py-1 rounded border ${resultsFlagFilters.fastPay ? "bg-blue-500/20 text-blue-300 border-blue-400/40" : "border-gray-600 text-gray-300 hover:text-gray-100"}`}
+                                  onClick={() => toggleResultsFlag("fastPay")}
+                                  title="Filter: FastPay flag"
+                                  aria-pressed={resultsFlagFilters.fastPay}
+                                >
+                                  FastPay
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`px-2 py-1 rounded border ${resultsFlagFilters.redCard ? "bg-purple-500/20 text-purple-300 border-purple-400/40" : "border-gray-600 text-gray-300 hover:text-gray-100"}`}
+                                  onClick={() => toggleResultsFlag("redCard")}
+                                  title="Filter: Red Card flag"
+                                  aria-pressed={resultsFlagFilters.redCard}
+                                >
+                                  Red Card
+                                </button>
+                                <select
+                                  value={resultsBucketFilter}
+                                  onChange={(e) =>
+                                    setResultsBucketFilter(e.target.value)
+                                  }
+                                  className="ml-2 bg-gray-800 border border-gray-600 rounded px-2 py-1 text-[11px] text-gray-100"
+                                  title="Filter by source bucket"
+                                >
+                                  <option value="any">Any bucket</option>
+                                  <option value="main">Dashers</option>
+                                  <option value="ready">Ready</option>
+                                  <option value="currently-using">
+                                    Currently Using
+                                  </option>
+                                  <option value="appealed">Appealed</option>
+                                  <option value="applied-pending">
+                                    Applied Pending
+                                  </option>
+                                  <option value="reverif">Reverif</option>
+                                  <option value="locked">Locked</option>
+                                  <option value="deactivated">
+                                    Deactivated
+                                  </option>
+                                  <option value="archived">Archived</option>
+                                </select>
+                                {(resultsBucketFilter !== "any" ||
+                                  resultsFlagFilters.appealed ||
+                                  resultsFlagFilters.crimson ||
+                                  resultsFlagFilters.fastPay ||
+                                  resultsFlagFilters.redCard) && (
+                                  <button
+                                    className="px-2 py-1 rounded border border-gray-600 text-gray-300 hover:text-gray-100"
+                                    onClick={resetResultsControls}
+                                    title="Clear Results filters"
+                                  >
+                                    Clear
+                                  </button>
                                 )}
                               </div>
                             </div>
-                            {resultsDashers.length === 0 ? (
-                              <p className="text-xs text-gray-400">
-                                No dashers matched the current filters. Try
-                                broadening your search.
-                              </p>
-                            ) : (
-                              <div className="grid gap-2">
-                                {resultsDashers.map(
-                                  ({
-                                    identity,
-                                    dasher,
-                                    primaryLocation,
-                                    alternateLocations,
-                                  }) => {
-                                    const balanceValue = parseBalanceValue(
-                                      dasher?.balance,
-                                    );
-                                    const balanceDisplay = Number.isFinite(
-                                      balanceValue,
-                                    )
-                                      ? balanceValue.toFixed(2)
-                                      : "0.00";
-                                    const isZeroBalance = Number.isFinite(
-                                      balanceValue,
-                                    )
-                                      ? balanceValue === 0
-                                      : true;
-                                    const contactBits = [];
-                                    if (dasher?.email)
-                                      contactBits.push({
-                                        key: "email",
-                                        label: dasher.email,
-                                      });
-                                    if (dasher?.phone)
-                                      contactBits.push({
-                                        key: "phone",
-                                        label: dasher.phone,
-                                      });
-                                    const altLabels = Array.from(
-                                      new Set(
-                                        ensureArray(alternateLocations)
-                                          .map((loc) => {
-                                            if (!loc) return null;
-                                            const pieces = [loc.bucketLabel];
-                                            if (
-                                              loc?.meta?.categoryName &&
-                                              loc.bucketKey === "main"
-                                            ) {
-                                              pieces.push(
-                                                loc.meta.categoryName,
-                                              );
-                                            }
-                                            return pieces
-                                              .filter(Boolean)
-                                              .join(" • ");
-                                          })
-                                          .filter(Boolean),
-                                      ),
-                                    );
-                                    const targetBucketKey =
-                                      primaryLocation?.bucketKey || "main";
-                                    const targetBucketLabel =
-                                      primaryLocation?.bucketLabel || "Dashers";
-                                    const targetMeta =
-                                      primaryLocation?.meta || {};
-                                    return (
-                                      <div
-                                        key={identity}
-                                        className="bg-gray-700/60 border border-gray-600/70 rounded-lg p-3 shadow-sm space-y-2"
-                                        data-testid="dashers-results-card"
-                                      >
-                                        <div className="flex flex-wrap items-start justify-between gap-3">
-                                          <div className="flex-1 min-w-[200px]">
-                                            <div className="text-sm font-semibold text-gray-100">
-                                              {dasher?.name || "Unnamed dasher"}
-                                            </div>
-                                            {contactBits.length > 0 && (
-                                              <div className="mt-1 text-xs text-gray-300 flex flex-wrap gap-x-3 gap-y-1">
-                                                {contactBits.map((item) => (
-                                                  <span key={item.key}>
-                                                    {item.label}
-                                                  </span>
-                                                ))}
-                                              </div>
-                                            )}
-                                          </div>
-                                          <div className="flex items-center gap-2">
-                                            <span
-                                              className={`text-xs px-2 py-1 rounded-full ${isZeroBalance ? "bg-green-500/10 text-green-300" : "bg-orange-500/10 text-orange-300"}`}
-                                              aria-label="Balance"
+
+                            {/* Table header */}
+                            <div
+                              className="bg-gray-800/60 border border-gray-700/70 rounded-md overflow-hidden"
+                              role="table"
+                              aria-label="Dasher search results"
+                            >
+                              <div
+                                className="grid grid-cols-12 gap-2 px-3 py-2 text-[11px] uppercase tracking-wide text-gray-400 border-b border-gray-700/70 bg-gray-800/80"
+                                role="row"
+                              >
+                                <button
+                                  type="button"
+                                  className="col-span-12 sm:col-span-4 text-left flex items-center gap-1 hover:text-gray-100 transition-colors"
+                                  onClick={() => setResultsSortKey("name")}
+                                  title="Sort by name"
+                                  role="columnheader"
+                                  aria-sort={getResultsAriaSort("name")}
+                                >
+                                  <span className="truncate">Name</span>
+                                  {resultsSort.key === "name" && (
+                                    <span aria-hidden="true">
+                                      {resultsSort.dir === "asc" ? "↑" : "↓"}
+                                    </span>
+                                  )}
+                                </button>
+                                <div
+                                  className="col-span-12 sm:col-span-5 text-left"
+                                  role="columnheader"
+                                  aria-sort="none"
+                                >
+                                  <span className="hidden sm:inline">Email / Phone</span>
+                                  <span className="sm:hidden">Contact</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  className="col-span-6 sm:col-span-2 text-left flex items-center gap-1 hover:text-gray-100 transition-colors"
+                                  onClick={() => setResultsSortKey("bucket")}
+                                  title="Sort by bucket"
+                                  role="columnheader"
+                                  aria-sort={getResultsAriaSort("bucket")}
+                                >
+                                  <span className="truncate">Source</span>
+                                  {resultsSort.key === "bucket" && (
+                                    <span aria-hidden="true">
+                                      {resultsSort.dir === "asc" ? "↑" : "↓"}
+                                    </span>
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="col-span-6 sm:col-span-1 text-right flex items-center justify-end gap-1 hover:text-gray-100 transition-colors"
+                                  onClick={() => setResultsSortKey("balance")}
+                                  title="Sort by balance"
+                                  role="columnheader"
+                                  aria-sort={getResultsAriaSort("balance")}
+                                >
+                                  <span className="truncate">Balance</span>
+                                  {resultsSort.key === "balance" && (
+                                    <span aria-hidden="true">
+                                      {resultsSort.dir === "asc" ? "↑" : "↓"}
+                                    </span>
+                                  )}
+                                </button>
+                              </div>
+
+                              {/* Rows */}
+                              {sortedResultsDashers.length === 0 ? (
+                                <div
+                                  className="px-3 py-3 text-xs text-gray-400"
+                                  role="row"
+                                >
+                                  No dashers matched these Results filters.
+                                </div>
+                              ) : (
+                                <div
+                                  className="divide-y divide-gray-700/60"
+                                  role="rowgroup"
+                                >
+                                  {sortedResultsDashers.map(
+                                    ({
+                                      identity,
+                                      dasher,
+                                      primaryLocation,
+                                      alternateLocations,
+                                    }) => {
+                                      const balanceValue = parseBalanceValue(
+                                        dasher?.balance,
+                                      );
+                                      const email = (
+                                        dasher?.email || ""
+                                      ).trim();
+                                      const phone = (
+                                        dasher?.phone || ""
+                                      ).trim();
+                                      const balanceBadgeClasses =
+                                        balanceValue === 0
+                                          ? "inline-flex items-center justify-end px-2 py-1 rounded-full border border-emerald-400/30 bg-emerald-500/10 text-emerald-300"
+                                          : "inline-flex items-center justify-end px-2 py-1 rounded-full border border-amber-400/40 bg-amber-500/10 text-amber-200 drop-shadow-[0_0_6px_rgba(251,191,36,0.35)]";
+                                      return (
+                                        <div
+                                          key={identity}
+                                          className="px-3 py-3 sm:py-2"
+                                          role="row"
+                                        >
+                                          <div className="grid grid-cols-12 gap-2 sm:items-center">
+                                            <div
+                                              className="col-span-12 sm:col-span-4 min-w-0 space-y-1"
+                                              role="cell"
                                             >
-                                              ${balanceDisplay}
-                                            </span>
-                                            <span className="text-xs px-2 py-1 rounded-full bg-blue-500/10 text-blue-200">
-                                              {targetBucketLabel}
-                                              {targetBucketKey === "main" &&
-                                              targetMeta?.categoryName
-                                                ? ` • ${targetMeta.categoryName}`
-                                                : ""}
-                                            </span>
+                                              <div className="truncate text-sm font-semibold text-gray-100">
+                                                {dasher?.name ||
+                                                  "Unnamed dasher"}
+                                              </div>
+                                              {identity && (
+                                                <div className="text-[10px] uppercase tracking-wide text-gray-500">
+                                                  {identity}
+                                                </div>
+                                              )}
+                                            </div>
+                                            <div
+                                              className="col-span-12 sm:col-span-5 min-w-0 space-y-1"
+                                              role="cell"
+                                            >
+                                              <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-300">
+                                                <span className="truncate max-w-full sm:max-w-[18rem]">
+                                                  {email ? (
+                                                    email
+                                                  ) : (
+                                                    <span className="italic text-gray-500">
+                                                      No email
+                                                    </span>
+                                                  )}
+                                                </span>
+                                                {phone && (
+                                                  <span className="tabular-nums text-gray-400">
+                                                    {phone}
+                                                  </span>
+                                                )}
+                                              </div>
+                                              <span
+                                                className="flag-badges block"
+                                                aria-label="Dasher status flags (Crimson, Red Card, Appealed, FastPay)"
+                                              >
+                                                <span
+                                                  className="flag-badge"
+                                                  data-flag="C"
+                                                  data-active={
+                                                    dasher?.crimson
+                                                      ? "true"
+                                                      : "false"
+                                                  }
+                                                  data-selected={
+                                                    (
+                                                      dasher?.selectedCashout ||
+                                                      ""
+                                                    ).toLowerCase() ===
+                                                    "crimson"
+                                                      ? "true"
+                                                      : "false"
+                                                  }
+                                                  title={
+                                                    dasher?.crimson
+                                                      ? dasher?.crimsonAt
+                                                        ? `Crimson since ${new Date(dasher.crimsonAt).toLocaleString()}`
+                                                        : "Crimson active"
+                                                      : "Crimson inactive"
+                                                  }
+                                                >
+                                                  CRIMSON
+                                                </span>
+                                                <span
+                                                  className="flag-badge"
+                                                  data-flag="FP"
+                                                  data-active={
+                                                    dasher?.fastPay
+                                                      ? "true"
+                                                      : "false"
+                                                  }
+                                                  data-selected={
+                                                    (
+                                                      dasher?.selectedCashout ||
+                                                      ""
+                                                    ).toLowerCase() ===
+                                                    "fastpay"
+                                                      ? "true"
+                                                      : "false"
+                                                  }
+                                                  title={
+                                                    dasher?.fastPay
+                                                      ? dasher?.fastPayInfo
+                                                        ? `FastPay: ${dasher.fastPayInfo}`
+                                                        : "FastPay active"
+                                                      : "FastPay inactive"
+                                                  }
+                                                >
+                                                  FastPay
+                                                </span>
+                                                <span
+                                                  className="flag-badge"
+                                                  data-flag="RC"
+                                                  data-active={
+                                                    dasher?.redCard
+                                                      ? "true"
+                                                      : "false"
+                                                  }
+                                                  title={
+                                                    dasher?.redCard
+                                                      ? dasher?.redCardAt
+                                                        ? `Red Card since ${new Date(dasher.redCardAt).toLocaleString()}`
+                                                        : "Red Card active"
+                                                      : "Red Card inactive"
+                                                  }
+                                                >
+                                                  RED CARD
+                                                </span>
+                                                <span
+                                                  className="flag-badge"
+                                                  data-flag="AP"
+                                                  data-active={
+                                                    dasher?.appealed
+                                                      ? "true"
+                                                      : "false"
+                                                  }
+                                                  title={
+                                                    dasher?.appealed
+                                                      ? dasher?.appealedAt
+                                                        ? `Appealed since ${new Date(dasher.appealedAt).toLocaleString()}`
+                                                        : "Appealed active"
+                                                      : "Appealed inactive"
+                                                  }
+                                                >
+                                                  APPEALED
+                                                </span>
+                                              </span>
+                                            </div>
+                                            <div
+                                              className="col-span-12 sm:col-span-2 min-w-0 space-y-1"
+                                              role="cell"
+                                            >
+                                              <div className="text-xs font-medium text-blue-200 truncate">
+                                                {primaryLocation.bucketLabel}
+                                              </div>
+                                              {primaryLocation.meta?.categoryName && (
+                                                <div className="text-[11px] text-blue-300/80 truncate">
+                                                  {primaryLocation.meta.categoryName}
+                                                </div>
+                                              )}
+                                            </div>
+                                            <div
+                                              className="col-span-12 sm:col-span-1 flex justify-between sm:justify-end items-center gap-3 sm:gap-1"
+                                              role="cell"
+                                            >
+                                              <span
+                                                className={`${balanceBadgeClasses} text-sm tabular-nums font-semibold`}
+                                                aria-label="Balance"
+                                              >
+                                                ${balanceValue.toFixed(2)}
+                                              </span>
+                                            </div>
                                           </div>
-                                        </div>
-                                        {altLabels.length > 0 && (
-                                          <div className="text-[11px] text-gray-400">
-                                            Also appears in:{" "}
-                                            {altLabels.join(", ")}
-                                          </div>
-                                        )}
-                                        <div className="flex flex-wrap items-center gap-2 text-xs">
-                                          <button
-                                            type="button"
-                                            className="text-blue-300 hover:text-blue-200"
-                                            onClick={() =>
-                                              revealDasherCard(
-                                                identity,
-                                                targetBucketKey,
-                                                targetMeta,
-                                              )
-                                            }
+                                          <div
+                                            className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-gray-300"
+                                            role="group"
+                                            aria-label="Result actions"
                                           >
-                                            Reveal in {targetBucketLabel}
-                                          </button>
-                                          {(globalQueryActive ||
-                                            showNonZeroOnly) && (
                                             <button
                                               type="button"
-                                              className="text-gray-300 hover:text-gray-200"
-                                              onClick={() => {
-                                                setGlobalQuery("");
-                                                setShowNonZeroOnly(false);
-                                                requestPersist();
-                                              }}
+                                              className="text-blue-300 hover:text-blue-200"
+                                              onClick={() =>
+                                                revealDasherCard(
+                                                  identity,
+                                                  primaryLocation.bucketKey,
+                                                  primaryLocation.meta,
+                                                )
+                                              }
                                             >
-                                              Clear filters
+                                              Reveal in{" "}
+                                              {primaryLocation.bucketLabel}
                                             </button>
-                                          )}
+                                            {alternateLocations.length > 0 && (
+                                              <div className="flex flex-wrap items-center gap-1 text-gray-400">
+                                                <span className="uppercase tracking-wide text-[10px] text-gray-500">
+                                                  Also
+                                                </span>
+                                                {alternateLocations.map((loc) => {
+                                                  const altKey = `${loc?.bucketKey ?? "bucket"}-${loc?.meta?.categoryName ?? "none"}`;
+                                                  return (
+                                                    <span
+                                                      key={altKey}
+                                                      className="px-2 py-0.5 rounded-full border border-gray-600/60 text-[10px] text-gray-300"
+                                                    >
+                                                      {loc?.bucketLabel}
+                                                    </span>
+                                                  );
+                                                })}
+                                              </div>
+                                            )}
+                                            {(globalQueryActive ||
+                                              showNonZeroOnly) && (
+                                              <button
+                                                type="button"
+                                                className="text-gray-300 hover:text-gray-200"
+                                                onClick={() => {
+                                                  setGlobalQuery("");
+                                                  setShowNonZeroOnly(false);
+                                                  resetResultsControls();
+                                                  requestPersist();
+                                                }}
+                                              >
+                                                Clear global filters
+                                              </button>
+                                            )}
+                                          </div>
                                         </div>
-                                      </div>
-                                    );
-                                  },
-                                )}
-                              </div>
-                            )}
+                                      );
+                                    },
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
                         {dasherCategories &&
