@@ -1,0 +1,13 @@
+{
+  "name": "dash-bash-utility",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Dev test harness for DOM smoke tests",
+  "license": "UNLICENSED",
+  "scripts": {
+    "test:dom": "node test-dom-smoke.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.0"
+  }
+}
