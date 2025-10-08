@@ -502,6 +502,21 @@
                 reverifDashers: new Set() // reverif dasher IDs
             });
 
+            // Global keyboard: Enter exits Edit Mode when not typing in an input/textarea/contenteditable
+            useEffect(() => {
+                const onKeyDown = (e) => {
+                    const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+                    const isTyping = tag === 'input' || tag === 'textarea' || (e.target && e.target.isContentEditable);
+                    if (isTyping) return;
+                    if (e.key === 'Enter' && isEditMode) {
+                        setIsEditMode(false);
+                        requestPersist();
+                    }
+                };
+                document.addEventListener('keydown', onKeyDown);
+                return () => document.removeEventListener('keydown', onKeyDown);
+            }, [isEditMode]);
+
             // State management
             const [availableExports, setAvailableExports] = useState([]);
             const [importNotification, setImportNotification] = useState('');
@@ -5104,6 +5119,35 @@
             const collapseAllDasherCategories = () => {
                 // Keep categories expanded/visible (don't collapse them)
                 setCollapsedDasherCategories({});
+            // MAIN bucket: Stage 1/2/3 helpers
+            // Stage 1: Fully collapse categories (only top-level headings visible)
+            const collapseMainToCategoriesOnly = () => {
+                // Collapse every category
+                const allCollapsed = {};
+                dasherCategories.forEach(cat => { allCollapsed[cat.id] = true; });
+                setCollapsedDasherCategories(allCollapsed);
+                // Also collapse any open dasher rows to ensure compact state
+                const allDashersCollapsed = {};
+                dasherCategories.forEach(cat => {
+                    cat.dashers.forEach(d => { allDashersCollapsed[`${cat.id}-${d.id}`] = true; });
+                });
+                setCollapsedDashers(allDashersCollapsed);
+                setTimeout(() => { saveAllToLocalStorage(); }, 100);
+            };
+
+            // Stage 2 (already provided by collapseAllDasherCategories): categories expanded, all dashers collapsed
+            // Stage 3 (already provided by expandAllDasherCategories): categories expanded, all dashers expanded
+
+            // Compute current main stage from state
+            const getMainStage = () => {
+                // If any category is collapsed -> Stage 1
+                const anyCategoryCollapsed = Object.values(collapsedDasherCategories || {}).some(Boolean);
+                if (anyCategoryCollapsed) return 1;
+
+                // Categories expanded. If any dasher is collapsed -> Stage 2 (unless none exist)
+                const anyDasherCollapsed = Object.values(collapsedDashers || {}).some(Boolean);
+                return anyDasherCollapsed ? 2 : 3;
+            };
 
                 // Collapse all individual dashers only
                 const allDashersCollapsed = {};
@@ -5329,6 +5373,7 @@
             const expandBucket = (key) => {
                 switch (key) {
                     case 'main':                // Main "Dashers" (categories)
+                        // Stage 3 for main: fully expand categories and dashers
                         expandAllDasherCategories();
                         break;
                     case 'ready':
@@ -5362,6 +5407,7 @@
             const collapseBucket = (key) => {
                 switch (key) {
                     case 'main':
+                        // Stage 2 for main: collapse all dashers but keep categories expanded
                         collapseAllDasherCategories();
                         break;
                     case 'ready':
@@ -5431,30 +5477,68 @@
             };
 
             // Reusable chevrons component for bucket headers
-            const BucketChevrons = ({ bucketKey, isVisible = true }) => (
-                React.createElement('div', {
-                    className: 'flex items-center gap-1 ml-2',
-                    style: {
-                        opacity: isVisible ? 1 : 0,
-                        pointerEvents: isVisible ? 'auto' : 'none',
-                        transition: 'opacity 200ms'
-                    },
-                    onClick: (event) => event.stopPropagation()
-                },
-                    React.createElement('button', {
-                        className: 'text-indigo-400 hover:text-indigo-300 p-1 hover:bg-gray-600/50 rounded transition-colors',
-                        title: 'Collapse all categories',
-                        'aria-label': 'Collapse all categories',
-                        onClick: () => collapseBucket(bucketKey)
-                    }, React.createElement(ChevronUp, { size: 16 })),
-                    React.createElement('button', {
-                        className: 'text-indigo-400 hover:text-indigo-300 p-1 hover:bg-gray-600/50 rounded transition-colors',
-                        title: 'Expand all categories',
-                        'aria-label': 'Expand all categories',
-                        onClick: () => expandBucket(bucketKey)
-                    }, React.createElement(ChevronDown, { size: 16 }))
-                )
-            );
+            const BucketChevrons = ({ bucketKey, bucketLabel, isVisible = true }) => {
+                const label = bucketLabel || bucketKey;
+                const hidden = !isVisible;
+                const isMain = bucketKey === 'main';
+                const mainStage = isMain ? getMainStage() : null;
+                // For main three-stage: Up button steps 3->2->1, Down button steps 1->2->3
+                const onMainCollapse = () => {
+                    const stage = getMainStage();
+                    if (stage === 3) {
+                        // to stage 2
+                        collapseAllDasherCategories();
+                    } else if (stage === 2) {
+                        // to stage 1
+                        collapseMainToCategoriesOnly();
+                    } else {
+                        // already at stage 1, keep it
+                        collapseMainToCategoriesOnly();
+                    }
+                };
+                const onMainExpand = () => {
+                    const stage = getMainStage();
+                    if (stage === 1) {
+                        // to stage 2
+                        collapseAllDasherCategories();
+                    } else if (stage === 2) {
+                        // to stage 3
+                        expandAllDasherCategories();
+                    } else {
+                        // already at stage 3
+                        expandAllDasherCategories();
+                    }
+                };
+                return (
+                    <div
+                        className="flex items-center gap-1 ml-2"
+                        onClick={(event) => event.stopPropagation()}
+                        aria-hidden={hidden}
+                        style={{ opacity: hidden ? 0.4 : 1 }}
+                    >
+                        <button
+                            type="button"
+                            className="text-indigo-400 hover:text-indigo-300 p-1 hover:bg-gray-600/50 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 disabled:opacity-30 disabled:cursor-default"
+                            title={isMain ? `Step collapse: ${mainStage === 3 ? 'to headers' : mainStage === 2 ? 'to categories only' : 'stay at categories only'}` : `Collapse all ${label || 'dashers'}`}
+                            aria-label={isMain ? `Collapse ${label || 'dashers'} stage` : `Collapse all ${label || 'dashers'}`}
+                            onClick={() => isMain ? onMainCollapse() : collapseBucket(bucketKey)}
+                            disabled={hidden}
+                        >
+                            <ChevronUp size={16} />
+                        </button>
+                        <button
+                            type="button"
+                            className="text-indigo-400 hover:text-indigo-300 p-1 hover:bg-gray-600/50 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 disabled:opacity-30 disabled:cursor-default"
+                            title={isMain ? `Step expand: ${mainStage === 1 ? 'to headers+cards (collapsed)' : mainStage === 2 ? 'to full cards' : 'stay at full cards'}` : `Expand all ${label || 'dashers'}`}
+                            aria-label={isMain ? `Expand ${label || 'dashers'} stage` : `Expand all ${label || 'dashers'}`}
+                            onClick={() => isMain ? onMainExpand() : expandBucket(bucketKey)}
+                            disabled={hidden}
+                        >
+                            <ChevronDown size={16} />
+                        </button>
+                    </div>
+                );
+            };
 
             // PHASE 6: Helper function to resolve time status based on bucket type
             function resolveDasherTimeStatus(dasher, sourceKey) {
@@ -6824,23 +6908,42 @@
 
                             {/* Dashers Section */}
                             <div className="bg-gray-800 rounded-lg overflow-hidden">
-                                <button
-                                    onClick={toggleDashersOpen}
-                                    className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
-                                >
-                                    <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-between p-4 hover:bg-gray-700/50 transition-colors" onKeyDown={(e) => {
+                                    if (e.target !== e.currentTarget && e.target.tagName !== 'BUTTON') return;
+                                    if (e.key === 'ArrowLeft') { (bucketKey => (bucketKey==='main' ? (getMainStage()===3?collapseAllDasherCategories():collapseMainToCategoriesOnly()) : collapseBucket(bucketKey)))('main'); e.preventDefault(); }
+                                    if (e.key === 'ArrowRight') { (bucketKey => (bucketKey==='main' ? (getMainStage()===1?collapseAllDasherCategories():expandAllDasherCategories()) : expandBucket(bucketKey)))('main'); e.preventDefault(); }
+                                }}>
+                                    <button
+                                        onClick={toggleDashersOpen}
+                                        className="flex items-center gap-3 flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300"
+                                        aria-expanded={isDashersOpen}
+                                        aria-controls="bucket-main"
+                                        type="button"
+                                    >
                                         <Users size={20} className="text-indigo-400" />
                                         <span className="text-lg font-medium flex items-center gap-2">
-                                            Dashers {renderStableCount(filteredCategoryDashers.length, categoryDashersFlat.length)}
+                                            Dashers
+                                            {renderStableCount(filteredCategoryDashers.length, categoryDashersFlat.length)}
                                         </span>
-                                        <BucketChevrons bucketKey="main" isVisible={isDashersOpen && dasherCategories.length > 0} />
+                                    </button>
+                                    <div className="flex items-center gap-2 pl-2">
+                                        {/* Enable chevrons even when closed; disable only when no categories */}
+                                        <BucketChevrons bucketKey="main" bucketLabel="Dashers" isVisible={dasherCategories.length > 0} />
+                                        {/* Stage indicator: 1/2/3 for main */}
+                                        <span
+                                            className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-gray-700/60 text-gray-300 border border-gray-600"
+                                            title={`Dashers view stage: ${getMainStage()}`}
+                                            aria-label={`Dashers view stage ${getMainStage()}`}
+                                        >{getMainStage()}</span>
+                                        <span className="text-gray-300" aria-hidden="true">
+                                            {isDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                        </span>
                                     </div>
-                                    {isDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                                </button>
+                                </div>
 
                                 {isDashersOpen && (
                                     dashersRenderReady ? (
-                                    <div className="border-t border-gray-700 p-4 space-y-3">
+                                    <div id="bucket-main" className="border-t border-gray-700 p-4 space-y-3">
                                         {dasherCategories && dasherCategories.length > 0 && dasherCategories.map((category) => {
                                             if (!category || !category.dashers) return null;
                                             const isCategoryCollapsed = collapsedDasherCategories[category.id];
@@ -7171,24 +7274,34 @@
 
                             {/* Dashers - Ready Section */}
                             <div className="bg-gray-800 rounded-lg overflow-hidden mt-3">
-                                <button
-                                    onClick={toggleReadyOpen}
-                                    className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
-                                >
-                                    <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-between p-4 hover:bg-gray-700/50 transition-colors" onKeyDown={(e) => {
+                                    if (e.target !== e.currentTarget && e.target.tagName !== 'BUTTON') return;
+                                    if (e.key === 'ArrowLeft') { collapseBucket('ready'); e.preventDefault(); }
+                                    if (e.key === 'ArrowRight') { expandBucket('ready'); e.preventDefault(); }
+                                }}>
+                                    <button
+                                        onClick={toggleReadyOpen}
+                                        className="flex items-center gap-3 flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300"
+                                        aria-expanded={isReadyDashersOpen}
+                                        aria-controls="bucket-ready"
+                                        type="button"
+                                    >
                                         <CircleCheck size={20} className="text-green-400" />
                                         <span className="text-lg font-medium flex items-center gap-2">
-                                            Ready {renderStableCount(filteredReadyDashers.length, readyDashers.length)}
+                                            Ready
+                                            {renderStableCount(filteredReadyDashers.length, readyDashers.length)}
+                                        </span>
+                                    </button>
+                                    <div className="flex items-center gap-2 pl-2">
+                                        <BucketChevrons bucketKey="ready" bucketLabel="Ready" isVisible={filteredReadyDashers.length > 0} />
+                                        <span className="text-gray-300" aria-hidden="true">
+                                            {isReadyDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                         </span>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <BucketChevrons bucketKey="ready" isVisible={isReadyDashersOpen && filteredReadyDashers.length > 0} />
-                                        {isReadyDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                                    </div>
-                                </button>
+                                </div>
                                 {isReadyDashersOpen && (
                                     readyRenderReady ? (
-                                    <div className="mt-2">
+                                    <div id="bucket-ready" className="mt-2">
                                         <div className="dasher-grid" role="table" aria-label="Ready Dashers">
                                             {filteredReadyDashers.length === 0 ? (
                                                 <div
@@ -7288,24 +7401,34 @@
 
                             {/* Dashers - Currently Using Section */}
                             <div className="bg-gray-800 rounded-lg overflow-hidden mt-3">
-                                <button
-                                    onClick={toggleUsingOpen}
-                                    className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
-                                >
-                                    <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-between p-4 hover:bg-gray-700/50 transition-colors" onKeyDown={(e) => {
+                                    if (e.target !== e.currentTarget && e.target.tagName !== 'BUTTON') return;
+                                    if (e.key === 'ArrowLeft') { collapseBucket('currently-using'); e.preventDefault(); }
+                                    if (e.key === 'ArrowRight') { expandBucket('currently-using'); e.preventDefault(); }
+                                }}>
+                                    <button
+                                        onClick={toggleUsingOpen}
+                                        className="flex items-center gap-3 flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300"
+                                        aria-expanded={isCurrentlyUsingDashersOpen}
+                                        aria-controls="bucket-currently-using"
+                                        type="button"
+                                    >
                                         <Activity size={20} className="text-blue-400" />
                                         <span className="text-lg font-medium flex items-center gap-2">
-                                            Using {renderStableCount(filteredCurrentlyUsingDashers.length, currentlyUsingDashers.length)}
+                                            Using
+                                            {renderStableCount(filteredCurrentlyUsingDashers.length, currentlyUsingDashers.length)}
+                                        </span>
+                                    </button>
+                                    <div className="flex items-center gap-2 pl-2">
+                                        <BucketChevrons bucketKey="currently-using" bucketLabel="Currently Using" isVisible={filteredCurrentlyUsingDashers.length > 0} />
+                                        <span className="text-gray-300" aria-hidden="true">
+                                            {isCurrentlyUsingDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                         </span>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <BucketChevrons bucketKey="currently-using" isVisible={isCurrentlyUsingDashersOpen && filteredCurrentlyUsingDashers.length > 0} />
-                                        {isCurrentlyUsingDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                                    </div>
-                                </button>
+                                </div>
                                 {isCurrentlyUsingDashersOpen && (
                                     usingRenderReady ? (
-                                    <div className="mt-2 px-2 pb-2">
+                                    <div id="bucket-currently-using" className="mt-2 px-2 pb-2">
                                         <div className="dasher-grid" role="table" aria-label="Currently Using Dashers">
                                             {filteredCurrentlyUsingDashers.length === 0 ? (
                                                 <div
@@ -7394,23 +7517,33 @@
 
                             {/* Dashers - Appealed Section */}
                             <div className="bg-gray-800 rounded-lg overflow-hidden mt-3">
-                                <button
-                                    onClick={toggleAppealedOpen}
-                                    className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
-                                >
-                                    <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-between p-4 hover:bg-gray-700/50 transition-colors" onKeyDown={(e) => {
+                                    if (e.target !== e.currentTarget && e.target.tagName !== 'BUTTON') return;
+                                    if (e.key === 'ArrowLeft') { collapseBucket('appealed'); e.preventDefault(); }
+                                    if (e.key === 'ArrowRight') { expandBucket('appealed'); e.preventDefault(); }
+                                }}>
+                                    <button
+                                        onClick={toggleAppealedOpen}
+                                        className="flex items-center gap-3 flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300"
+                                        aria-expanded={isAppealedDashersOpen}
+                                        aria-controls="bucket-appealed"
+                                        type="button"
+                                    >
                                         <CircleCheck size={20} className="text-amber-400" />
                                         <span className="text-lg font-medium flex items-center gap-2">
-                                            Appealed {renderStableCount(filteredAppealedDashers.length, appealedDashers.length)}
+                                            Appealed
+                                            {renderStableCount(filteredAppealedDashers.length, appealedDashers.length)}
+                                        </span>
+                                    </button>
+                                    <div className="flex items-center gap-2 pl-2">
+                                        <BucketChevrons bucketKey="appealed" bucketLabel="Appealed" isVisible={filteredAppealedDashers.length > 0} />
+                                        <span className="text-gray-300" aria-hidden="true">
+                                            {isAppealedDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                         </span>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <BucketChevrons bucketKey="appealed" isVisible={isAppealedDashersOpen && filteredAppealedDashers.length > 0} />
-                                        {isAppealedDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                                    </div>
-                                </button>
+                                </div>
                                 {isAppealedDashersOpen && (appealedRenderReady ? (
-                                    <div className="mt-2 px-2 pb-2">
+                                    <div id="bucket-appealed" className="mt-2 px-2 pb-2">
                                         <div className="dasher-grid" role="table" aria-label="Appealed Dashers">
                                             {filteredAppealedDashers.length === 0 ? (
                                                 <div
@@ -7498,23 +7631,33 @@
 
                             {/* Dashers - Applied Pending Section */}
                             <div className="bg-gray-800 rounded-lg overflow-hidden mt-3">
-                                <button
-                                    onClick={toggleAppliedOpen}
-                                    className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
-                                >
-                                    <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-between p-4 hover:bg-gray-700/50 transition-colors" onKeyDown={(e) => {
+                                    if (e.target !== e.currentTarget && e.target.tagName !== 'BUTTON') return;
+                                    if (e.key === 'ArrowLeft') { collapseBucket('applied-pending'); e.preventDefault(); }
+                                    if (e.key === 'ArrowRight') { expandBucket('applied-pending'); e.preventDefault(); }
+                                }}>
+                                    <button
+                                        onClick={toggleAppliedOpen}
+                                        className="flex items-center gap-3 flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300"
+                                        aria-expanded={isAppliedPendingDashersOpen}
+                                        aria-controls="bucket-applied-pending"
+                                        type="button"
+                                    >
                                         <Clock size={20} className="text-purple-300" />
                                         <span className="text-lg font-medium flex items-center gap-2">
-                                            Applied Pending {renderStableCount(filteredAppliedPendingDashers.length, appliedPendingDashers.length)}
+                                            Applied Pending
+                                            {renderStableCount(filteredAppliedPendingDashers.length, appliedPendingDashers.length)}
+                                        </span>
+                                    </button>
+                                    <div className="flex items-center gap-2 pl-2">
+                                        <BucketChevrons bucketKey="applied-pending" bucketLabel="Applied Pending" isVisible={filteredAppliedPendingDashers.length > 0} />
+                                        <span className="text-gray-300" aria-hidden="true">
+                                            {isAppliedPendingDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                         </span>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <BucketChevrons bucketKey="applied-pending" isVisible={isAppliedPendingDashersOpen && filteredAppliedPendingDashers.length > 0} />
-                                        {isAppliedPendingDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                                    </div>
-                                </button>
+                                </div>
                                 {isAppliedPendingDashersOpen && (appliedRenderReady ? (
-                                    <div className="mt-2 px-2 pb-2">
+                                    <div id="bucket-applied-pending" className="mt-2 px-2 pb-2">
                                         <div className="dasher-grid" role="table" aria-label="Applied Pending Dashers">
                                             {filteredAppliedPendingDashers.length === 0 ? (
                                                 <div className="text-center text-gray-500 py-8 text-sm italic col-span-full" role="row">No applied pending dashers</div>
@@ -7592,23 +7735,33 @@
 
                             {/* Dashers - Reverif Section */}
                             <div className="bg-gray-800 rounded-lg overflow-hidden mt-3">
-                                <button
-                                    onClick={toggleReverifOpen}
-                                    className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
-                                >
-                                    <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-between p-4 hover:bg-gray-700/50 transition-colors" onKeyDown={(e) => {
+                                    if (e.target !== e.currentTarget && e.target.tagName !== 'BUTTON') return;
+                                    if (e.key === 'ArrowLeft') { collapseBucket('reverif'); e.preventDefault(); }
+                                    if (e.key === 'ArrowRight') { expandBucket('reverif'); e.preventDefault(); }
+                                }}>
+                                    <button
+                                        onClick={toggleReverifOpen}
+                                        className="flex items-center gap-3 flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300"
+                                        aria-expanded={isReverifDashersOpen}
+                                        aria-controls="bucket-reverif"
+                                        type="button"
+                                    >
                                         <ShieldCheck size={20} className="text-emerald-300" />
                                         <span className="text-lg font-medium flex items-center gap-2">
-                                            Reverif {renderStableCount(filteredReverifDashers.length, reverifDashers.length)}
+                                            Reverif
+                                            {renderStableCount(filteredReverifDashers.length, reverifDashers.length)}
+                                        </span>
+                                    </button>
+                                    <div className="flex items-center gap-2 pl-2">
+                                        <BucketChevrons bucketKey="reverif" bucketLabel="Reverif" isVisible={filteredReverifDashers.length > 0} />
+                                        <span className="text-gray-300" aria-hidden="true">
+                                            {isReverifDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                         </span>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <BucketChevrons bucketKey="reverif" isVisible={isReverifDashersOpen && filteredReverifDashers.length > 0} />
-                                        {isReverifDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                                    </div>
-                                </button>
+                                </div>
                                 {isReverifDashersOpen && (reverifRenderReady ? (
-                                    <div className="mt-2 px-2 pb-2">
+                                    <div id="bucket-reverif" className="mt-2 px-2 pb-2">
                                         <div className="dasher-grid" role="table" aria-label="Reverif Dashers">
                                             {filteredReverifDashers.length === 0 ? (
                                                 <div className="text-center text-gray-500 py-8 text-sm italic col-span-full" role="row">No reverif dashers</div>
@@ -7686,23 +7839,33 @@
 
                             {/* Dashers - Locked Section */}
                             <div className="bg-gray-800 rounded-lg overflow-hidden mt-3">
-                                <button
-                                    onClick={toggleLockedOpen}
-                                    className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
-                                >
-                                    <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-between p-4 hover:bg-gray-700/50 transition-colors" onKeyDown={(e) => {
+                                    if (e.target !== e.currentTarget && e.target.tagName !== 'BUTTON') return;
+                                    if (e.key === 'ArrowLeft') { collapseBucket('locked'); e.preventDefault(); }
+                                    if (e.key === 'ArrowRight') { expandBucket('locked'); e.preventDefault(); }
+                                }}>
+                                    <button
+                                        onClick={toggleLockedOpen}
+                                        className="flex items-center gap-3 flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300"
+                                        aria-expanded={isLockedDashersOpen}
+                                        aria-controls="bucket-locked"
+                                        type="button"
+                                    >
                                         <Lock size={20} className="text-gray-400" />
                                         <span className="text-lg font-medium flex items-center gap-2">
-                                            Locked {renderStableCount(filteredLockedDashers.length, lockedDashers.length)}
+                                            Locked
+                                            {renderStableCount(filteredLockedDashers.length, lockedDashers.length)}
+                                        </span>
+                                    </button>
+                                    <div className="flex items-center gap-2 pl-2">
+                                        <BucketChevrons bucketKey="locked" bucketLabel="Locked" isVisible={filteredLockedDashers.length > 0} />
+                                        <span className="text-gray-300" aria-hidden="true">
+                                            {isLockedDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                         </span>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <BucketChevrons bucketKey="locked" isVisible={isLockedDashersOpen && filteredLockedDashers.length > 0} />
-                                        {isLockedDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                                    </div>
-                                </button>
+                                </div>
                                 {isLockedDashersOpen && (lockedRenderReady ? (
-                                    <div className="mt-2 px-2 pb-2">
+                                    <div id="bucket-locked" className="mt-2 px-2 pb-2">
                                         <div className="dasher-grid" role="table" aria-label="Locked Dashers">
                                             {filteredLockedDashers.length === 0 ? (
                                                 <div className="text-center text-gray-500 py-8 text-sm italic col-span-full" role="row">No locked dashers</div>
@@ -7780,23 +7943,33 @@
 
                             {/* Dashers - Deactivated Section */}
                             <div className="bg-gray-800 rounded-lg overflow-hidden mt-3">
-                                <button
-                                    onClick={toggleDeactivatedOpen}
-                                    className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
-                                >
-                                    <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-between p-4 hover:bg-gray-700/50 transition-colors" onKeyDown={(e) => {
+                                    if (e.target !== e.currentTarget && e.target.tagName !== 'BUTTON') return;
+                                    if (e.key === 'ArrowLeft') { collapseBucket('deactivated'); e.preventDefault(); }
+                                    if (e.key === 'ArrowRight') { expandBucket('deactivated'); e.preventDefault(); }
+                                }}>
+                                    <button
+                                        onClick={toggleDeactivatedOpen}
+                                        className="flex items-center gap-3 flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300"
+                                        aria-expanded={isDeactivatedDashersOpen}
+                                        aria-controls="bucket-deactivated"
+                                        type="button"
+                                    >
                                         <UserX size={20} className="text-red-400" />
                                         <span className="text-lg font-medium flex items-center gap-2">
-                                            Deactivated {renderStableCount(filteredDeactivatedDashers.length, deactivatedDashers.length)}
+                                            Deactivated
+                                            {renderStableCount(filteredDeactivatedDashers.length, deactivatedDashers.length)}
+                                        </span>
+                                    </button>
+                                    <div className="flex items-center gap-2 pl-2">
+                                        <BucketChevrons bucketKey="deactivated" bucketLabel="Deactivated" isVisible={filteredDeactivatedDashers.length > 0} />
+                                        <span className="text-gray-300" aria-hidden="true">
+                                            {isDeactivatedDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                         </span>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <BucketChevrons bucketKey="deactivated" isVisible={isDeactivatedDashersOpen && filteredDeactivatedDashers.length > 0} />
-                                        {isDeactivatedDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                                    </div>
-                                </button>
+                                </div>
                                 {isDeactivatedDashersOpen && (deactivatedRenderReady ? (
-                                    <div className="p-4 pt-2 space-y-2">
+                                    <div id="bucket-deactivated" className="p-4 pt-2 space-y-2">
                                         {deactivatedDashers.length === 0 ? (
                                             <div className="text-center text-gray-500 py-8 text-sm italic">No deactivated dashers</div>
                                         ) : (
@@ -7953,24 +8126,34 @@
                                 ) : <Spinner text="Loading deactivated dashers…" />)}
                             </div>
                             <div className="bg-gray-800 rounded-lg overflow-hidden mt-3">
-                                <button
-                                    onClick={toggleArchivedOpen}
-                                    className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
-                                >
-                                    <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-between p-4 hover:bg-gray-700/50 transition-colors" onKeyDown={(e) => {
+                                    if (e.target !== e.currentTarget && e.target.tagName !== 'BUTTON') return;
+                                    if (e.key === 'ArrowLeft') { collapseBucket('archived'); e.preventDefault(); }
+                                    if (e.key === 'ArrowRight') { expandBucket('archived'); e.preventDefault(); }
+                                }}>
+                                    <button
+                                        onClick={toggleArchivedOpen}
+                                        className="flex items-center gap-3 flex-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300"
+                                        aria-expanded={isArchivedDashersOpen}
+                                        aria-controls="bucket-archived"
+                                        type="button"
+                                    >
                                         <Archive size={20} className="text-amber-400" />
                                         <span className="text-lg font-medium flex items-center gap-2">
-                                            Archived {renderStableCount(filteredArchivedDashers.length, archivedDashers.length)}
+                                            Archived
+                                            {renderStableCount(filteredArchivedDashers.length, archivedDashers.length)}
+                                        </span>
+                                    </button>
+                                    <div className="flex items-center gap-2 pl-2">
+                                        <BucketChevrons bucketKey="archived" bucketLabel="Archived" isVisible={filteredArchivedDashers.length > 0} />
+                                        <span className="text-gray-300" aria-hidden="true">
+                                            {isArchivedDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                         </span>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <BucketChevrons bucketKey="archived" isVisible={isArchivedDashersOpen && filteredArchivedDashers.length > 0} />
-                                        {isArchivedDashersOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                                    </div>
-                                </button>
+                                </div>
 
                                 {isArchivedDashersOpen && (archivedRenderReady ? (
-                                    <div className="border-t border-gray-700 p-4 space-y-3">
+                                    <div id="bucket-archived" className="border-t border-gray-700 p-4 space-y-3">
                                         {archivedDashers.length === 0 ? (
                                             <p className="text-sm text-gray-400 text-center py-4">No archived dashers</p>
                                         ) : (
