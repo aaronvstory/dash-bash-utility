@@ -5119,6 +5119,23 @@
             const collapseAllDasherCategories = () => {
                 // Keep categories expanded/visible (don't collapse them)
                 setCollapsedDasherCategories({});
+
+                // Collapse all individual dashers only
+                const allDashersCollapsed = {};
+                dasherCategories.forEach(cat => {
+                    cat.dashers.forEach(dasher => {
+                        const key = `${cat.id}-${dasher.id}`;
+                        allDashersCollapsed[key] = true;
+                    });
+                });
+                setCollapsedDashers(allDashersCollapsed);
+
+                // Auto-save after collapsing all
+                setTimeout(() => {
+                    saveAllToLocalStorage();
+                }, 100);
+            };
+
             // MAIN bucket: Stage 1/2/3 helpers
             // Stage 1: Fully collapse categories (only top-level headings visible)
             const collapseMainToCategoriesOnly = () => {
@@ -5147,22 +5164,6 @@
                 // Categories expanded. If any dasher is collapsed -> Stage 2 (unless none exist)
                 const anyDasherCollapsed = Object.values(collapsedDashers || {}).some(Boolean);
                 return anyDasherCollapsed ? 2 : 3;
-            };
-
-                // Collapse all individual dashers only
-                const allDashersCollapsed = {};
-                dasherCategories.forEach(cat => {
-                    cat.dashers.forEach(dasher => {
-                        const key = `${cat.id}-${dasher.id}`;
-                        allDashersCollapsed[key] = true;
-                    });
-                });
-                setCollapsedDashers(allDashersCollapsed);
-
-                // Auto-save after collapsing all
-                setTimeout(() => {
-                    saveAllToLocalStorage();
-                }, 100);
             };
 
             // Selection Helper Functions for Edit Mode
