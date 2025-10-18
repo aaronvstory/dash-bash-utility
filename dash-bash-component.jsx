@@ -296,6 +296,234 @@
         </div>
       );
 
+      // Memoized DasherCard component to prevent unnecessary re-renders (v1.9.2 Performance Optimization)
+      const DasherCard = React.memo(
+        ({
+          dasher,
+          bucketType,
+          index,
+          isSelected,
+          isCollapsed,
+          isEditing,
+          isEditMode,
+          cardRecentlyMoved,
+          movedNote,
+          identityFallback,
+          // Handlers
+          onToggleSelect,
+          onToggleCollapse,
+          onStartTimer,
+          onResetTimer,
+          onToggleEdit,
+          onCashOut,
+          onDelete,
+          // Render functions
+          getDasherTitle,
+          renderMoveButtons,
+          renderDasherDetails,
+          // Data arrays for renderDasherDetails
+          dashersArray,
+          setDashersArray,
+          saveAllToLocalStorage,
+          copyToClipboard,
+          deriveDasherIdentity,
+          getDasherAnchorId,
+          parseBalanceValue,
+        }) => {
+          const dasherTitle = getDasherTitle(dasher);
+          const anchorIdentity = deriveDasherIdentity(dasher, identityFallback);
+          const anchorId = getDasherAnchorId(anchorIdentity);
+
+          return (
+            <div
+              key={dasher.id}
+              className={`bg-gray-600/50 rounded-lg overflow-hidden border border-gray-500/30 transition-opacity ${cardRecentlyMoved ? "ring-2 ring-amber-400/80 animate-pulse" : ""}`}
+              id={anchorId || undefined}
+              data-dasher-anchor={anchorIdentity || undefined}
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between p-3">
+                <div className="flex items-center gap-2 flex-1">
+                  {isEditMode && (
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={onToggleSelect}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-4 h-4 text-gray-300 bg-gray-700 border-gray-500 rounded focus:ring-gray-400 focus:ring-2"
+                    />
+                  )}
+                  <div
+                    className={`${isEditing ? "text-gray-700 cursor-not-allowed" : "text-gray-400 hover:text-gray-300 cursor-move"}`}
+                    aria-label="Drag to reorder"
+                    style={{
+                      pointerEvents: isEditing ? "none" : "auto",
+                    }}
+                  >
+                    <GripVertical size={14} />
+                  </div>
+                  <button
+                    onClick={onToggleCollapse}
+                    className="flex items-center gap-2 flex-1 text-left"
+                  >
+                    {isCollapsed ? (
+                      <ChevronDown size={14} />
+                    ) : (
+                      <ChevronUp size={14} />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h5 className="font-medium text-sm flex items-center gap-2 truncate">
+                        {dasherTitle}
+                        <span
+                          className="flag-badges"
+                          aria-label="Dasher status flags (Crimson, Red Card, Appealed, FastPay)"
+                        >
+                          <span
+                            className="flag-badge"
+                            data-flag="C"
+                            data-active={dasher.crimson ? "true" : "false"}
+                            data-selected={
+                              (dasher.selectedCashout || "").toLowerCase() ===
+                              "crimson"
+                                ? "true"
+                                : "false"
+                            }
+                          >
+                            CRIMSON
+                          </span>
+                          <span
+                            className="flag-badge"
+                            data-flag="FP"
+                            data-active={dasher.fastPay ? "true" : "false"}
+                            data-selected={
+                              (dasher.selectedCashout || "").toLowerCase() ===
+                              "fastpay"
+                                ? "true"
+                                : "false"
+                            }
+                            title={
+                              dasher.fastPay
+                                ? dasher.fastPayInfo
+                                  ? `FastPay: ${dasher.fastPayInfo}`
+                                  : "FastPay active"
+                                : "FastPay inactive"
+                            }
+                          >
+                            FastPay
+                          </span>
+                          <span
+                            className="flag-badge"
+                            data-flag="RC"
+                            data-active={dasher.redCard ? "true" : "false"}
+                          >
+                            RED CARD
+                          </span>
+                          <span
+                            className="flag-badge"
+                            data-flag="AP"
+                            data-active={dasher.appealed ? "true" : "false"}
+                          >
+                            APPEALED
+                          </span>
+                        </span>
+                      </h5>
+                      {movedNote && (
+                        <div className="text-[11px] text-amber-300/80 mt-0.5">
+                          {movedNote}
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  {renderMoveButtons(bucketType, dasher.id)}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={onStartTimer}
+                      className="icon-btn text-purple-400 hover:text-purple-300"
+                      title="Start 24hr timer"
+                      aria-label="Start 24 hour timer"
+                    >
+                      <Timer size={14} />
+                    </button>
+                    <button
+                      onClick={onResetTimer}
+                      className="icon-btn text-orange-400 hover:text-orange-300"
+                      title="Reset timer"
+                      aria-label="Reset timer"
+                    >
+                      <TimerOff size={14} />
+                    </button>
+                    <button
+                      onClick={onToggleEdit}
+                      className={`icon-btn ${isEditing ? "text-green-400 hover:text-green-300" : "text-yellow-400 hover:text-yellow-300"}`}
+                      title={isEditing ? "Save" : "Edit"}
+                      aria-label={isEditing ? "Save dasher" : "Edit dasher"}
+                    >
+                      {isEditing ? <Check size={14} /> : <Edit2 size={14} />}
+                    </button>
+                    {parseBalanceValue(dasher.balance) > 0 && (
+                      <button
+                        onClick={onCashOut}
+                        className="icon-btn text-green-300 hover:text-green-200"
+                        title="Cash Out"
+                        aria-label="Cash out balance"
+                      >
+                        <Banknote size={16} />
+                      </button>
+                    )}
+                    <button
+                      onClick={onDelete}
+                      className="icon-btn text-red-400 hover:text-red-300"
+                      title="Delete"
+                      aria-label="Delete dasher"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+              {/* Details */}
+              {!isCollapsed && (
+                <div className="border-b border-gray-800 px-4 py-2 bg-gray-900/30">
+                  {renderDasherDetails(
+                    dasher,
+                    dashersArray,
+                    setDashersArray,
+                    saveAllToLocalStorage,
+                    copyToClipboard,
+                    null,
+                    isEditing,
+                    bucketType,
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        },
+        (prevProps, nextProps) => {
+          // Custom comparison function - only re-render if these props actually changed
+          return (
+            prevProps.dasher.id === nextProps.dasher.id &&
+            prevProps.dasher.name === nextProps.dasher.name &&
+            prevProps.dasher.email === nextProps.dasher.email &&
+            prevProps.dasher.balance === nextProps.dasher.balance &&
+            prevProps.dasher.lastUsed === nextProps.dasher.lastUsed &&
+            prevProps.dasher.crimson === nextProps.dasher.crimson &&
+            prevProps.dasher.fastPay === nextProps.dasher.fastPay &&
+            prevProps.dasher.fastPayInfo === nextProps.dasher.fastPayInfo &&
+            prevProps.dasher.redCard === nextProps.dasher.redCard &&
+            prevProps.dasher.appealed === nextProps.dasher.appealed &&
+            prevProps.dasher.selectedCashout === nextProps.dasher.selectedCashout &&
+            prevProps.isSelected === nextProps.isSelected &&
+            prevProps.isCollapsed === nextProps.isCollapsed &&
+            prevProps.isEditing === nextProps.isEditing &&
+            prevProps.isEditMode === nextProps.isEditMode &&
+            prevProps.cardRecentlyMoved === nextProps.cardRecentlyMoved
+          );
+        },
+      );
+
       const EnhancedCalculator = () => {
         const [target, setTarget] = useState("99");
         const [targetPreset, setTargetPreset] = useState("99"); // '99', '120', or 'custom'
@@ -11252,269 +11480,53 @@
                             </div>
                           ) : (
                             filteredReadyDashers.map((dasher, index) => {
-                              const isSelected = selectedItems.readyDashers.has(
-                                dasher.id,
-                              );
-                              const isCollapsed =
-                                !!collapsedReadyDashers[dasher.id];
-                              const isEditing = isDasherEditing(
-                                "ready",
-                                dasher.id,
-                              );
-                              const dasherTitle = getDasherTitle(dasher);
-                              const cardRecentlyMoved =
-                                recentlyMoved instanceof Set &&
-                                recentlyMoved.has(dasher.id);
-                              const movedNote = dasher.readyAt
-                                ? `Ready: ${formatRelativeTime(dasher.readyAt)}`
-                                : null;
+                              const isSelected = selectedItems.readyDashers.has(dasher.id);
+                              const isCollapsed = !!collapsedReadyDashers[dasher.id];
+                              const isEditing = isDasherEditing("ready", dasher.id);
+                              const cardRecentlyMoved = recentlyMoved instanceof Set && recentlyMoved.has(dasher.id);
+                              const movedNote = dasher.readyAt ? `Ready: ${formatRelativeTime(dasher.readyAt)}` : null;
                               const identityFallback = `ready-${index}`;
-                              const anchorIdentity = deriveDasherIdentity(
-                                dasher,
-                                identityFallback,
-                              );
-                              const anchorId =
-                                getDasherAnchorId(anchorIdentity);
 
                               return (
-                                <div
+                                <DasherCard
                                   key={dasher.id}
-                                  className={`bg-gray-600/50 rounded-lg overflow-hidden border border-gray-500/30 transition-opacity ${cardRecentlyMoved ? "ring-2 ring-amber-400/80 animate-pulse" : ""}`}
-                                  id={anchorId || undefined}
-                                  data-dasher-anchor={
-                                    anchorIdentity || undefined
-                                  }
-                                >
-                                  {/* Header */}
-                                  <div className="flex items-start justify-between p-3">
-                                    <div className="flex items-center gap-2 flex-1">
-                                      {isEditMode && (
-                                        <input
-                                          type="checkbox"
-                                          checked={isSelected}
-                                          onChange={() => {
-                                            const next = new Set(
-                                              selectedItems.readyDashers,
-                                            );
-                                            isSelected
-                                              ? next.delete(dasher.id)
-                                              : next.add(dasher.id);
-                                            setSelectedItems({
-                                              ...selectedItems,
-                                              readyDashers: next,
-                                            });
-                                          }}
-                                          onClick={(e) => e.stopPropagation()}
-                                          className="w-4 h-4 text-gray-300 bg-gray-700 border-gray-500 rounded focus:ring-gray-400 focus:ring-2"
-                                        />
-                                      )}
-                                      <div
-                                        className={`${isEditing ? "text-gray-700 cursor-not-allowed" : "text-gray-400 hover:text-gray-300 cursor-move"}`}
-                                        aria-label="Drag to reorder"
-                                        style={{
-                                          pointerEvents: isEditing
-                                            ? "none"
-                                            : "auto",
-                                        }}
-                                      >
-                                        <GripVertical size={14} />
-                                      </div>
-                                      <button
-                                        onClick={() =>
-                                          toggleBucketRowCollapsed(
-                                            "ready",
-                                            dasher.id,
-                                          )
-                                        }
-                                        className="flex items-center gap-2 flex-1 text-left"
-                                      >
-                                        {isCollapsed ? (
-                                          <ChevronDown size={14} />
-                                        ) : (
-                                          <ChevronUp size={14} />
-                                        )}
-                                        <div className="flex-1 min-w-0">
-                                          <h5 className="font-medium text-sm flex items-center gap-2 truncate">
-                                            {dasherTitle}
-                                            <span
-                                              className="flag-badges"
-                                              aria-label="Dasher status flags (Crimson, Red Card, Appealed, FastPay)"
-                                            >
-                                              <span
-                                                className="flag-badge"
-                                                data-flag="C"
-                                                data-active={
-                                                  dasher.crimson
-                                                    ? "true"
-                                                    : "false"
-                                                }
-                                                data-selected={
-                                                  (
-                                                    dasher.selectedCashout || ""
-                                                  ).toLowerCase() === "crimson"
-                                                    ? "true"
-                                                    : "false"
-                                                }
-                                              >
-                                                CRIMSON
-                                              </span>
-                                              <span
-                                                className="flag-badge"
-                                                data-flag="FP"
-                                                data-active={
-                                                  dasher.fastPay
-                                                    ? "true"
-                                                    : "false"
-                                                }
-                                                data-selected={
-                                                  (
-                                                    dasher.selectedCashout || ""
-                                                  ).toLowerCase() === "fastpay"
-                                                    ? "true"
-                                                    : "false"
-                                                }
-                                                title={
-                                                  dasher.fastPay
-                                                    ? dasher.fastPayInfo
-                                                      ? `FastPay: ${dasher.fastPayInfo}`
-                                                      : "FastPay active"
-                                                    : "FastPay inactive"
-                                                }
-                                              >
-                                                FastPay
-                                              </span>
-                                              <span
-                                                className="flag-badge"
-                                                data-flag="RC"
-                                                data-active={
-                                                  dasher.redCard
-                                                    ? "true"
-                                                    : "false"
-                                                }
-                                              >
-                                                RED CARD
-                                              </span>
-                                              <span
-                                                className="flag-badge"
-                                                data-flag="AP"
-                                                data-active={
-                                                  dasher.appealed
-                                                    ? "true"
-                                                    : "false"
-                                                }
-                                              >
-                                                APPEALED
-                                              </span>
-                                            </span>
-                                          </h5>
-                                          {movedNote && (
-                                            <div className="text-[11px] text-amber-300/80 mt-0.5">
-                                              {movedNote}
-                                            </div>
-                                          )}
-                                        </div>
-                                      </button>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      {renderMoveButtons("ready", dasher.id)}
-                                      <div className="flex items-center gap-1">
-                                        <button
-                                          onClick={() =>
-                                            bucketTimerHandlers["ready"].start(
-                                              dasher.id,
-                                            )
-                                          }
-                                          className="icon-btn text-purple-400 hover:text-purple-300"
-                                          title="Start 24hr timer"
-                                          aria-label="Start 24 hour timer"
-                                        >
-                                          <Timer size={14} />
-                                        </button>
-                                        <button
-                                          onClick={() =>
-                                            bucketTimerHandlers["ready"].reset(
-                                              dasher.id,
-                                            )
-                                          }
-                                          className="icon-btn text-orange-400 hover:text-orange-300"
-                                          title="Reset timer"
-                                          aria-label="Reset timer"
-                                        >
-                                          <TimerOff size={14} />
-                                        </button>
-                                        <button
-                                          onClick={() =>
-                                            toggleEditDasher("ready", dasher.id)
-                                          }
-                                          className={`icon-btn ${isEditing ? "text-green-400 hover:text-green-300" : "text-yellow-400 hover:text-yellow-300"}`}
-                                          title={isEditing ? "Save" : "Edit"}
-                                          aria-label={
-                                            isEditing
-                                              ? "Save dasher"
-                                              : "Edit dasher"
-                                          }
-                                        >
-                                          {isEditing ? (
-                                            <Check size={14} />
-                                          ) : (
-                                            <Edit2 size={14} />
-                                          )}
-                                        </button>
-                                        {parseBalanceValue(dasher.balance) >
-                                          0 && (
-                                          <button
-                                            onClick={() =>
-                                              addCashOutEntry(
-                                                "ready",
-                                                dasher.id,
-                                                "auto",
-                                              )
-                                            }
-                                            className="icon-btn text-green-300 hover:text-green-200"
-                                            title="Cash Out"
-                                            aria-label="Cash out balance"
-                                          >
-                                            <Banknote size={16} />
-                                          </button>
-                                        )}
-                                        <button
-                                          onClick={() => {
-                                            if (
-                                              confirm("Delete this dasher?")
-                                            ) {
-                                              setReadyDashers((prev) =>
-                                                prev.filter(
-                                                  (d) => d.id !== dasher.id,
-                                                ),
-                                              );
-                                              requestPersist();
-                                            }
-                                          }}
-                                          className="icon-btn text-red-400 hover:text-red-300"
-                                          title="Delete"
-                                          aria-label="Delete dasher"
-                                        >
-                                          <Trash2 size={14} />
-                                        </button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  {/* Details */}
-                                  {!isCollapsed && (
-                                    <div className="border-b border-gray-800 px-4 py-2 bg-gray-900/30">
-                                      {renderDasherDetails(
-                                        dasher,
-                                        readyDashers,
-                                        setReadyDashers,
-                                        saveAllToLocalStorage,
-                                        copyToClipboard,
-                                        null,
-                                        isEditing,
-                                        "ready",
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
+                                  dasher={dasher}
+                                  bucketType="ready"
+                                  index={index}
+                                  isSelected={isSelected}
+                                  isCollapsed={isCollapsed}
+                                  isEditing={isEditing}
+                                  isEditMode={isEditMode}
+                                  cardRecentlyMoved={cardRecentlyMoved}
+                                  movedNote={movedNote}
+                                  identityFallback={identityFallback}
+                                  onToggleSelect={() => {
+                                    const next = new Set(selectedItems.readyDashers);
+                                    isSelected ? next.delete(dasher.id) : next.add(dasher.id);
+                                    setSelectedItems({ ...selectedItems, readyDashers: next });
+                                  }}
+                                  onToggleCollapse={() => toggleBucketRowCollapsed("ready", dasher.id)}
+                                  onStartTimer={() => bucketTimerHandlers["ready"].start(dasher.id)}
+                                  onResetTimer={() => bucketTimerHandlers["ready"].reset(dasher.id)}
+                                  onToggleEdit={() => toggleEditDasher("ready", dasher.id)}
+                                  onCashOut={() => addCashOutEntry("ready", dasher.id, "auto")}
+                                  onDelete={() => {
+                                    if (confirm("Delete this dasher?")) {
+                                      setReadyDashers((prev) => prev.filter((d) => d.id !== dasher.id));
+                                      requestPersist();
+                                    }
+                                  }}
+                                  getDasherTitle={getDasherTitle}
+                                  renderMoveButtons={renderMoveButtons}
+                                  renderDasherDetails={renderDasherDetails}
+                                  dashersArray={readyDashers}
+                                  setDashersArray={setReadyDashers}
+                                  saveAllToLocalStorage={saveAllToLocalStorage}
+                                  copyToClipboard={copyToClipboard}
+                                  deriveDasherIdentity={deriveDasherIdentity}
+                                  getDasherAnchorId={getDasherAnchorId}
+                                  parseBalanceValue={parseBalanceValue}
+                                />
                               );
                             })
                           )}

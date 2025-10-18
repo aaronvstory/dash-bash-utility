@@ -20,10 +20,13 @@
         "/c",
         "npx",
         "-y",
-        "chrome-devtools-mcp@latest",
-        "--headless"
+        "chrome-devtools-mcp@latest"
       ],
-      "description": "Chrome DevTools MCP server - browser automation and debugging"
+      "env": {
+        "CHROME_HEADLESS": "false",
+        "CHROME_REMOTE_DEBUGGING_PORT": "9222"
+      },
+      "description": "Chrome DevTools MCP server - connect to Chrome debug instance on port 9222"
     }
   }
 }
