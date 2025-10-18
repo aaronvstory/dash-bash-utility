@@ -68,3 +68,10 @@ dashbash-export-*.json
 # Local test helpers
 test-*.js
 test-*.html
+
+# Local history and common local folders — should not be tracked
+.history/
+.cache/
+.terraform/
+.venv/
+.envrc
