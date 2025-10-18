@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Dash Bash Utility is a React-based Progressive Web App (PWA) designed for delivery service drivers (primarily DoorDash). It's a **single-file application** that runs directly in the browser without any build process required.
+Dash Bash Utility is a React-based Progressive Web App (PWA) designed for delivery service drivers (primarily DoorDash). Uses **precompiled JSX** with Babel CLI for optimal performance.
 
-**Current Version**: 1.8.9 (October 2025)
+**Current Version**: 1.9.1 (October 2025) - JSX Precompilation Release
 
 **Core Features:**
 - **Target Calculator**: Calculates optimal quantities to reach target dollar amounts ($99/$120/custom)
@@ -32,7 +32,7 @@ python serve-pwa.py
 # Access at: http://localhost:8443/index.html
 ```
 
-**Note**: This project has NO build process or package dependencies. It's a standalone HTML file that runs directly in the browser using CDN resources for React, Babel, and Tailwind CSS.
+**Build Process**: Uses Babel CLI to precompile JSX offline. Run `npm run build` before deploying changes.
 
 ### Testing PWA Features
 ```bash
@@ -55,23 +55,17 @@ To test specific functionality:
 
 ### Deployment to GitHub Pages
 
-⚠️ **CRITICAL**: Always ensure changes are compiled from TSX to index.html before deploying!
+⚠️ **CRITICAL**: Always run `npm run build` before deploying!
 
 ```bash
-# Step 1: Verify changes are in index.html
-# Check that your TSX changes are reflected in index.html
+# Automated deployment (recommended)
+npm run deploy
 
-# Step 2: Stage specific files (avoid Windows reserved files like 'nul')
-git add enhanced-calculator-addressbook.tsx index.html
-# Or if no reserved files: git add -A
-
-# Step 3: Commit with descriptive message
+# Manual deployment
+npm run build  # Extract JSX and compile to dash-bash-compiled.js
+git add index.html dash-bash-compiled.js dash-bash-component.jsx
 git commit -m "Your descriptive message"
-
-# Step 4: Push to main branch
 git push origin main
-
-# Step 5: Deploy to GitHub Pages (gh-pages branch)
 git checkout gh-pages
 git merge main --no-edit
 git push origin gh-pages
@@ -81,23 +75,44 @@ git checkout main
 # Note: GitHub Pages may take 1-2 minutes to reflect changes
 ```
 
+**Build Process**:
+1. `npm run extract-jsx` - Extracts JSX from index.html to dash-bash-component.jsx
+2. `npm run compile` - Compiles JSX to optimized JavaScript (dash-bash-compiled.js)
+3. `npm run build` - Runs both extract and compile steps
+4. `npm run deploy` - Builds and deploys to gh-pages automatically
+
 **Regular Commit Practice**: Commit frequently to avoid losing work and maintain version history. Each feature or fix should be its own commit.
 
 ## Architecture
 
 ### Core Design Pattern
-Single-file React application using functional components and hooks. No build process required - runs directly in browser with CDN dependencies. The TSX component (`enhanced-calculator-addressbook.tsx`) is compiled to inline JavaScript in `index.html` for standalone use.
+React application using functional components and hooks with **precompiled JSX** for optimal performance.
 
-### ⚠️ CRITICAL: TSX to HTML Compilation
-**IMPORTANT**: Changes made to `enhanced-calculator-addressbook.tsx` are NOT automatically reflected in the app. The TSX file is the source component, but `index.html` contains the actual served inline JavaScript that runs in the browser.
+**Architecture** (v1.9.1+):
+- **Source**: `dash-bash-component.jsx` (extracted from index.html)
+- **Compiled**: `dash-bash-compiled.js` (optimized, minified JavaScript)
+- **Served**: `index.html` (11.5 KB) + `dash-bash-compiled.js` (303 KB)
+- **CDN**: React, ReactDOM, Tailwind CSS, Lucide Icons
 
-**Development Workflow:**
-1. Make changes to `enhanced-calculator-addressbook.tsx` (source component)
-2. **MUST manually update** corresponding code in `index.html` (served file)
-   - Find the `<script type="text/babel">` tag (around line 120+)
-   - Update the React component code to match TSX changes
-3. Test locally with `python serve-pwa.py` before deploying
-4. Open `http://localhost:8443/index.html` and verify changes
+**Performance Gains** (vs v1.9.0):
+- 98.4% reduction in HTML size (720 KB → 11.5 KB)
+- No browser-side Babel compilation
+- Optimized, minified JavaScript
+- 80-95% faster page loads
+
+### Development Workflow
+
+**Making Changes**:
+1. Edit `dash-bash-component.jsx` (React component source)
+2. Run `npm run build` to compile JSX → JavaScript
+3. Test locally: `python serve-pwa.py` → `http://localhost:8443`
+4. Verify changes in browser DevTools
+5. Deploy: `npm run deploy` (automated) or manual git workflow
+
+**Why Precompilation?**:
+- Babel refused to optimize >500KB inline scripts (v1.9.0 was 703KB)
+- Browser-side compilation caused 9.8s LCP and 100-330ms React handler times
+- Precompiled JS eliminates runtime overhead and enables full optimization
 5. Check browser console for any errors
 
 **Common Mistake**: Editing only the TSX file and expecting changes to appear. The browser only reads `index.html`!

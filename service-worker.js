@@ -1,5 +1,5 @@
 // Service Worker for Dash Bash Utility PWA (network-first shell with versioned cache)
-const APP_VERSION = "1.9.0";
+const APP_VERSION = "1.9.1"; // JSX Precompilation Release
 const CORE_CACHE = `dashbash-core-${APP_VERSION}`;
 const RUNTIME_CACHE = `dashbash-runtime-${APP_VERSION}`;
 const PRECACHE_URLS = [

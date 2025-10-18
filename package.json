@@ -1,13 +1,20 @@
 {
   "name": "dash-bash-utility",
   "private": true,
-  "version": "0.0.0",
-  "description": "Dev test harness for DOM smoke tests",
+  "version": "1.9.1",
+  "description": "Progressive Web App for DoorDash delivery drivers with target calculator, dashers management, and address book",
   "license": "UNLICENSED",
   "scripts": {
-    "test:dom": "node test-dom-smoke.js"
+    "test:dom": "node test-dom-smoke.js",
+    "extract-jsx": "node extract-jsx.js",
+    "compile": "babel dash-bash-component.jsx --out-file dash-bash-compiled.js --presets @babel/preset-react --compact --no-comments",
+    "build": "npm run extract-jsx && npm run compile",
+    "deploy": "npm run build && git add index.html dash-bash-compiled.js && git commit -m 'build: precompiled JSX for v1.9.1' && git push origin main && git checkout gh-pages && git merge main --no-edit && git push origin gh-pages && git checkout main"
   },
   "devDependencies": {
+    "@babel/cli": "^7.25.9",
+    "@babel/core": "^7.26.0",
+    "@babel/preset-react": "^7.25.9",
     "jsdom": "^24.1.0"
   }
 }
