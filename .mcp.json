@@ -13,6 +13,17 @@
         "C:\\claude\\dash-bash"
       ],
       "description": "Serena MCP server - semantic code intelligence for dash-bash project"
+    },
+    "chrome-devtools": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "chrome-devtools-mcp@latest",
+        "--headless"
+      ],
+      "description": "Chrome DevTools MCP server - browser automation and debugging"
     }
   }
 }
