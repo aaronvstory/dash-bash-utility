@@ -1,6 +1,6 @@
 /**
  * Dash Bash Utility - Comprehensive Stylesheet
- * Version: 1.8.10
+ * Version: 1.9.2
  *
  * This stylesheet is designed for easy theming and maintainability.
  * Update CSS variables in :root to change the entire app's appearance.
@@ -1574,12 +1574,12 @@ body.dragging {
 .theme-jp input[type="tel"],
 .theme-jp select,
 .theme-jp textarea {
-  --db-input-bg: #1f2937;           /* gray-800 */
-  --db-input-border: #374151;       /* gray-700 */
+  --db-input-bg: #2a2a2a;           /* pure dark gray - better contrast for white text */
+  --db-input-border: #3f3f3f;       /* neutral gray border */
   --db-input-text: #e5e7eb;         /* gray-200 */
   --db-input-placeholder: #9ca3af;  /* gray-400 */
   --db-input-radius: 2px;
-  --db-input-height: 30px;
+  --db-input-height: 22px;
   --db-input-px: 12px;
   --db-input-py: 4px;
 
@@ -1619,7 +1619,7 @@ body.dragging {
 
 /* Compact height variant for tight inline rows */
 .theme-jp .db-input-sm {
-  --db-input-height: 30px;
+  --db-input-height: 22px;
   --db-input-py: 4px;
   --db-input-radius: 2px;
 }
