@@ -38,7 +38,7 @@
 
     <!-- React and Dependencies -->
     <!-- BUILD STAMP: injected at 2025-09-30T08:05Z for version 1.4.3 (badge wiring, flag badges + icon-btn) -->
-    <script
+    <scripthttps://aaronvstory.github.io/dash-bash-utility/index.html
       crossorigin
       src="https://unpkg.com/react@18/umd/react.production.min.js"
     ></script>
@@ -1168,7 +1168,7 @@
         const [timerTick, setTimerTick] = useState(0);
         // Dual-speed timer system (Phase 3): fast updates for critical dashers, slow for others
         const [slowTimerTick, setSlowTimerTick] = useState(0);
-        
+
         // Track visible dashers for performance optimization (Phase 2.1)
         const [visibleDasherIds, setVisibleDasherIds] = useState(new Set());
 
@@ -1269,7 +1269,7 @@
         // Track visible dashers for performance optimization (Phase 2.1)
         useEffect(() => {
           const visible = new Set();
-          
+
           // Helper to add visible dashers from a bucket
           const addVisibleDashers = (isOpen, isReady, dashers) => {
             if (isOpen && isReady && Array.isArray(dashers)) {
@@ -1280,7 +1280,7 @@
               });
             }
           };
-          
+
           // Check each bucket and add visible dashers
           if (isDashersOpen && dashersRenderReady) {
             dasherCategories.forEach(cat => {
@@ -1289,7 +1289,7 @@
               }
             });
           }
-          
+
           // Add from other buckets (these are flat arrays, not categorized)
           addVisibleDashers(isReadyDashersOpen, readyRenderReady, filteredReadyDashers);
           addVisibleDashers(isCurrentlyUsingDashersOpen, usingRenderReady, filteredCurrentlyUsingDashers);
@@ -1298,7 +1298,7 @@
           addVisibleDashers(isReverifDashersOpen, reverifRenderReady, filteredReverifDashers);
           addVisibleDashers(isLockedDashersOpen, lockedRenderReady, filteredLockedDashers);
           addVisibleDashers(isDeactivatedDashersOpen, true, filteredDeactivatedDashers);
-          
+
           setVisibleDasherIds(visible);
         }, [
           isDashersOpen, dashersRenderReady,
@@ -5744,7 +5744,7 @@
 
         const calculateDasherTimeStatus = (lastUsedTime, dasherId = null) => {
           if (!lastUsedTime) return null;
-          
+
           // Performance optimization (Phase 2.2): Skip expensive calculations for invisible dashers
           if (dasherId && !visibleDasherIds.has(dasherId)) {
             return {
@@ -5767,7 +5767,7 @@
           // Format the date/time details (with caching for performance)
           // Cache key: round to nearest minute to avoid cache explosion
           const cacheKey = Math.floor(lastUsed.getTime() / 60000) * 60000;
-          
+
           let dayOfWeek, date, time, fullDateTime;
           if (dateFormatCache.current.has(cacheKey)) {
             const cached = dateFormatCache.current.get(cacheKey);
@@ -5789,10 +5789,10 @@
             date = lastUsed.toLocaleDateString();
             time = lastUsed.toLocaleTimeString();
             fullDateTime = `${dayOfWeek}, ${date} at ${time}`;
-            
+
             // Cache the formatted values
             dateFormatCache.current.set(cacheKey, { dayOfWeek, date, time, fullDateTime });
-            
+
             // Prevent cache from growing indefinitely (keep last 100 entries)
             if (dateFormatCache.current.size > 100) {
               const firstKey = dateFormatCache.current.keys().next().value;
@@ -5862,15 +5862,15 @@
                 timerTickToUse = timerTick; // Use fast timer for last hour
               }
             }
-            
+
             // Generate cache key from dasher properties that affect display
             const cacheKey = `${dasher?.id || 'null'}-${dasher?.name || ''}-${dasher?.email || ''}-${dasher?.balance || ''}-${dasher?.lastUsed || ''}-${timerTickToUse}`;
-            
+
             // Check cache first
             if (dasherTitleCache.current.has(cacheKey)) {
               return dasherTitleCache.current.get(cacheKey);
             }
-            
+
             // Calculate title (existing logic)
             let titleResult;
             if (!dasher) {
@@ -5959,14 +5959,14 @@
             }
 
             titleResult = React.createElement(React.Fragment, {}, parts);
-            
+
             // Cache the result with size limit
             dasherTitleCache.current.set(cacheKey, titleResult);
             if (dasherTitleCache.current.size > 100) {
               const firstKey = dasherTitleCache.current.keys().next().value;
               dasherTitleCache.current.delete(firstKey);
             }
-            
+
             return titleResult;
           } catch (error) {
             console.error("Error in getDasherTitle:", error, dasher);
@@ -6760,8 +6760,8 @@
                               : "Collapse notes",
                           },
                           isDasherNotesCollapsed(dasher.id)
-                            ? "Show full"
-                            : "Collapse",
+                            ? React.createElement(ChevronDown, { size: 14 })
+                            : React.createElement(ChevronUp, { size: 14 }),
                         ),
                       ]),
                 ],
@@ -9838,8 +9838,8 @@
                                                     category.id,
                                                     store.id,
                                                   )
-                                                    ? "Show full"
-                                                    : "Collapse"}
+                                                    ? React.createElement(ChevronDown, { size: 14 })
+                                                    : React.createElement(ChevronUp, { size: 14 })}
                                                 </button>
                                               </div>
                                             )}
@@ -10191,8 +10191,8 @@
                                                   category.id,
                                                   noteIndex,
                                                 )
-                                                  ? "Show full"
-                                                  : "Collapse"}
+                                                  ? React.createElement(ChevronDown, { size: 14 })
+                                                  : React.createElement(ChevronUp, { size: 14 })}
                                               </button>
                                             )}
                                             <button
