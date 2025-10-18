@@ -1,5 +1,5 @@
 // Service Worker for Dash Bash Utility PWA (network-first shell with versioned cache)
-const APP_VERSION = "1.9.2"; // Dark gray input theme + compact height
+const APP_VERSION = "1.9.3"; // Fix: network-first for compiled JS to prevent stale cache
 const CORE_CACHE = `dashbash-core-${APP_VERSION}`;
 const RUNTIME_CACHE = `dashbash-runtime-${APP_VERSION}`;
 const PRECACHE_URLS = [
@@ -47,11 +47,12 @@ self.addEventListener("fetch", (event) => {
     return; // allow default fetch (no respondWith) to not interfere
   }
 
-  // Always network-first for HTML shell and main stylesheet to avoid stale UI
+  // Always network-first for HTML shell, main stylesheet, and compiled JS to avoid stale UI
   const isShell = req.mode === "navigate" || /index\.html$/.test(url.pathname);
   const isStyle = url.pathname.endsWith("/styles.css");
+  const isCompiledJS = url.pathname.endsWith("/dash-bash-compiled.js");
 
-  if (isShell || isStyle) {
+  if (isShell || isStyle || isCompiledJS) {
     event.respondWith(
       (async () => {
         try {
