@@ -1,5 +1,5 @@
 
-      const { useState, useEffect, useRef, useCallback, useMemo } = React;
+      const { useState, useEffect, useRef, useCallback, useMemo, useTransition } = React;
 
       // Simple icon component wrapper for Lucide
       const Icon = ({ name, size = 20, className = "" }) => {
@@ -1117,6 +1117,9 @@
         // Track visible dashers for performance optimization (Phase 2.1)
         const [visibleDasherIds, setVisibleDasherIds] = useState(new Set());
 
+        // Import transition for non-blocking state updates (v1.9.4)
+        const [isImportPending, startImportTransition] = useTransition();
+
         // Undo support for cash outs
         const lastCashOutRef = React.useRef(null);
         const saveDebouncedRef = React.useRef(null);
@@ -1195,21 +1198,33 @@
           return () => clearInterval(interval);
         }, []);
 
-        // Update timer tick every second for dashers
-        useEffect(() => {
-          const interval = setInterval(() => {
-            setTimerTick((prev) => prev + 1);
-          }, 1000);
-          return () => clearInterval(interval);
-        }, []);
+        // Smart timer batching (v1.9.4 Performance): Only update when visible dashers need it
+        // Use refs to track time without triggering re-renders, then batch updates
+        const lastFastUpdate = useRef(Date.now());
+        const lastSlowUpdate = useRef(Date.now());
 
-        // Slow timer for non-critical dashers (Phase 3)
         useEffect(() => {
           const interval = setInterval(() => {
-            setSlowTimerTick((prev) => prev + 1);
-          }, 5000); // Update every 5 seconds for better performance
+            const now = Date.now();
+            const hasVisibleDashers = visibleDasherIds && visibleDasherIds.size > 0;
+
+            // Only update if there are visible dashers (prevents global re-renders when all collapsed)
+            if (hasVisibleDashers) {
+              // Fast tick (1s) for critical dashers
+              if (now - lastFastUpdate.current >= 1000) {
+                lastFastUpdate.current = now;
+                setTimerTick((prev) => prev + 1);
+              }
+
+              // Slow tick (5s) for non-critical dashers
+              if (now - lastSlowUpdate.current >= 5000) {
+                lastSlowUpdate.current = now;
+                setSlowTimerTick((prev) => prev + 1);
+              }
+            }
+          }, 1000); // Check every second but only update state when needed
           return () => clearInterval(interval);
-        }, []);
+        }, [visibleDasherIds]);
 
         // MOVED UP: Filtered dasher useMemo hooks (must appear before useEffect that uses them)
         const filteredReadyDashers = useMemo(
@@ -2508,6 +2523,59 @@
           }
         };
 
+        // Normalize imported data to prevent issues (v1.9.4 Performance)
+        const normalizeImportedData = (state) => {
+          const normalized = { ...state };
+
+          // Normalize dasher data across all buckets
+          const normalizeDasher = (dasher) => {
+            if (!dasher) return dasher;
+            return {
+              ...dasher,
+              balance: parseBalanceValue(dasher.balance || 0),
+              phone: String(dasher.phone || "").replace(/\D/g, ""),
+              notes: String(dasher.notes || "").slice(0, 3000), // Trim long notes
+            };
+          };
+
+          // Apply to all dasher buckets
+          if (normalized.dasherCategories) {
+            normalized.dasherCategories = normalized.dasherCategories.map(cat => ({
+              ...cat,
+              dashers: (cat.dashers || []).map(normalizeDasher)
+            }));
+          }
+
+          const dasherBuckets = [
+            'readyDashers', 'currentlyUsingDashers', 'appealedDashers',
+            'lockedDashers', 'appliedPendingDashers', 'reverifDashers',
+            'archivedDashers', 'deactivatedDashers'
+          ];
+
+          dasherBuckets.forEach(bucket => {
+            if (normalized[bucket]) {
+              normalized[bucket] = normalized[bucket].map(normalizeDasher);
+            }
+          });
+
+          // Ensure collapsed state maps exist
+          const collapsedMaps = [
+            'collapsedCategories', 'collapsedStores', 'collapsedDashers',
+            'collapsedDasherCategories', 'collapsedNoteCategories',
+            'collapsedArchivedDashers', 'collapsedDeactivatedDashers',
+            'collapsedLockedDashers', 'collapsedAppliedPendingDashers',
+            'collapsedReverifDashers'
+          ];
+
+          collapsedMaps.forEach(map => {
+            if (!normalized[map] || typeof normalized[map] !== 'object') {
+              normalized[map] = {};
+            }
+          });
+
+          return normalized;
+        };
+
         const importFromJSON = (event) => {
           const file = event.target.files[0];
           if (!file) return;
@@ -2887,92 +2955,72 @@
                 setTimeout(() => setImportNotification(""), 3000);
                 requestPersist();
               } else {
-                // Handle full import (backward compatibility for v2.1 and earlier)
-                // Load target configuration
-                const savedTarget = state.target || "99";
-                const savedPreset =
-                  state.targetPreset ||
-                  (savedTarget === "99" || savedTarget === "120"
-                    ? savedTarget
-                    : "custom");
+                // Handle full import with batched state updates (v1.9.4 Performance)
+                // Normalize data first to prevent issues
+                const normalized = normalizeImportedData(state);
 
-                setTarget(savedTarget);
-                setTargetPreset(savedPreset);
-                if (savedPreset === "custom") {
-                  setCustomTarget(savedTarget);
-                }
+                // Build all state updates in a function
+                const applyBatchedImport = () => {
+                  // Target configuration
+                  const savedTarget = normalized.target || "99";
+                  const savedPreset =
+                    normalized.targetPreset ||
+                    (savedTarget === "99" || savedTarget === "120"
+                      ? savedTarget
+                      : "custom");
 
-                setPrices(state.prices || []);
-                setMessages(state.messages || []);
-                setCategories(state.categories || []);
-                // Don't use defaults if we have saved state
-                if (state.noteCategories)
-                  setNoteCategories(state.noteCategories);
-                if (state.dasherCategories)
-                  setDasherCategories(state.dasherCategories);
-                if (state.archivedDashers)
-                  setArchivedDashers(state.archivedDashers);
-                if (state.deactivatedDashers)
-                  setDeactivatedDashers(state.deactivatedDashers);
-                if (state.readyDashers) setReadyDashers(state.readyDashers);
-                if (state.currentlyUsingDashers)
-                  setCurrentlyUsingDashers(state.currentlyUsingDashers);
-                if (state.appealedDashers)
-                  setAppealedDashers(state.appealedDashers);
-                if (state.lockedDashers) setLockedDashers(state.lockedDashers);
-                if (state.appliedPendingDashers)
-                  setAppliedPendingDashers(state.appliedPendingDashers);
-                if (state.reverifDashers)
-                  setReverifDashers(state.reverifDashers);
+                  setTarget(savedTarget);
+                  setTargetPreset(savedPreset);
+                  if (savedPreset === "custom") {
+                    setCustomTarget(savedTarget);
+                  }
 
-                // Load collapsed states if they exist
-                if (state.collapsedCategories)
-                  setCollapsedCategories(state.collapsedCategories);
-                if (state.collapsedStores)
-                  setCollapsedStores(state.collapsedStores);
-                if (state.collapsedDashers)
-                  setCollapsedDashers(state.collapsedDashers);
-                if (state.collapsedArchivedDashers)
-                  setCollapsedArchivedDashers(state.collapsedArchivedDashers);
-                if (state.collapsedDasherCategories)
-                  setCollapsedDasherCategories(state.collapsedDasherCategories);
-                if (state.collapsedNoteCategories)
-                  setCollapsedNoteCategories(state.collapsedNoteCategories);
-                if (state.collapsedDeactivatedDashers)
-                  setCollapsedDeactivatedDashers(
-                    state.collapsedDeactivatedDashers,
-                  );
-                if (state.collapsedLockedDashers)
-                  setCollapsedLockedDashers(state.collapsedLockedDashers);
-                if (state.collapsedAppliedPendingDashers)
-                  setCollapsedAppliedPendingDashers(
-                    state.collapsedAppliedPendingDashers,
-                  );
-                if (state.collapsedReverifDashers)
-                  setCollapsedReverifDashers(state.collapsedReverifDashers);
-                if (state.isArchivedDashersOpen !== undefined)
-                  setIsArchivedDashersOpen(state.isArchivedDashersOpen);
-                if (state.isDeactivatedDashersOpen !== undefined)
-                  setIsDeactivatedDashersOpen(state.isDeactivatedDashersOpen);
-                if (state.isReadyDashersOpen !== undefined)
-                  setIsReadyDashersOpen(state.isReadyDashersOpen);
-                if (state.isCurrentlyUsingDashersOpen !== undefined)
-                  setIsCurrentlyUsingDashersOpen(
-                    state.isCurrentlyUsingDashersOpen,
-                  );
-                if (state.isAppealedDashersOpen !== undefined)
-                  setIsAppealedDashersOpen(state.isAppealedDashersOpen);
-                if (state.isLockedDashersOpen !== undefined)
-                  setIsLockedDashersOpen(state.isLockedDashersOpen);
-                if (state.isAppliedPendingDashersOpen !== undefined)
-                  setIsAppliedPendingDashersOpen(
-                    state.isAppliedPendingDashersOpen,
-                  );
-                if (state.isReverifDashersOpen !== undefined)
-                  setIsReverifDashersOpen(state.isReverifDashersOpen);
-                if (state.showNonZeroOnly !== undefined)
-                  setShowNonZeroOnly(state.showNonZeroOnly);
-                if (state.dasherSort) setDasherSort(state.dasherSort);
+                  // Core data
+                  setPrices(normalized.prices || []);
+                  setMessages(normalized.messages || []);
+                  setCategories(normalized.categories || []);
+
+                  // Dasher data
+                  if (normalized.noteCategories) setNoteCategories(normalized.noteCategories);
+                  if (normalized.dasherCategories) setDasherCategories(normalized.dasherCategories);
+                  if (normalized.archivedDashers) setArchivedDashers(normalized.archivedDashers);
+                  if (normalized.deactivatedDashers) setDeactivatedDashers(normalized.deactivatedDashers);
+                  if (normalized.readyDashers) setReadyDashers(normalized.readyDashers);
+                  if (normalized.currentlyUsingDashers) setCurrentlyUsingDashers(normalized.currentlyUsingDashers);
+                  if (normalized.appealedDashers) setAppealedDashers(normalized.appealedDashers);
+                  if (normalized.lockedDashers) setLockedDashers(normalized.lockedDashers);
+                  if (normalized.appliedPendingDashers) setAppliedPendingDashers(normalized.appliedPendingDashers);
+                  if (normalized.reverifDashers) setReverifDashers(normalized.reverifDashers);
+
+                  // Collapsed states
+                  if (normalized.collapsedCategories) setCollapsedCategories(normalized.collapsedCategories);
+                  if (normalized.collapsedStores) setCollapsedStores(normalized.collapsedStores);
+                  if (normalized.collapsedDashers) setCollapsedDashers(normalized.collapsedDashers);
+                  if (normalized.collapsedArchivedDashers) setCollapsedArchivedDashers(normalized.collapsedArchivedDashers);
+                  if (normalized.collapsedDasherCategories) setCollapsedDasherCategories(normalized.collapsedDasherCategories);
+                  if (normalized.collapsedNoteCategories) setCollapsedNoteCategories(normalized.collapsedNoteCategories);
+                  if (normalized.collapsedDeactivatedDashers) setCollapsedDeactivatedDashers(normalized.collapsedDeactivatedDashers);
+                  if (normalized.collapsedLockedDashers) setCollapsedLockedDashers(normalized.collapsedLockedDashers);
+                  if (normalized.collapsedAppliedPendingDashers) setCollapsedAppliedPendingDashers(normalized.collapsedAppliedPendingDashers);
+                  if (normalized.collapsedReverifDashers) setCollapsedReverifDashers(normalized.collapsedReverifDashers);
+
+                  // UI states
+                  if (normalized.isArchivedDashersOpen !== undefined) setIsArchivedDashersOpen(normalized.isArchivedDashersOpen);
+                  if (normalized.isDeactivatedDashersOpen !== undefined) setIsDeactivatedDashersOpen(normalized.isDeactivatedDashersOpen);
+                  if (normalized.isReadyDashersOpen !== undefined) setIsReadyDashersOpen(normalized.isReadyDashersOpen);
+                  if (normalized.isCurrentlyUsingDashersOpen !== undefined) setIsCurrentlyUsingDashersOpen(normalized.isCurrentlyUsingDashersOpen);
+                  if (normalized.isAppealedDashersOpen !== undefined) setIsAppealedDashersOpen(normalized.isAppealedDashersOpen);
+                  if (normalized.isLockedDashersOpen !== undefined) setIsLockedDashersOpen(normalized.isLockedDashersOpen);
+                  if (normalized.isAppliedPendingDashersOpen !== undefined) setIsAppliedPendingDashersOpen(normalized.isAppliedPendingDashersOpen);
+                  if (normalized.isReverifDashersOpen !== undefined) setIsReverifDashersOpen(normalized.isReverifDashersOpen);
+                  if (normalized.showNonZeroOnly !== undefined) setShowNonZeroOnly(normalized.showNonZeroOnly);
+                  if (normalized.dasherSort) setDasherSort(normalized.dasherSort);
+                };
+
+                // Apply all updates in a non-blocking transition (React 18)
+                startImportTransition(() => {
+                  applyBatchedImport();
+                });
 
                 setImportNotification(`✅ Imported data from ${file.name}`);
                 setTimeout(() => setImportNotification(""), 3000);
@@ -5800,7 +5848,7 @@
         // Cache for getDasherTitle results (Performance Optimization Phase 1.2)
         const dasherTitleCache = useRef(new Map());
 
-        const getDasherTitle = (dasher) => {
+        const getDasherTitle = useCallback((dasher) => {
           try {
             // Dual-speed timer (Phase 3): Use fast timer for critical dashers (< 1hr), slow timer for others
             let timerTickToUse = slowTimerTick;
@@ -5926,7 +5974,7 @@
             );
             return errorResult;
           }
-        };
+        }, [timerTick, slowTimerTick, parseBalanceValue, calculateDasherTimeStatus]);
 
         // Reusable full dasher details block (editing-aware)
         const renderDasherDetails = (
@@ -7518,28 +7566,8 @@
             });
           }
 
-          // Verify the move took effect; if not, attempt a forced move on next tick
-          if (DEV && beforeCounts) {
-            setTimeout(() => {
-              try {
-                const after = getBucketCounts();
-                const unchanged =
-                  JSON.stringify(after) === JSON.stringify(beforeCounts);
-                if (unchanged) {
-                  console.warn(
-                    "[DashBash] moveDasher detected unchanged counts, applying fallback",
-                    { dasherId, toKey, before: beforeCounts, after },
-                  );
-                  forceRemoveDasherEverywhere(dasherId);
-                  // Use the same insertion path to preserve stamping/originalCategory
-                  insertDasherIntoBucket(dasher, toKey, fromCategoryId);
-                  console.debug("[DashBash] fallback applied", {
-                    post: getBucketCounts(),
-                  });
-                }
-              } catch {}
-            }, 0);
-          }
+          // Fallback verification disabled (v1.9.4) - was causing console spam and loops
+          // The primary move logic above is reliable; fallback retry creates more issues than it solves
 
           requestPersist();
         };
@@ -7612,7 +7640,7 @@
           }, 150);
         };
 
-        const renderMoveButtons = (currentKey, dasherId) => {
+        const renderMoveButtons = useCallback((currentKey, dasherId) => {
           const order = [
             {
               key: "main",
@@ -7691,7 +7719,7 @@
                 ),
               ),
           );
-        };
+        }, [moveDasher]);
 
         // Toggle dasher flags (CRIMSON, RED CARD, APPEALED) across all buckets
         function toggleDasherFlag(dasherId, flag) {

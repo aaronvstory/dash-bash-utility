@@ -196,7 +196,7 @@
 
               const versionPoll = setInterval(
                 () => requestVersionCheck("interval"),
-                300000,
+                3600000, // 60 minutes (reduced from 5 min for performance)
               );
 
               const cleanup = () => {
@@ -271,14 +271,11 @@
         navigator.serviceWorker.ready.then(() => requestVersionCheck("ready"));
       }
 
-      document.addEventListener("visibilitychange", () => {
-        if (!document.hidden) {
-          requestVersionCheck("visibilitychange");
-        }
-      });
+      // Removed visibilitychange listener - redundant with focus event
+      // Keep focus event for responsive updates when user returns to app
       window.addEventListener("focus", () => requestVersionCheck("focus"));
     </script>
 
-    <script src="dash-bash-compiled.js?v=1.9.1"></script>
+    <script src="dash-bash-compiled.js?v=1.9.3"></script>
   </body>
 </html>
