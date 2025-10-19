@@ -331,6 +331,9 @@
           deriveDasherIdentity,
           getDasherAnchorId,
           parseBalanceValue,
+          // Balance editing props
+          editingBalanceValue,
+          setEditingBalanceValue,
         }) => {
           const dasherTitle = getDasherTitle(dasher);
           const anchorIdentity = deriveDasherIdentity(dasher, identityFallback);
@@ -497,6 +500,8 @@
                     null,
                     isEditing,
                     bucketType,
+                    editingBalanceValue,
+                    setEditingBalanceValue,
                   )}
                 </div>
               )}
@@ -1107,6 +1112,9 @@
           balance: 0,
           notes: "",
         });
+        
+        // Track the balance value during editing separately to prevent formatting during typing
+        const [editingBalanceValue, setEditingBalanceValue] = useState("");
         const [draggedDasher, setDraggedDasher] = useState({
           categoryId: "",
           dasherIndex: -1,
@@ -5856,14 +5864,82 @@
           }, 100);
         };
 
+        // Helper to find a dasher by categoryId and dasherId
+        const findDasherById = (categoryId, dasherId) => {
+          // Check in dasher categories
+          const category = dasherCategories.find(cat => cat.id === categoryId);
+          if (category && category.dashers) {
+            const dasher = category.dashers.find(d => d.id === dasherId);
+            if (dasher) return dasher;
+          }
+          
+          // Check in ready dashers
+          if (categoryId === "ready") {
+            const dasher = readyDashers.find(d => d.id === dasherId);
+            if (dasher) return dasher;
+          }
+          
+          // Check in currently using dashers
+          if (categoryId === "currently-using") {
+            const dasher = currentlyUsingDashers.find(d => d.id === dasherId);
+            if (dasher) return dasher;
+          }
+          
+          // Check in other buckets
+          if (categoryId === "appealed") {
+            const dasher = appealedDashers.find(d => d.id === dasherId);
+            if (dasher) return dasher;
+          }
+          
+          if (categoryId === "applied-pending") {
+            const dasher = appliedPendingDashers.find(d => d.id === dasherId);
+            if (dasher) return dasher;
+          }
+          
+          if (categoryId === "reverif") {
+            const dasher = reverifDashers.find(d => d.id === dasherId);
+            if (dasher) return dasher;
+          }
+          
+          if (categoryId === "locked") {
+            const dasher = lockedDashers.find(d => d.id === dasherId);
+            if (dasher) return dasher;
+          }
+          
+          if (categoryId === "deactivated") {
+            const dasher = deactivatedDashers.find(d => d.id === dasherId);
+            if (dasher) return dasher;
+          }
+          
+          if (categoryId === "archived") {
+            const dasher = archivedDashers.find(d => d.id === dasherId);
+            if (dasher) return dasher;
+          }
+          
+          return null;
+        };
+
         const toggleEditDasher = (categoryId, dasherId) => {
           if (
             editingDasher.categoryId === categoryId &&
             editingDasher.dasherId === dasherId
           ) {
+            // Exiting edit mode - save the balance value
+            if (editingBalanceValue !== "") {
+              // Save the balance value when exiting edit mode
+              updateListField("balance", editingBalanceValue);
+            }
             setEditingDasher({ categoryId: "", dasherId: "" });
+            setEditingBalanceValue(""); // Clear when exiting edit mode
           } else {
             setEditingDasher({ categoryId, dasherId });
+            // Find the dasher and initialize the balance value for editing
+            const dasher = findDasherById(categoryId, dasherId);
+            if (dasher) {
+              // Store the raw balance value without formatting
+              const balanceStr = dasher.balance ? String(dasher.balance) : "";
+              setEditingBalanceValue(balanceStr);
+            }
           }
         };
 
@@ -6247,6 +6323,8 @@
           timeStatus,
           isEditing = false,
           categoryId = null,
+          editingBalanceValue = "",
+          setEditingBalanceValue = null,
         ) => {
           if (!dasher || !Array.isArray(list) || typeof setList !== "function")
             return null;
@@ -6302,7 +6380,8 @@
             const prevNum = parseBalanceValue(dasher.balance);
             const nextNum = hasFiniteValue ? parseBalanceValue(rawInput) : prevNum;
             const delta = hasFiniteValue ? nextNum - prevNum : 0;
-            const shouldSyncPeers = hasFiniteValue && !isInterimValue;
+            // Don't sync peers during active typing - only update the current dasher
+            const shouldSyncPeers = false; // Changed: Never sync during typing
             const historyUpdatesByIdentity = shouldSyncPeers ? new Map() : null;
 
             primaryDescriptors.forEach((descriptor) => {
@@ -6314,12 +6393,16 @@
                 const existingPrev = parseBalanceValue(existing.balance);
                 const history = ensureArray(existing.earningsHistory);
 
-                if (!shouldSyncPeers && descriptor.meta.dasher !== dasher) {
+                // Skip updating other dashers when not syncing peers
+                if (!shouldSyncPeers && existing.id !== dasher.id) {
                   return existing;
                 }
 
                 let nextBalanceValue;
-                if (descriptor.meta.dasher === dasher) {
+                // Check if this is the dasher being edited
+                const isCurrentDasher = existing.id === dasher.id;
+                if (isCurrentDasher) {
+                  // Keep raw input for the dasher being edited - no formatting
                   nextBalanceValue = rawInput;
                 } else {
                   const updatedValue = shouldSyncPeers
@@ -6745,9 +6828,12 @@
                   isEditing
                     ? React.createElement("input", {
                         type: "text",
-                        value: dasher.balance || "",
-                        onChange: (e) =>
-                          updateListField("balance", e.target.value),
+                        value: editingBalanceValue,
+                        onChange: (e) => {
+                          // Just update the local editing value, no formatting
+                          setEditingBalanceValue(e.target.value);
+                        },
+                        // Removed onBlur to prevent formatting during edit
                         className:
                           "flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-gray-400",
                       })
@@ -11769,6 +11855,8 @@
                                                     timeStatus,
                                                     isEditing,
                                                     category.id,
+                                                    editingBalanceValue,
+                                                    setEditingBalanceValue,
                                                   )}
                                                 </div>
                                               )}
@@ -11918,6 +12006,8 @@
                                   deriveDasherIdentity={deriveDasherIdentity}
                                   getDasherAnchorId={getDasherAnchorId}
                                   parseBalanceValue={parseBalanceValue}
+                                  editingBalanceValue={editingBalanceValue}
+                                  setEditingBalanceValue={setEditingBalanceValue}
                                 />
                               );
                             })
@@ -12270,6 +12360,8 @@
                                           null,
                                           isEditing,
                                           "currently-using",
+                                          editingBalanceValue,
+                                          setEditingBalanceValue,
                                         )}
                                       </div>
                                     )}
@@ -12612,6 +12704,8 @@
                                         null,
                                         isEditing,
                                         "appealed",
+                                        editingBalanceValue,
+                                        setEditingBalanceValue,
                                       )}
                                     </div>
                                   )}
@@ -12943,6 +13037,8 @@
                                           null,
                                           isEditing,
                                           "applied-pending",
+                                          editingBalanceValue,
+                                          setEditingBalanceValue,
                                         )}
                                       </div>
                                     )}
@@ -13265,6 +13361,8 @@
                                         null,
                                         isEditing,
                                         "reverif",
+                                        editingBalanceValue,
+                                        setEditingBalanceValue,
                                       )}
                                     </div>
                                   )}
@@ -13582,6 +13680,8 @@
                                         null,
                                         isEditing,
                                         "locked",
+                                        editingBalanceValue,
+                                        setEditingBalanceValue,
                                       )}
                                     </div>
                                   )}
@@ -13936,6 +14036,8 @@
                                       timeStatus,
                                       isEditing,
                                       "deactivated",
+                                      editingBalanceValue,
+                                      setEditingBalanceValue,
                                     )}
                                   </div>
                                 )}
@@ -14270,6 +14372,8 @@
                                       timeStatus,
                                       isEditing,
                                       "archived",
+                                      editingBalanceValue,
+                                      setEditingBalanceValue,
                                     )}
                                   </div>
                                 )}
