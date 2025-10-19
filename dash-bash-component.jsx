@@ -1,9 +1,12 @@
 
+      console.log("🚀 SCRIPT LOADING - Top of dash-bash-component.jsx");
       const { useState, useEffect, useRef, useCallback, useMemo, useTransition } = React;
       // [PERF-STAGE2] Phase 2 memo helper
       const memo = React.memo;
+      console.log("✅ React hooks destructured successfully");
       // [PERF-STAGE6] react-window for virtualization
-      const { FixedSizeList: VirtualList } = window.ReactWindow || {};
+      // Use getter function instead of destructuring to avoid timing issues with adapter
+      const getVirtualList = () => window.ReactWindow?.FixedSizeList || window.ReactWindow?.List;
 
       // Simple icon component wrapper for Lucide
       const Icon = ({ name, size = 20, className = "" }) => {
@@ -9384,21 +9387,8 @@
 
         const targetAmount = parseFloat(target) || 0;
 
-        // Render gate (v1.9.5): Show loading overlay during import to prevent DOM reconciliation
-        if (isImporting) {
-          return (
-            <div className="fixed inset-0 flex items-center justify-center bg-gray-900/80 backdrop-blur-sm z-[9999]">
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-8 shadow-2xl">
-                <div className="flex items-center gap-4">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
-                  <span className="text-xl text-gray-200">Importing data...</span>
-                </div>
-              </div>
-            </div>
-          );
-        }
-
         // [PERF-STAGE7] periodic performance summary logger
+        // IMPORTANT: This hook must be BEFORE any conditional returns to avoid React Hooks violations
         useEffect(() => {
           const interval = setInterval(() => {
             const measures = performance.getEntriesByType('measure');
@@ -9412,6 +9402,43 @@
           }, 8000);
           return () => clearInterval(interval);
         }, []);
+
+        // [FIX] Set all renderReady flags to true after import completes
+        const wasImportingRef = useRef(false);
+        useEffect(() => {
+          // Only set renderReady flags when transitioning from importing (true) to not importing (false)
+          if (wasImportingRef.current && !isImporting) {
+            // Small delay to ensure state updates have propagated
+            const timer = setTimeout(() => {
+              setDashersRenderReady(true);
+              setReadyRenderReady(true);
+              setUsingRenderReady(true);
+              setAppealedRenderReady(true);
+              setAppliedRenderReady(true);
+              setReverifRenderReady(true);
+              setLockedRenderReady(true);
+              setDeactivatedRenderReady(true);
+              setArchivedRenderReady(true);
+            }, 100);
+            return () => clearTimeout(timer);
+          }
+          // Track previous isImporting state
+          wasImportingRef.current = isImporting;
+        }, [isImporting]);
+
+        // Render gate (v1.9.5): Show loading overlay during import to prevent DOM reconciliation
+        if (isImporting) {
+          return (
+            <div className="fixed inset-0 flex items-center justify-center bg-gray-900/80 backdrop-blur-sm z-[9999]">
+              <div className="bg-gray-800 border border-gray-700 rounded-xl p-8 shadow-2xl">
+                <div className="flex items-center gap-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
+                  <span className="text-xl text-gray-200">Importing data...</span>
+                </div>
+              </div>
+            </div>
+          );
+        }
 
         return (
           <div className="min-h-screen text-white">
@@ -12215,8 +12242,8 @@
                             </div>
                           ) : (
                             /* [PERF-STAGE6] Virtualized Ready Dashers List with search-safe filter */
-                            filteredReadyDashers.length > 0 && VirtualList
-                              ? React.createElement(VirtualList, {
+                            filteredReadyDashers.length > 0 && getVirtualList()
+                              ? React.createElement(getVirtualList(), {
                                   height: 600,
                                   itemCount: filteredReadyDashers.length,
                                   itemSize: 160,
@@ -15839,7 +15866,66 @@
         );
       };
 
+      // Expose components globally for debugging and external access
+      window.EnhancedCalculator = EnhancedCalculator;
+      window.DasherCard = DasherCard;
+      window.Icon = Icon;
+      window.Trash2 = Trash2;
+      window.Plus = Plus;
+      window.Copy = Copy;
+      window.ChevronDown = ChevronDown;
+      window.ChevronUp = ChevronUp;
+      window.ChevronsDown = ChevronsDown;
+      window.ChevronsUp = ChevronsUp;
+      window.Edit2 = Edit2;
+      window.Check = Check;
+      window.Save = Save;
+      window.X = X;
+      window.GripVertical = GripVertical;
+      window.Clock = Clock;
+      window.MapPin = MapPin;
+      window.Calculator = Calculator;
+      window.MessageSquare = MessageSquare;
+      window.Building2 = Building2;
+      window.Settings = Settings;
+      window.Download = Download;
+      window.Upload = Upload;
+      window.RefreshCw = RefreshCw;
+      window.CheckSquare = CheckSquare;
+      window.FolderOpen = FolderOpen;
+      window.FileText = FileText;
+      window.Timer = Timer;
+      window.Users = Users;
+      window.TimerOff = TimerOff;
+      window.BarChart3 = BarChart3;
+      window.Archive = Archive;
+      window.ArchiveRestore = ArchiveRestore;
+      window.UserX = UserX;
+      window.UserCheck = UserCheck;
+      window.CircleCheck = CircleCheck;
+      window.Activity = Activity;
+      window.Banknote = Banknote;
+      window.Lock = Lock;
+      window.RotateCcw = RotateCcw;
+      window.ShieldCheck = ShieldCheck;
+      window.Spinner = Spinner;
+      window.CalculatorSection = CalculatorSection;
+      window.MessagesSection = MessagesSection;
+      window.AddressBookSection = AddressBookSection;
+      window.NotesSection = NotesSection;
+      window.StatisticsSection = StatisticsSection;
+      console.log("✅ All components exposed to window (total:", Object.keys(window).filter(k => k.match(/^[A-Z]/) && typeof window[k] === 'function').length, ")");
+
       // Render the React component
+      console.log("🔍 Pre-render check:");
+      console.log("  EnhancedCalculator:", typeof EnhancedCalculator, EnhancedCalculator);
+      console.log("  React:", typeof React);
+      console.log("  ReactDOM:", typeof ReactDOM);
+      console.log("  document.getElementById('root'):", document.getElementById("root"));
+
       const root = ReactDOM.createRoot(document.getElementById("root"));
+      console.log("  Root created:", root);
+      console.log("  About to render EnhancedCalculator...");
       root.render(React.createElement(EnhancedCalculator));
+      console.log("✅ Render completed!");
     
