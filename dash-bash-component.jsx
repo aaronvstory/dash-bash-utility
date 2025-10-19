@@ -6114,7 +6114,70 @@
             // Exiting edit mode - save the balance value
             if (editingBalanceValue !== "") {
               // Save the balance value when exiting edit mode
-              updateListField("balance", editingBalanceValue);
+              const rawInput = editingBalanceValue;
+              const trimmedInput = rawInput.trim();
+              const hasFiniteValue = Number.isFinite(parseFloat(trimmedInput === "" ? "NaN" : trimmedInput));
+              
+              if (hasFiniteValue) {
+                const dasher = findDasherById(categoryId, dasherId);
+                if (dasher) {
+                  // Update the dasher's balance directly
+                  const updateDashersInCategory = (categories) => {
+                    return categories.map(cat => {
+                      if (cat.id === categoryId && cat.dashers) {
+                        return {
+                          ...cat,
+                          dashers: cat.dashers.map(d =>
+                            d.id === dasherId ? { ...d, balance: rawInput } : d
+                          )
+                        };
+                      }
+                      return cat;
+                    });
+                  };
+                  
+                  // Update in the appropriate state based on categoryId
+                  if (categoryId === "ready") {
+                    setReadyDashers(prev => prev.map(d =>
+                      d.id === dasherId ? { ...d, balance: rawInput } : d
+                    ));
+                  } else if (categoryId === "currently-using") {
+                    setCurrentlyUsingDashers(prev => prev.map(d =>
+                      d.id === dasherId ? { ...d, balance: rawInput } : d
+                    ));
+                  } else if (categoryId === "appealed") {
+                    setAppealedDashers(prev => prev.map(d =>
+                      d.id === dasherId ? { ...d, balance: rawInput } : d
+                    ));
+                  } else if (categoryId === "applied-pending") {
+                    setAppliedPendingDashers(prev => prev.map(d =>
+                      d.id === dasherId ? { ...d, balance: rawInput } : d
+                    ));
+                  } else if (categoryId === "reverif") {
+                    setReverifDashers(prev => prev.map(d =>
+                      d.id === dasherId ? { ...d, balance: rawInput } : d
+                    ));
+                  } else if (categoryId === "locked") {
+                    setLockedDashers(prev => prev.map(d =>
+                      d.id === dasherId ? { ...d, balance: rawInput } : d
+                    ));
+                  } else if (categoryId === "deactivated") {
+                    setDeactivatedDashers(prev => prev.map(d =>
+                      d.id === dasherId ? { ...d, balance: rawInput } : d
+                    ));
+                  } else if (categoryId === "archived") {
+                    setArchivedDashers(prev => prev.map(d =>
+                      d.id === dasherId ? { ...d, balance: rawInput } : d
+                    ));
+                  } else {
+                    // Update in dasher categories
+                    setDasherCategories(prev => updateDashersInCategory(prev));
+                  }
+                  
+                  // Trigger save
+                  setTimeout(() => saveAllToLocalStorage(), 100);
+                }
+              }
             }
             setEditingDasher({ categoryId: "", dasherId: "" });
             setEditingBalanceValue(""); // Clear when exiting edit mode
