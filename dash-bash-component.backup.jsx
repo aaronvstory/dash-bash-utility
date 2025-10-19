@@ -1,7 +1,5 @@
 
       const { useState, useEffect, useRef, useCallback, useMemo, useTransition } = React;
-      // [PERF-STAGE2] Phase 2 memo helper
-      const memo = React.memo;
 
       // Simple icon component wrapper for Lucide
       const Icon = ({ name, size = 20, className = "" }) => {
@@ -300,16 +298,7 @@
         </div>
       );
 
-      // [PERF-STAGE2] Inline memoized section shells to prevent ripple re-renders.
-      // Keep them lightweight; pass only stable props.
-      const CalculatorSection = memo(function CalculatorSection({ children }) { return children; });
-      const MessagesSection   = memo(function MessagesSection({ children }) { return children; });
-      const AddressBookSection= memo(function AddressBookSection({ children }) { return children; });
-      const NotesSection      = memo(function NotesSection({ children }) { return children; });
-      const StatisticsSection = memo(function StatisticsSection({ children }) { return children; });
-
       // Memoized DasherCard component to prevent unnecessary re-renders (v1.9.2 Performance Optimization)
-      // [PERF-STAGE1] Added local timer to eliminate global re-renders
       const DasherCard = React.memo(
         ({
           dasher,
@@ -346,16 +335,7 @@
           editingBalanceValue,
           setEditingBalanceValue,
         }) => {
-          // [PERF-STAGE1] Local timer - only ticks when card is expanded
-          const [localTick, setLocalTick] = useState(0);
-          
-          useEffect(() => {
-            if (isCollapsed) return; // Don't tick when collapsed
-            const id = setInterval(() => setLocalTick(t => t + 1), 1000);
-            return () => clearInterval(id);
-          }, [isCollapsed]);
-
-          const dasherTitle = getDasherTitle(dasher, localTick);
+          const dasherTitle = getDasherTitle(dasher);
           const anchorIdentity = deriveDasherIdentity(dasher, identityFallback);
           const anchorId = getDasherAnchorId(anchorIdentity);
 
@@ -1143,10 +1123,9 @@
           useState(null);
         const [collapsedDasherCategories, setCollapsedDasherCategories] =
           useState({});
-        // [PERF-STAGE1] Global timers disabled - moved to local DasherCard state
-        // const [timerTick, setTimerTick] = useState(0);
+        const [timerTick, setTimerTick] = useState(0);
         // Dual-speed timer system (Phase 3): fast updates for critical dashers, slow for others
-        // const [slowTimerTick, setSlowTimerTick] = useState(0);
+        const [slowTimerTick, setSlowTimerTick] = useState(0);
 
         // Track visible dashers for performance optimization (Phase 2.1)
         const [visibleDasherIds, setVisibleDasherIds] = useState(new Set());
@@ -1235,10 +1214,8 @@
           return () => clearInterval(interval);
         }, []);
 
-        // [PERF-STAGE1] Global timer useEffect disabled - each DasherCard now has its own local timer
         // Smart timer batching (v1.9.4 Performance): Only update when visible dashers need it
         // Use refs to track time without triggering re-renders, then batch updates
-        /* COMMENTED OUT - PERF STAGE 1
         const lastFastUpdate = useRef(Date.now());
         const lastSlowUpdate = useRef(Date.now());
 
@@ -1267,7 +1244,6 @@
           }, 1000); // Check every second but only update state when needed
           return () => clearInterval(interval);
         }, [visibleDasherIds, isImporting]);
-        */
 
         // MOVED UP: Filtered dasher useMemo hooks (must appear before useEffect that uses them)
         const filteredReadyDashers = useMemo(
@@ -6209,14 +6185,20 @@
         // Cache for getDasherTitle results (Performance Optimization Phase 1.2)
         const dasherTitleCache = useRef(new Map());
 
-        // [PERF-STAGE1] getDasherTitle now accepts localTick from DasherCard
-        const getDasherTitle = useCallback((dasher, localTick = 0) => {
+        const getDasherTitle = useCallback((dasher) => {
           try {
-            // [PERF-STAGE1] Use localTick passed from DasherCard instead of global timer
-            // This allows each card to update independently without re-rendering the entire tree
-            
+            // Dual-speed timer (Phase 3): Use fast timer for critical dashers (< 1hr), slow timer for others
+            let timerTickToUse = slowTimerTick;
+            if (dasher?.lastUsed) {
+              const diffMs = new Date() - new Date(dasher.lastUsed);
+              const remainingHours = 24 - (diffMs / (1000 * 60 * 60));
+              if (remainingHours > 0 && remainingHours <= 1) {
+                timerTickToUse = timerTick; // Use fast timer for last hour
+              }
+            }
+
             // Generate cache key from dasher properties that affect display
-            const cacheKey = `${dasher?.id || 'null'}-${dasher?.name || ''}-${dasher?.email || ''}-${dasher?.balance || ''}-${dasher?.lastUsed || ''}-${localTick}`;
+            const cacheKey = `${dasher?.id || 'null'}-${dasher?.name || ''}-${dasher?.email || ''}-${dasher?.balance || ''}-${dasher?.lastUsed || ''}-${timerTickToUse}`;
 
             // Check cache first
             if (dasherTitleCache.current.has(cacheKey)) {
@@ -6329,7 +6311,7 @@
             );
             return errorResult;
           }
-        }, [parseBalanceValue, calculateDasherTimeStatus]); // [PERF-STAGE1] Removed timerTick/slowTimerTick deps
+        }, [timerTick, slowTimerTick, parseBalanceValue, calculateDasherTimeStatus]);
 
         // Reusable full dasher details block (editing-aware)
         const renderDasherDetails = (
@@ -9311,7 +9293,7 @@
 
               <div className="space-y-4">
                 {/* Target Calculator Section */}
-                <CalculatorSection><div className="bg-gray-800 rounded-lg overflow-hidden">
+                <div className="bg-gray-800 rounded-lg overflow-hidden">
                   <button
                     onClick={() => setIsCalculatorOpen(!isCalculatorOpen)}
                     className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
@@ -9610,10 +9592,10 @@
                       )}
                     </div>
                   )}
-                </div></CalculatorSection>
+                </div>
 
                 {/* Quick Messages Section */}
-                <MessagesSection><div className="bg-gray-800 rounded-lg overflow-hidden">
+                <div className="bg-gray-800 rounded-lg overflow-hidden">
                   <button
                     onClick={() => setIsMessagesOpen(!isMessagesOpen)}
                     className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
@@ -9760,10 +9742,10 @@
                       )}
                     </div>
                   )}
-                </div></MessagesSection>
+                </div>
 
                 {/* Address Book Section */}
-                <AddressBookSection><div className="bg-gray-800 rounded-lg overflow-hidden">
+                <div className="bg-gray-800 rounded-lg overflow-hidden">
                   <button
                     onClick={() => setIsAddressBookOpen(!isAddressBookOpen)}
                     className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
@@ -10356,10 +10338,10 @@
                       )}
                     </div>
                   )}
-                </div></AddressBookSection>
+                </div>
 
                 {/* Notes Section */}
-                <NotesSection><div className="bg-gray-800 rounded-lg overflow-hidden">
+                <div className="bg-gray-800 rounded-lg overflow-hidden">
                   <button
                     onClick={() => setIsNotesOpen(!isNotesOpen)}
                     className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
@@ -10680,7 +10662,7 @@
                       </button>
                     </div>
                   )}
-                </div></NotesSection>
+                </div>
 
                 {/* ========== DASHERS MANAGEMENT (GLOBAL CONTROLS) ========== */}
                 <div className="flex items-center gap-3 my-8">
@@ -14417,7 +14399,7 @@
                 </div>
 
                 {/* Statistics Section */}
-                <StatisticsSection><div className="bg-gray-800 rounded-lg overflow-hidden">
+                <div className="bg-gray-800 rounded-lg overflow-hidden">
                   <button
                     onClick={() => setIsStatisticsOpen(!isStatisticsOpen)}
                     className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 transition-colors"
@@ -15301,7 +15283,7 @@
                       </div>
                     </div>
                   )}
-                </div></StatisticsSection>
+                </div>
 
                 {/* State Management Section */}
                 <div className="bg-gray-800 rounded-lg overflow-hidden">
