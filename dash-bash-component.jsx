@@ -649,6 +649,10 @@
         },
         (prevProps, nextProps) => {
           // Custom comparison function - only re-render if these props actually changed
+          // [FIX] Add null check for initial mount when prevProps is undefined
+          if (!prevProps || !prevProps.dasher || !nextProps || !nextProps.dasher) {
+            return false; // Re-render if props are missing
+          }
           return (
             prevProps.dasher.id === nextProps.dasher.id &&
             prevProps.dasher.name === nextProps.dasher.name &&
@@ -1480,15 +1484,21 @@
 
         // Toggle helpers that expose a spinner frame before heavy render
         const toggleOpenWithSpinner = (isOpen, setOpen, setReady) => {
+          console.log('[DEBUG] toggleOpenWithSpinner called:', { isOpen });
           if (isOpen) {
+            console.log('[DEBUG] Closing section');
             setOpen(false);
             setReady(false);
             requestPersist();
           } else {
+            console.log('[DEBUG] Opening section');
             setOpen(true);
             setReady(false);
             // Give the browser a frame to paint the spinner
-            setTimeout(() => setReady(true), 60);
+            setTimeout(() => {
+              console.log('[DEBUG] Setting renderReady to true');
+              setReady(true);
+            }, 60);
             requestPersist();
           }
         };
@@ -2757,6 +2767,9 @@
             "collapsedNoteCategories",
             "collapsedArchivedDashers",
             "collapsedDeactivatedDashers",
+            "collapsedReadyDashers",
+            "collapsedCurrentlyUsingDashers",
+            "collapsedAppealedDashers",
             "collapsedLockedDashers",
             "collapsedAppliedPendingDashers",
             "collapsedReverifDashers",
@@ -5495,7 +5508,7 @@
 
         const isStoreCollapsed = (categoryId, storeId) => {
           const key = `${categoryId}-${storeId}`;
-          return collapsedStores[key] || false;
+          return collapsedStores[key] ?? true;
         };
 
         const getStoresStatusCount = (stores) => {
@@ -10126,7 +10139,7 @@
                           category.stores,
                         );
                         const isCategoryCollapsed =
-                          collapsedCategories[category.id];
+                          collapsedCategories[category.id] ?? true;
 
                         return (
                           <div
@@ -10692,7 +10705,7 @@
                       <div className="space-y-3">
                         {noteCategories.map((category) => {
                           const isCategoryCollapsed =
-                            collapsedNoteCategories[category.id];
+                            collapsedNoteCategories[category.id] ?? true;
 
                           return (
                             <div
@@ -11600,8 +11613,9 @@
                           dasherCategories.length > 0 &&
                           dasherCategories.map((category) => {
                             if (!category || !category.dashers) return null;
+                            // Always collapse empty categories, otherwise use saved state (default true)
                             const isCategoryCollapsed =
-                              collapsedDasherCategories[category.id];
+                              (category.dashers.length === 0) ? true : (collapsedDasherCategories[category.id] ?? true);
                             const categoryDashersFiltered =
                               filterAndSortDashers(category.dashers || []);
 
@@ -12227,6 +12241,13 @@
                   </div>
                   {isReadyDashersOpen &&
                     (readyRenderReady ? (
+                      console.log('[DEBUG] Rendering Ready dashers:', {
+                        readyDashersCount: readyDashers.length,
+                        filteredCount: filteredReadyDashers.length,
+                        firstDasher: filteredReadyDashers[0],
+                        collapsedReadyDashers: Object.keys(collapsedReadyDashers).length,
+                        bucketTimerHandlers: !!bucketTimerHandlers
+                      }),
                       <div id="bucket-ready" className="mt-2">
                         <div
                           className="dasher-grid"
@@ -12241,35 +12262,26 @@
                               No ready dashers
                             </div>
                           ) : (
-                            /* [PERF-STAGE6] Virtualized Ready Dashers List with search-safe filter */
-                            filteredReadyDashers.length > 0 && getVirtualList()
-                              ? React.createElement(getVirtualList(), {
-                                  height: 600,
-                                  itemCount: filteredReadyDashers.length,
-                                  itemSize: 160,
-                                  width: "100%",
-                                  overscanCount: 4,
-                                  children: ({ index, style }) => {
-                                    const dasher = filteredReadyDashers[index];
-                                    if (!dasher) return null;
-                                    const isSelected = selectedItems.readyDashers.has(dasher.id);
-                                    const isCollapsed = !!collapsedReadyDashers[dasher.id];
-                                    const isEditing = isDasherEditing("ready", dasher.id);
-                                    const cardRecentlyMoved = recentlyMoved instanceof Set && recentlyMoved.has(dasher.id);
-                                    const movedNote = dasher.readyAt ? `Ready: ${formatRelativeTime(dasher.readyAt)}` : null;
-                                    const identityFallback = `ready-${index}`;
+                            /* Direct rendering without virtualization (bucket sections typically have few items) */
+                            filteredReadyDashers.map((dasher, index) => {
+                              const isSelected = selectedItems.readyDashers.has(dasher.id);
+                              const isCollapsed = !!collapsedReadyDashers[dasher.id];
+                              const isEditing = isDasherEditing("ready", dasher.id);
+                              const cardRecentlyMoved = recentlyMoved instanceof Set && recentlyMoved.has(dasher.id);
+                              const movedNote = dasher.readyAt ? `Ready: ${formatRelativeTime(dasher.readyAt)}` : null;
+                              const identityFallback = `ready-${index}`;
 
-                                    return React.createElement("div", { style, key: dasher.id },
-                                      React.createElement(DasherCard, {
-                                        dasher: dasher,
-                                        bucketType: "ready",
-                                        index: index,
-                                        isSelected: isSelected,
-                                        isCollapsed: isCollapsed,
-                                        isEditing: isEditing,
-                                        isEditMode: isEditMode,
-                                        cardRecentlyMoved: cardRecentlyMoved,
-                                        movedNote: movedNote,
+                              return React.createElement(DasherCard, {
+                                key: dasher.id,
+                                dasher: dasher,
+                                bucketType: "ready",
+                                index: index,
+                                isSelected: isSelected,
+                                isCollapsed: isCollapsed,
+                                isEditing: isEditing,
+                                isEditMode: isEditMode,
+                                cardRecentlyMoved: cardRecentlyMoved,
+                                movedNote: movedNote,
                                         identityFallback: identityFallback,
                                         onToggleSelect: () => handleToggleSelectReady(dasher.id),
                                         onToggleCollapse: () => toggleBucketRowCollapsed("ready", dasher.id),
@@ -12291,11 +12303,8 @@
                                         parseBalanceValue: parseBalanceValue,
                                         editingBalanceValue: editingBalanceValue,
                                         setEditingBalanceValue: setEditingBalanceValue
-                                      })
-                                    );
-                                  }
-                                })
-                              : null
+                              });
+                            })
                           )}
                         </div>
                       </div>
