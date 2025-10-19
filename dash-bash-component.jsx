@@ -1,5 +1,10 @@
 
       console.log("🚀 SCRIPT LOADING - Top of dash-bash-component.jsx");
+
+      // Build stamp for version tracking
+      window.__DBU_BUILD__ = "2025-10-19T17:22:00Z-centralized-updateDasherEverywhere";
+      console.log("📦 Build:", window.__DBU_BUILD__);
+
       const { useState, useEffect, useRef, useCallback, useMemo, useTransition } = React;
       // [PERF-STAGE2] Phase 2 memo helper
       const memo = React.memo;
@@ -2787,7 +2792,13 @@
         const ensureImportWorker = () => {
           if (typeof Worker === "undefined") return null;
           if (!importWorkerRef.current) {
-            importWorkerRef.current = new Worker("import-worker.js");
+            try {
+              importWorkerRef.current = new Worker("import-worker.js");
+            } catch (err) {
+              // Worker file not found or failed to load, fallback to main thread parsing
+              console.warn("Import worker unavailable, using fallback JSON parsing:", err.message);
+              return null;
+            }
           }
           return importWorkerRef.current;
         };
@@ -6110,106 +6121,168 @@
          * @param {string|number} newBalance - The new balance value (raw input, can include formatting)
          * @returns {boolean} - Success status
          */
-        const updateDasherBalance = (categoryId, dasherId, newBalance) => {
-          // Validate inputs
-          if (!categoryId || !dasherId || newBalance === undefined || newBalance === null) {
-            console.warn('[updateDasherBalance] Missing required parameters', { categoryId, dasherId, newBalance });
+        /**
+         * Shared helper for identity-aware dasher balance updates.
+         * Uses the component-level getDescriptorsForDasher and mutateDasherByMeta
+         * to properly update dashers across ALL state arrays (preset + custom categories).
+         * 
+         * @param {string} categoryId - The category ID where dasher is located
+         * @param {string} dasherId - The dasher's unique ID
+         * @param {string|number} newBalance - The new balance value
+         * @returns {boolean} - Success status
+         */
+        // REMOVED: updateDasherBalance (replaced with updateDasher)
+        const updateDasherBalance_REMOVED = (categoryId, dasherId, newBalance) => {
+          console.log('[updateDasherBalance] START', { categoryId, dasherId, newBalance });
+          // Find the dasher first
+          const dasher = findDasherById(categoryId, dasherId);
+          console.log('[updateDasherBalance] Found dasher:', dasher);
+          if (!dasher) {
+            console.warn('[updateDasherBalance] Dasher not found', { categoryId, dasherId });
             return false;
           }
 
-          // Convert to string for consistency
-          const rawInput = typeof newBalance === "string" ? newBalance : String(newBalance);
+          // Convert to string for consistency (same as original updateListField)
+          const rawInput =
+            typeof newBalance === "string"
+              ? newBalance
+              : newBalance === null || newBalance === undefined
+                ? ""
+                : String(newBalance);
           const trimmedInput = rawInput.trim();
-
-          // Validate that it's a finite number (allow interim values like "-" or "." during typing)
-          const isInterimValue = 
+          
+          // Validate interim values (allow "-", ".", etc. during typing)
+          const isInterimValue =
             trimmedInput === "" ||
             trimmedInput === "-" ||
             trimmedInput === "." ||
             trimmedInput === "-." ||
             trimmedInput === "+";
 
-          const hasFiniteValue = Number.isFinite(parseFloat(trimmedInput === "" || trimmedInput === "+" ? "NaN" : trimmedInput));
+          const hasFiniteValue = Number.isFinite(
+            parseFloat(
+              trimmedInput === "" || trimmedInput === "+" ? "NaN" : trimmedInput,
+            ),
+          );
 
-          // For saving (non-interim), require a valid finite value
-          if (!isInterimValue && !hasFiniteValue) {
-            console.warn('[updateDasherBalance] Invalid balance value', { rawInput, trimmedInput });
+          // Get descriptors for identity-aware updates
+          const primaryDescriptors = getDescriptorsForDasher(dasher, {
+            preferredBucketId: categoryId ?? null,
+            fallbackHint: `${categoryId ?? "bucket"}-${dasher?.id ?? dasher?.email ?? dasher?.phone ?? "dash"}`,
+          });
+
+          console.log('[updateDasherBalance] Descriptors:', primaryDescriptors);
+          if (!primaryDescriptors || primaryDescriptors.length === 0) {
+            console.warn('[updateDasherBalance] No descriptors found - cannot update');
             return false;
           }
 
-          // Verify dasher exists
-          const dasher = findDasherById(categoryId, dasherId);
-          if (!dasher) {
-            console.warn('[updateDasherBalance] Dasher not found', { categoryId, dasherId });
-            return false;
-          }
+          // Calculate delta for balance changes
+          const prevNum = parseBalanceValue(dasher.balance);
+          const nextNum = hasFiniteValue ? parseBalanceValue(rawInput) : prevNum;
+          const delta = hasFiniteValue ? nextNum - prevNum : 0;
+          
+          // Don't sync peers during active typing - only update the current dasher
+          const shouldSyncPeers = false;
+          const nowIso = new Date().toISOString();
+          const historyUpdatesByIdentity = shouldSyncPeers ? new Map() : null;
 
-          // Helper to update dashers in a category array
-          const updateDashersInCategory = (categories) => {
-            return categories.map(cat => {
-              if (cat.id === categoryId && cat.dashers) {
-                return {
-                  ...cat,
-                  dashers: cat.dashers.map(d =>
-                    d.id === dasherId ? { ...d, balance: rawInput } : d
-                  )
-                };
+          // Update all descriptors using mutateDasherByMeta
+          console.log('[updateDasherBalance] Updating', primaryDescriptors.length, 'descriptors');
+          primaryDescriptors.forEach((descriptor) => {
+            const descriptorIdentity =
+              identityForMeta(descriptor.meta) || `ref::${descriptor.index}`;
+            
+            console.log('[updateDasherBalance] Mutating descriptor:', descriptor.meta);
+            mutateDasherByMeta(descriptor, (existing) => {
+              console.log('[updateDasherBalance] Mutator called with existing:', existing?.id, existing?.balance);
+              if (!existing) return existing;
+
+              const existingPrev = parseBalanceValue(existing.balance);
+              const history = ensureArray(existing.earningsHistory);
+
+              // Skip updating other dashers when not syncing peers
+              if (!shouldSyncPeers && existing.id !== dasher.id) {
+                console.log('[updateDasherBalance] Skipping peer dasher:', existing.id);
+                return existing;
               }
-              return cat;
+
+              let nextBalanceValue;
+              // Check if this is the dasher being edited
+              const isCurrentDasher = existing.id === dasher.id;
+              console.log('[updateDasherBalance] Is current dasher?', isCurrentDasher, 'rawInput:', rawInput);
+              if (isCurrentDasher) {
+                // Keep raw input for the dasher being edited - no formatting
+                nextBalanceValue = rawInput;
+              } else {
+                const updatedValue = shouldSyncPeers
+                  ? existingPrev + delta
+                  : existingPrev;
+                const clampedBalance = Math.max(
+                  -1000000,
+                  Math.min(1000000, Number.isFinite(updatedValue) ? updatedValue : existingPrev),
+                );
+                nextBalanceValue = Number.isFinite(clampedBalance)
+                  ? clampedBalance.toFixed(2)
+                  : existingPrev.toFixed(2);
+              }
+
+              let nextHistory = history;
+              if (shouldSyncPeers && delta > 0.000001) {
+                if (
+                  descriptorIdentity &&
+                  historyUpdatesByIdentity &&
+                  historyUpdatesByIdentity.has(descriptorIdentity)
+                ) {
+                  nextHistory =
+                    historyUpdatesByIdentity.get(descriptorIdentity);
+                } else {
+                  const historyEntry = {
+                    amount: Number(delta.toFixed(2)),
+                    at: nowIso,
+                    source: "balance-edit",
+                  };
+                  const updatedHistory = [...history, historyEntry];
+                  if (descriptorIdentity && historyUpdatesByIdentity) {
+                    historyUpdatesByIdentity.set(
+                      descriptorIdentity,
+                      updatedHistory,
+                    );
+                  }
+                  nextHistory = updatedHistory;
+                }
+              } else if (
+                shouldSyncPeers &&
+                descriptorIdentity &&
+                historyUpdatesByIdentity &&
+                historyUpdatesByIdentity.has(descriptorIdentity)
+              ) {
+                nextHistory =
+                  historyUpdatesByIdentity.get(descriptorIdentity);
+              }
+
+              console.log('[updateDasherBalance] Returning updated dasher:', { id: existing.id, oldBalance: existing.balance, newBalance: nextBalanceValue });
+              return {
+                ...existing,
+                balance: nextBalanceValue,
+                earningsHistory: nextHistory,
+              };
             });
-          };
+          });
 
-          // Update the appropriate state based on categoryId
-          try {
-            if (categoryId === "ready") {
-              setReadyDashers(prev => prev.map(d =>
-                d.id === dasherId ? { ...d, balance: rawInput } : d
-              ));
-            } else if (categoryId === "currently-using") {
-              setCurrentlyUsingDashers(prev => prev.map(d =>
-                d.id === dasherId ? { ...d, balance: rawInput } : d
-              ));
-            } else if (categoryId === "appealed") {
-              setAppealedDashers(prev => prev.map(d =>
-                d.id === dasherId ? { ...d, balance: rawInput } : d
-              ));
-            } else if (categoryId === "applied-pending") {
-              setAppliedPendingDashers(prev => prev.map(d =>
-                d.id === dasherId ? { ...d, balance: rawInput } : d
-              ));
-            } else if (categoryId === "reverif") {
-              setReverifDashers(prev => prev.map(d =>
-                d.id === dasherId ? { ...d, balance: rawInput } : d
-              ));
-            } else if (categoryId === "locked") {
-              setLockedDashers(prev => prev.map(d =>
-                d.id === dasherId ? { ...d, balance: rawInput } : d
-              ));
-            } else if (categoryId === "deactivated") {
-              setDeactivatedDashers(prev => prev.map(d =>
-                d.id === dasherId ? { ...d, balance: rawInput } : d
-              ));
-            } else if (categoryId === "archived") {
-              setArchivedDashers(prev => prev.map(d =>
-                d.id === dasherId ? { ...d, balance: rawInput } : d
-              ));
-            } else {
-              // Update in dasher categories (custom categories)
-              setDasherCategories(prev => updateDashersInCategory(prev));
-            }
-
-            // Trigger save only for valid finite values (not during typing)
-            if (hasFiniteValue && !isInterimValue) {
-              setTimeout(() => saveAllToLocalStorage(), 100);
-            }
-
-            return true;
-          } catch (error) {
-            console.error('[updateDasherBalance] Error updating state', error);
-            return false;
+          // Trigger save only for valid finite values (not during typing)
+          if (hasFiniteValue && !isInterimValue) {
+            console.log('[updateDasherBalance] Triggering persist');
+            requestPersist();
+          } else {
+            console.log('[updateDasherBalance] Skipping persist - interim value');
           }
+
+          console.log('[updateDasherBalance] COMPLETE');
+          return true;
         };
 
+        // [PERF-STAGE7] measure edit toggle
         // [PERF-STAGE7] measure edit toggle
         const toggleEditDasher = (categoryId, dasherId) => {
           performance.mark('toggleEdit-start');
@@ -6218,20 +6291,14 @@
             editingDasher.categoryId === categoryId &&
             editingDasher.dasherId === dasherId
           ) {
-            // Exiting edit mode - save the balance value using shared helper
+            // Exiting edit mode - save the balance value
             if (editingBalanceValue !== "") {
-              const success = updateDasherBalance(categoryId, dasherId, editingBalanceValue);
-              if (!success) {
-                console.warn('[toggleEditDasher] Failed to update balance', { 
-                  categoryId, 
-                  dasherId, 
-                  editingBalanceValue 
-                });
-              }
+              updateDasher(categoryId, dasherId, "balance", editingBalanceValue);
             }
             setEditingDasher({ categoryId: "", dasherId: "" });
             setEditingBalanceValue(""); // Clear when exiting edit mode
           } else {
+            // Entering edit mode
             setEditingDasher({ categoryId, dasherId });
             // Find the dasher and initialize the balance value for editing
             const dasher = findDasherById(categoryId, dasherId);
@@ -6299,42 +6366,70 @@
           }, 100);
         };
 
-        // [PERF-STAGE4] commit edited fields from a card
-        const onDraftCommit = useCallback((dasherId, draft) => {
+        // [CENTRALIZED UPDATE] Update a dasher everywhere (dasherCategories + all bucket arrays)
+        const updateDasherEverywhere = useCallback((dasherId, updates) => {
           if (!dasherId) return;
 
-          const apply = (list, setList) => {
+          // Helper to apply updates to a single dasher object
+          const applyUpdates = (dasher) => {
+            return {
+              ...dasher,
+              ...(updates.name !== undefined && { name: updates.name }),
+              ...(updates.email !== undefined && { email: updates.email }),
+              ...(updates.balance !== undefined && { balance: updates.balance }),
+              ...(updates.notes !== undefined && {
+                notes: Array.isArray(updates.notes)
+                  ? updates.notes
+                  : (typeof updates.notes === "string" ? updates.notes.split("\n").filter(Boolean) : dasher.notes)
+              }),
+              ...(updates.crimson !== undefined && { crimson: updates.crimson }),
+              ...(updates.fastPay !== undefined && { fastPay: updates.fastPay }),
+              ...(updates.redCard !== undefined && { redCard: updates.redCard }),
+              ...(updates.appealed !== undefined && { appealed: updates.appealed }),
+              ...(updates.lastUsed !== undefined && { lastUsed: updates.lastUsed }),
+              lastEditedAt: new Date().toISOString(),
+            };
+          };
+
+          // Generic update function for bucket arrays
+          const updateBucketArray = (list, setList) => {
             setList(prev => {
-              let touched = false;
               const next = prev.map(d => {
                 if (String(d.id) !== String(dasherId)) return d;
-                touched = true;
-                return {
-                  ...d,
-                  name: draft.name ?? d.name,
-                  email: draft.email ?? d.email,
-                  balance: draft.balance ?? d.balance,
-                  notes: Array.isArray(draft.notes) ? draft.notes : (typeof draft.notes === "string" ? draft.notes.split("\n").filter(Boolean) : d.notes),
-                  lastEditedAt: new Date().toISOString(),
-                };
+                return applyUpdates(d);
               });
-              return touched ? next : prev;
+              return next;
             });
           };
 
-          // Try each bucket until we find the dasher
-          apply(readyDashers, setReadyDashers);
-          apply(currentlyUsingDashers, setCurrentlyUsingDashers);
-          apply(appealedDashers, setAppealedDashers);
-          apply(reverifDashers, setReverifDashers);
-          apply(lockedDashers, setLockedDashers);
-          apply(appliedPendingDashers, setAppliedPendingDashers);
-          apply(deactivatedDashers, setDeactivatedDashers);
-          apply(archivedDashers, setArchivedDashers);
+          // Update dasherCategories (SINGLE SOURCE OF TRUTH for persistence)
+          setDasherCategories(prev => {
+            return prev.map(category => {
+              if (!category.dashers) return category;
 
-          // queue persistence (Phase 5 will batch this)
+              const updatedDashers = category.dashers.map(d => {
+                if (String(d.id) !== String(dasherId)) return d;
+                return applyUpdates(d);
+              });
+
+              return { ...category, dashers: updatedDashers };
+            });
+          });
+
+          // Update all bucket arrays to keep UI in sync
+          updateBucketArray(readyDashers, setReadyDashers);
+          updateBucketArray(currentlyUsingDashers, setCurrentlyUsingDashers);
+          updateBucketArray(appealedDashers, setAppealedDashers);
+          updateBucketArray(reverifDashers, setReverifDashers);
+          updateBucketArray(lockedDashers, setLockedDashers);
+          updateBucketArray(appliedPendingDashers, setAppliedPendingDashers);
+          updateBucketArray(deactivatedDashers, setDeactivatedDashers);
+          updateBucketArray(archivedDashers, setArchivedDashers);
+
+          // Queue persistence
           requestPersist();
         }, [
+          setDasherCategories,
           readyDashers, setReadyDashers,
           currentlyUsingDashers, setCurrentlyUsingDashers,
           appealedDashers, setAppealedDashers,
@@ -6345,6 +6440,19 @@
           archivedDashers, setArchivedDashers,
           requestPersist
         ]);
+
+        // [PERF-STAGE4] commit edited fields from a card
+        const onDraftCommit = useCallback((dasherId, draft) => {
+          if (!dasherId) return;
+
+          // Use centralized update helper
+          updateDasherEverywhere(dasherId, {
+            name: draft.name,
+            email: draft.email,
+            balance: draft.balance,
+            notes: draft.notes
+          });
+        }, [updateDasherEverywhere]);
 
         const toggleDasherCollapse = (categoryId, dasherId) => {
           const key = categoryId + "-" + dasherId;
@@ -8677,12 +8785,15 @@
           setCollapsedDasherCategories({});
 
           // Expand all individual dashers within categories
+          // Must explicitly set to false since default is true
           const allDashersExpanded = {};
           dasherCategories.forEach((cat) => {
-            cat.dashers.forEach((dasher) => {
-              const key = `${cat.id}-${dasher.id}`;
-              allDashersExpanded[key] = false;
-            });
+            if (cat.dashers) {
+              cat.dashers.forEach((dasher) => {
+                const key = `${cat.id}-${dasher.id}`;
+                allDashersExpanded[key] = false;
+              });
+            }
           });
           setCollapsedDashers(allDashersExpanded);
 
@@ -11182,6 +11293,7 @@
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => {
+                          expandAllDasherCategories();
                           expandKeySections();
                           setIsAppealedDashersOpen(true);
                           setIsAppliedPendingDashersOpen(true);
@@ -11198,6 +11310,7 @@
                       </button>
                       <button
                         onClick={() => {
+                          collapseAllDasherCategories();
                           collapseKeySections();
                           setIsAppealedDashersOpen(false);
                           setIsAppliedPendingDashersOpen(false);
@@ -11726,9 +11839,9 @@
                           dasherCategories.length > 0 &&
                           dasherCategories.map((category) => {
                             if (!category || !category.dashers) return null;
-                            // Always collapse empty categories, otherwise use saved state (default true)
+                            // Use saved collapse state (default true)
                             const isCategoryCollapsed =
-                              (category.dashers.length === 0) ? true : (collapsedDasherCategories[category.id] ?? true);
+                              collapsedDasherCategories[category.id] ?? true;
                             const categoryDashersFiltered =
                               filterAndSortDashers(category.dashers || []);
 
@@ -11820,9 +11933,8 @@
                                             category.id,
                                           );
                                         }}
-                                        className="p-1 transition-colors text-indigo-400 hover:text-indigo-300 disabled:opacity-30 disabled:cursor-default"
+                                        className="p-1 transition-colors text-indigo-400 hover:text-indigo-300"
                                         title="Collapse all dashers in this category"
-                                        disabled={category.dashers.length === 0}
                                       >
                                         <ChevronsUp size={14} />
                                       </button>
@@ -11833,9 +11945,8 @@
                                             category.id,
                                           );
                                         }}
-                                        className="p-1 transition-colors text-indigo-400 hover:text-indigo-300 disabled:opacity-30 disabled:cursor-default"
+                                        className="p-1 transition-colors text-indigo-400 hover:text-indigo-300"
                                         title="Expand all dashers in this category"
-                                        disabled={category.dashers.length === 0}
                                       >
                                         <ChevronsDown size={14} />
                                       </button>
@@ -11886,8 +11997,9 @@
                                     }}
                                   >
                                     {categoryDashersFiltered.length === 0 ? (
-                                      <div className="text-xs text-gray-500 italic text-center py-3">
-                                        No dashers yet
+                                      <div className="text-sm text-gray-400 text-center py-4 border-2 border-dashed border-gray-600 rounded-lg bg-gray-700/30">
+                                        <div className="mb-1">📋 No dashers yet</div>
+                                        <div className="text-xs text-gray-500">Drag dashers here or click + to add</div>
                                       </div>
                                     ) : (
                                       categoryDashersFiltered.map(
