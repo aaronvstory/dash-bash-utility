@@ -1124,12 +1124,7 @@
         const [isImportPending, startImportTransition] = useTransition();
 
         // Web Worker for async JSON parsing (v1.9.5)
-        const importWorker = useMemo(() => {
-          if (typeof Worker !== 'undefined') {
-            return new Worker('import-worker.js');
-          }
-          return null;
-        }, []);
+        const importWorkerRef = useRef(null);
 
         // Undo support for cash outs
         const lastCashOutRef = React.useRef(null);
@@ -2542,50 +2537,65 @@
 
         // Normalize imported data to prevent issues (v1.9.4 Performance)
         const normalizeImportedData = (state) => {
-          const normalized = { ...state };
+          if (!state || typeof state !== "object") return state;
 
-          // Normalize dasher data across all buckets
-          const normalizeDasher = (dasher) => {
-            if (!dasher) return dasher;
-            return {
-              ...dasher,
-              balance: parseBalanceValue(dasher.balance || 0),
-              phone: String(dasher.phone || "").replace(/\D/g, ""),
-              notes: String(dasher.notes || "").slice(0, 3000), // Trim long notes
-            };
+          const normalized = state;
+
+          const normalizeDasherInPlace = (dasher) => {
+            if (!dasher || typeof dasher !== "object") return;
+            dasher.balance = parseBalanceValue(dasher.balance || 0);
+            dasher.phone = String(dasher.phone || "").replace(/\D/g, "");
+            dasher.notes = String(dasher.notes || "").slice(0, 3000);
           };
 
-          // Apply to all dasher buckets
-          if (normalized.dasherCategories) {
-            normalized.dasherCategories = normalized.dasherCategories.map(cat => ({
-              ...cat,
-              dashers: (cat.dashers || []).map(normalizeDasher)
-            }));
+          const normalizeDasherArray = (dashers) => {
+            if (!Array.isArray(dashers)) return [];
+            for (let i = 0; i < dashers.length; i += 1) {
+              normalizeDasherInPlace(dashers[i]);
+            }
+            return dashers;
+          };
+
+          if (Array.isArray(normalized.dasherCategories)) {
+            for (let i = 0; i < normalized.dasherCategories.length; i += 1) {
+              const cat = normalized.dasherCategories[i];
+              if (!cat || typeof cat !== "object") continue;
+              cat.dashers = normalizeDasherArray(cat.dashers || []);
+            }
           }
 
           const dasherBuckets = [
-            'readyDashers', 'currentlyUsingDashers', 'appealedDashers',
-            'lockedDashers', 'appliedPendingDashers', 'reverifDashers',
-            'archivedDashers', 'deactivatedDashers'
+            "readyDashers",
+            "currentlyUsingDashers",
+            "appealedDashers",
+            "lockedDashers",
+            "appliedPendingDashers",
+            "reverifDashers",
+            "archivedDashers",
+            "deactivatedDashers",
           ];
 
-          dasherBuckets.forEach(bucket => {
-            if (normalized[bucket]) {
-              normalized[bucket] = normalized[bucket].map(normalizeDasher);
+          dasherBuckets.forEach((bucket) => {
+            if (Array.isArray(normalized[bucket])) {
+              normalizeDasherArray(normalized[bucket]);
             }
           });
 
-          // Ensure collapsed state maps exist
           const collapsedMaps = [
-            'collapsedCategories', 'collapsedStores', 'collapsedDashers',
-            'collapsedDasherCategories', 'collapsedNoteCategories',
-            'collapsedArchivedDashers', 'collapsedDeactivatedDashers',
-            'collapsedLockedDashers', 'collapsedAppliedPendingDashers',
-            'collapsedReverifDashers'
+            "collapsedCategories",
+            "collapsedStores",
+            "collapsedDashers",
+            "collapsedDasherCategories",
+            "collapsedNoteCategories",
+            "collapsedArchivedDashers",
+            "collapsedDeactivatedDashers",
+            "collapsedLockedDashers",
+            "collapsedAppliedPendingDashers",
+            "collapsedReverifDashers",
           ];
 
-          collapsedMaps.forEach(map => {
-            if (!normalized[map] || typeof normalized[map] !== 'object') {
+          collapsedMaps.forEach((map) => {
+            if (!normalized[map] || typeof normalized[map] !== "object") {
               normalized[map] = {};
             }
           });
@@ -2593,107 +2603,178 @@
           return normalized;
         };
 
-        // Parse JSON using Web Worker to avoid main thread blocking (v1.9.5)
-        const parseJSONInWorker = (text) => {
-          return new Promise((resolve, reject) => {
-            if (!importWorker) {
-              // Fallback to synchronous parse if worker unavailable
-              try {
-                resolve(JSON.parse(text));
-              } catch (err) {
-                reject(err);
-              }
-              return;
-            }
+        const ensureImportWorker = () => {
+          if (typeof Worker === "undefined") return null;
+          if (!importWorkerRef.current) {
+            importWorkerRef.current = new Worker("import-worker.js");
+          }
+          return importWorkerRef.current;
+        };
 
-            importWorker.onmessage = (e) => {
-              if (e.data.ok) {
-                resolve(e.data.data);
+        // Parse JSON using Web Worker to avoid main thread blocking (v1.9.5)
+        const parseJSONInWorker = (payload, isArrayBuffer = false) => {
+          const worker = ensureImportWorker();
+          if (!worker) {
+            try {
+              if (isArrayBuffer && payload instanceof ArrayBuffer) {
+                const decoder = new TextDecoder();
+                const text = decoder.decode(payload);
+                return Promise.resolve(JSON.parse(text));
+              }
+              if (typeof payload === "string") {
+                return Promise.resolve(JSON.parse(payload));
+              }
+              return Promise.reject(new Error("Unsupported payload without worker"));
+            } catch (err) {
+              return Promise.reject(err);
+            }
+          }
+
+          return new Promise((resolve, reject) => {
+            const handleMessage = (e) => {
+              const { ok, data, error } = e.data || {};
+              worker.removeEventListener("message", handleMessage);
+              try {
+                worker.terminate();
+              } catch {}
+              importWorkerRef.current = null;
+              if (ok) {
+                resolve(data);
               } else {
-                reject(new Error(e.data.error));
+                reject(new Error(error || "Worker failed to parse import payload"));
               }
             };
 
-            importWorker.postMessage({ text });
+            worker.addEventListener("message", handleMessage);
+
+            try {
+              if (isArrayBuffer && payload instanceof ArrayBuffer) {
+                worker.postMessage({ type: "ARRAY_BUFFER", payload }, [payload]);
+              } else {
+                worker.postMessage(payload);
+              }
+            } catch (postErr) {
+              worker.removeEventListener("message", handleMessage);
+              try {
+                worker.terminate();
+              } catch {}
+              importWorkerRef.current = null;
+              reject(postErr);
+            }
           });
         };
 
-        const importFromJSON = (event) => {
+        useEffect(() => {
+          return () => {
+            if (importWorkerRef.current) {
+              try {
+                importWorkerRef.current.terminate();
+              } catch {}
+              importWorkerRef.current = null;
+            }
+          };
+        }, []);
+
+        const importFromJSON = async (event) => {
           const file = event.target.files[0];
           if (!file) return;
 
-          const reader = new FileReader();
-          reader.onload = async (e) => {
-            // Set import gate to prevent re-renders, localStorage writes, timer updates (v1.9.5)
-            setIsImporting(true);
+          setIsImporting(true);
 
+          let state;
+
+          try {
             try {
-              // Parse JSON in Web Worker to avoid blocking main thread
-              const state = await parseJSONInWorker(e.target.result);
-              migrateLegacyDashers(state);
+              const buffer = await file.arrayBuffer();
+              state = await parseJSONInWorker(buffer, true);
+            } catch (workerErr) {
+              const fallbackText = await file.text();
+              state = JSON.parse(fallbackText);
+            }
 
-              // Helpers for deduplication ("unless identical")
-              const normalizeEmail = (v) => (v || "").trim().toLowerCase();
-              const normalizePhone = (v) => String(v || "").replace(/\D/g, "");
-              const normalizeName = (v) => (v || "").trim().toLowerCase();
-              const dasherIdentityKey = (d) => {
-                const em = normalizeEmail(d.email);
-                if (em) return `e:${em}`;
-                const ph = normalizePhone(d.phone);
-                if (ph) return `p:${ph}`;
-                const nm = normalizeName(d.name);
-                if (nm) return `n:${nm}`;
-                return `id:${String(d.id || "")}`;
-              };
-              const buildExistingDasherKeySet = () => {
-                const set = new Set();
-                // main categories
-                (dasherCategories || []).forEach((c) =>
-                  (c.dashers || []).forEach((d) =>
-                    set.add(dasherIdentityKey(d)),
-                  ),
-                );
-                // top-level buckets
-                [
-                  archivedDashers,
-                  deactivatedDashers,
-                  readyDashers,
-                  currentlyUsingDashers,
-                  appealedDashers,
-                  lockedDashers,
-                  appliedPendingDashers,
-                  reverifDashers,
-                ].forEach((list) =>
-                  (list || []).forEach((d) => set.add(dasherIdentityKey(d))),
-                );
-                return set;
-              };
-              const existingDasherKeys = buildExistingDasherKeySet();
-              const filterNewDashers = (arr) =>
-                (arr || []).filter((d) => {
-                  const key = dasherIdentityKey(d);
-                  if (existingDasherKeys.has(key)) return false;
-                  existingDasherKeys.add(key);
-                  return true;
-                });
+            migrateLegacyDashers(state);
 
-              // Check if this is a selective export (v3.0+)
-              if (state.version === "3.0" && state.exportType === "selective") {
-                // Handle selective import
-                const timestamp = new Date().toLocaleDateString();
+            const normalizeEmail = (v) => (v || "").trim().toLowerCase();
+            const normalizePhone = (v) => String(v || "").replace(/\D/g, "");
+            const normalizeName = (v) => (v || "").trim().toLowerCase();
+            const dasherIdentityKey = (d) => {
+              const em = normalizeEmail(d.email);
+              if (em) return `e:${em}`;
+              const ph = normalizePhone(d.phone);
+              if (ph) return `p:${ph}`;
+              const nm = normalizeName(d.name);
+              if (nm) return `n:${nm}`;
+              return `id:${String(d.id || "")}`;
+            };
+            const buildExistingDasherKeySet = () => {
+              const set = new Set();
+              (dasherCategories || []).forEach((c) =>
+                (c.dashers || []).forEach((d) => set.add(dasherIdentityKey(d))),
+              );
+              [
+                archivedDashers,
+                deactivatedDashers,
+                readyDashers,
+                currentlyUsingDashers,
+                appealedDashers,
+                lockedDashers,
+                appliedPendingDashers,
+                reverifDashers,
+              ].forEach((list) =>
+                (list || []).forEach((d) => set.add(dasherIdentityKey(d))),
+              );
+              return set;
+            };
+            const existingDasherKeys = buildExistingDasherKeySet();
+            const filterNewDashers = (arr) =>
+              (arr || []).filter((d) => {
+                const key = dasherIdentityKey(d);
+                if (existingDasherKeys.has(key)) return false;
+                existingDasherKeys.add(key);
+                return true;
+              });
 
-                // Create/update imported categories
-                let importedDasherCategory = null;
-                let importedNoteCategory = null;
-                let importedStoreCategory = null;
+            const runSelectiveImport = () => {
+              const timestamp = new Date().toLocaleDateString();
 
-                // Process individual dashers
-                if (state.dashers && state.dashers.length > 0) {
-                  const uniqueDashers = filterNewDashers(state.dashers);
-                  if (uniqueDashers.length > 0) {
-                    importedDasherCategory = {
-                      id: "imported-" + Date.now(),
-                      name: "Imported " + timestamp,
+              let importedDasherCategory = null;
+              let importedNoteCategory = null;
+              let importedStoreCategory = null;
+
+              if (state.dashers && state.dashers.length > 0) {
+                const uniqueDashers = filterNewDashers(state.dashers);
+                if (uniqueDashers.length > 0) {
+                  importedDasherCategory = {
+                    id: "imported-" + Date.now(),
+                    name: "Imported " + timestamp,
+                    dashers: uniqueDashers.map((dasher) => ({
+                      ...dasher,
+                      id:
+                        dasher.id +
+                        "-imp-" +
+                        Date.now() +
+                        "-" +
+                        Math.random().toString(36).substr(2, 9),
+                      imported: true,
+                      importDate: new Date().toISOString(),
+                    })),
+                  };
+                }
+              }
+
+              if (
+                state.fullCategories &&
+                state.fullCategories.dasher &&
+                state.fullCategories.dasher.length > 0
+              ) {
+                const importedCategories = state.fullCategories.dasher
+                  .map((cat) => {
+                    const uniqueDashers = filterNewDashers(cat.dashers || []);
+                    if (uniqueDashers.length === 0) return null;
+                    return {
+                      ...cat,
+                      id: cat.id + "-imp-" + Date.now(),
+                      name: cat.name + " (Imported)",
                       dashers: uniqueDashers.map((dasher) => ({
                         ...dasher,
                         id:
@@ -2706,386 +2787,366 @@
                         importDate: new Date().toISOString(),
                       })),
                     };
-                  }
-                }
-
-                // Process full dasher categories
-                if (
-                  state.fullCategories &&
-                  state.fullCategories.dasher &&
-                  state.fullCategories.dasher.length > 0
-                ) {
-                  const importedCategories = state.fullCategories.dasher
-                    .map((cat) => {
-                      const uniqueDashers = filterNewDashers(cat.dashers || []);
-                      if (uniqueDashers.length === 0) return null;
-                      return {
-                        ...cat,
-                        id: cat.id + "-imp-" + Date.now(),
-                        name: cat.name + " (Imported)",
-                        dashers: uniqueDashers.map((dasher) => ({
-                          ...dasher,
-                          id:
-                            dasher.id +
-                            "-imp-" +
-                            Date.now() +
-                            "-" +
-                            Math.random().toString(36).substr(2, 9),
-                          imported: true,
-                          importDate: new Date().toISOString(),
-                        })),
-                      };
-                    })
-                    .filter(Boolean);
-                  if (importedCategories.length > 0)
-                    setDasherCategories([
-                      ...dasherCategories,
-                      ...importedCategories,
-                    ]);
-                } else if (importedDasherCategory) {
+                  })
+                  .filter(Boolean);
+                if (importedCategories.length > 0)
                   setDasherCategories([
                     ...dasherCategories,
-                    importedDasherCategory,
+                    ...importedCategories,
                   ]);
-                }
+              } else if (importedDasherCategory) {
+                setDasherCategories([
+                  ...dasherCategories,
+                  importedDasherCategory,
+                ]);
+              }
 
-                // Process archived dashers
-                if (state.archivedDashers && state.archivedDashers.length > 0) {
-                  const filtered = filterNewDashers(state.archivedDashers);
-                  const importedArchived = filtered.map((dasher) => ({
-                    ...dasher,
-                    id:
-                      dasher.id +
-                      "-imp-" +
-                      Date.now() +
-                      "-" +
-                      Math.random().toString(36).substr(2, 9),
-                    imported: true,
-                    importDate: new Date().toISOString(),
-                  }));
-                  if (importedArchived.length > 0)
-                    setArchivedDashers([
-                      ...archivedDashers,
-                      ...importedArchived,
-                    ]);
-                }
+              if (state.archivedDashers && state.archivedDashers.length > 0) {
+                const filtered = filterNewDashers(state.archivedDashers);
+                const importedArchived = filtered.map((dasher) => ({
+                  ...dasher,
+                  id:
+                    dasher.id +
+                    "-imp-" +
+                    Date.now() +
+                    "-" +
+                    Math.random().toString(36).substr(2, 9),
+                  imported: true,
+                  importDate: new Date().toISOString(),
+                }));
+                if (importedArchived.length > 0)
+                  setArchivedDashers([
+                    ...archivedDashers,
+                    ...importedArchived,
+                  ]);
+              }
 
-                // Process deactivated dashers
-                if (
-                  state.deactivatedDashers &&
-                  state.deactivatedDashers.length > 0
-                ) {
-                  const filtered = filterNewDashers(state.deactivatedDashers);
-                  const importedDeactivated = filtered.map((dasher) => ({
-                    ...dasher,
-                    id:
-                      dasher.id +
-                      "-imp-" +
-                      Date.now() +
-                      "-" +
-                      Math.random().toString(36).substr(2, 9),
-                    imported: true,
-                    importDate: new Date().toISOString(),
-                  }));
-                  if (importedDeactivated.length > 0)
-                    setDeactivatedDashers([
-                      ...deactivatedDashers,
-                      ...importedDeactivated,
-                    ]);
-                }
+              if (
+                state.deactivatedDashers &&
+                state.deactivatedDashers.length > 0
+              ) {
+                const filtered = filterNewDashers(state.deactivatedDashers);
+                const importedDeactivated = filtered.map((dasher) => ({
+                  ...dasher,
+                  id:
+                    dasher.id +
+                    "-imp-" +
+                    Date.now() +
+                    "-" +
+                    Math.random().toString(36).substr(2, 9),
+                  imported: true,
+                  importDate: new Date().toISOString(),
+                }));
+                if (importedDeactivated.length > 0)
+                  setDeactivatedDashers([
+                    ...deactivatedDashers,
+                    ...importedDeactivated,
+                  ]);
+              }
 
-                // Process ready dashers
-                if (state.readyDashers && state.readyDashers.length > 0) {
-                  const filtered = filterNewDashers(state.readyDashers);
-                  const importedReady = filtered.map((dasher) => ({
-                    ...dasher,
-                    id:
-                      dasher.id +
-                      "-imp-" +
-                      Date.now() +
-                      "-" +
-                      Math.random().toString(36).substr(2, 9),
-                    imported: true,
-                    importDate: new Date().toISOString(),
-                  }));
-                  if (importedReady.length > 0)
-                    setReadyDashers([...readyDashers, ...importedReady]);
-                }
+              if (state.readyDashers && state.readyDashers.length > 0) {
+                const filtered = filterNewDashers(state.readyDashers);
+                const importedReady = filtered.map((dasher) => ({
+                  ...dasher,
+                  id:
+                    dasher.id +
+                    "-imp-" +
+                    Date.now() +
+                    "-" +
+                    Math.random().toString(36).substr(2, 9),
+                  imported: true,
+                  importDate: new Date().toISOString(),
+                }));
+                if (importedReady.length > 0)
+                  setReadyDashers([...readyDashers, ...importedReady]);
+              }
 
-                // Process currently using dashers
-                if (
-                  state.currentlyUsingDashers &&
-                  state.currentlyUsingDashers.length > 0
-                ) {
-                  const filtered = filterNewDashers(
-                    state.currentlyUsingDashers,
-                  );
-                  const importedCurrentlyUsing = filtered.map((dasher) => ({
-                    ...dasher,
-                    id:
-                      dasher.id +
-                      "-imp-" +
-                      Date.now() +
-                      "-" +
-                      Math.random().toString(36).substr(2, 9),
-                    imported: true,
-                    importDate: new Date().toISOString(),
-                  }));
-                  if (importedCurrentlyUsing.length > 0)
-                    setCurrentlyUsingDashers([
-                      ...currentlyUsingDashers,
-                      ...importedCurrentlyUsing,
-                    ]);
-                }
+              if (
+                state.currentlyUsingDashers &&
+                state.currentlyUsingDashers.length > 0
+              ) {
+                const filtered = filterNewDashers(
+                  state.currentlyUsingDashers,
+                );
+                const importedCurrentlyUsing = filtered.map((dasher) => ({
+                  ...dasher,
+                  id:
+                    dasher.id +
+                    "-imp-" +
+                    Date.now() +
+                    "-" +
+                    Math.random().toString(36).substr(2, 9),
+                  imported: true,
+                  importDate: new Date().toISOString(),
+                }));
+                if (importedCurrentlyUsing.length > 0)
+                  setCurrentlyUsingDashers([
+                    ...currentlyUsingDashers,
+                    ...importedCurrentlyUsing,
+                  ]);
+              }
 
-                // Process appealed dashers
-                if (state.appealedDashers && state.appealedDashers.length > 0) {
-                  const filtered = filterNewDashers(state.appealedDashers);
-                  const importedAppealed = filtered.map((dasher) => ({
-                    ...dasher,
-                    id:
-                      dasher.id +
-                      "-imp-" +
-                      Date.now() +
-                      "-" +
-                      Math.random().toString(36).substr(2, 9),
-                    imported: true,
-                    importDate: new Date().toISOString(),
-                  }));
-                  if (importedAppealed.length > 0)
-                    setAppealedDashers([
-                      ...appealedDashers,
-                      ...importedAppealed,
-                    ]);
-                }
+              if (state.appealedDashers && state.appealedDashers.length > 0) {
+                const filtered = filterNewDashers(state.appealedDashers);
+                const importedAppealed = filtered.map((dasher) => ({
+                  ...dasher,
+                  id:
+                    dasher.id +
+                    "-imp-" +
+                    Date.now() +
+                    "-" +
+                    Math.random().toString(36).substr(2, 9),
+                  imported: true,
+                  importDate: new Date().toISOString(),
+                }));
+                if (importedAppealed.length > 0)
+                  setAppealedDashers([
+                    ...appealedDashers,
+                    ...importedAppealed,
+                  ]);
+              }
 
-                // Process locked dashers
-                if (state.lockedDashers && state.lockedDashers.length > 0) {
-                  const filtered = filterNewDashers(state.lockedDashers);
-                  const importedLocked = filtered.map((dasher) => ({
-                    ...dasher,
-                    id:
-                      dasher.id +
-                      "-imp-" +
-                      Date.now() +
-                      "-" +
-                      Math.random().toString(36).substr(2, 9),
-                    imported: true,
-                    importDate: new Date().toISOString(),
-                  }));
-                  if (importedLocked.length > 0)
-                    setLockedDashers([...lockedDashers, ...importedLocked]);
-                }
+              if (state.lockedDashers && state.lockedDashers.length > 0) {
+                const filtered = filterNewDashers(state.lockedDashers);
+                const importedLocked = filtered.map((dasher) => ({
+                  ...dasher,
+                  id:
+                    dasher.id +
+                    "-imp-" +
+                    Date.now() +
+                    "-" +
+                    Math.random().toString(36).substr(2, 9),
+                  imported: true,
+                  importDate: new Date().toISOString(),
+                }));
+                if (importedLocked.length > 0)
+                  setLockedDashers([...lockedDashers, ...importedLocked]);
+              }
 
-                // Process applied pending dashers
-                if (
-                  state.appliedPendingDashers &&
-                  state.appliedPendingDashers.length > 0
-                ) {
-                  const filtered = filterNewDashers(
-                    state.appliedPendingDashers,
-                  );
-                  const importedAppliedPending = filtered.map((dasher) => ({
-                    ...dasher,
-                    id:
-                      dasher.id +
-                      "-imp-" +
-                      Date.now() +
-                      "-" +
-                      Math.random().toString(36).substr(2, 9),
-                    imported: true,
-                    importDate: new Date().toISOString(),
-                  }));
-                  if (importedAppliedPending.length > 0)
-                    setAppliedPendingDashers([
-                      ...appliedPendingDashers,
-                      ...importedAppliedPending,
-                    ]);
-                }
+              if (
+                state.appliedPendingDashers &&
+                state.appliedPendingDashers.length > 0
+              ) {
+                const filtered = filterNewDashers(
+                  state.appliedPendingDashers,
+                );
+                const importedAppliedPending = filtered.map((dasher) => ({
+                  ...dasher,
+                  id:
+                    dasher.id +
+                    "-imp-" +
+                    Date.now() +
+                    "-" +
+                    Math.random().toString(36).substr(2, 9),
+                  imported: true,
+                  importDate: new Date().toISOString(),
+                }));
+                if (importedAppliedPending.length > 0)
+                  setAppliedPendingDashers([
+                    ...appliedPendingDashers,
+                    ...importedAppliedPending,
+                  ]);
+              }
 
-                // Process reverif dashers
-                if (state.reverifDashers && state.reverifDashers.length > 0) {
-                  const filtered = filterNewDashers(state.reverifDashers);
-                  const importedReverif = filtered.map((dasher) => ({
-                    ...dasher,
-                    id:
-                      dasher.id +
-                      "-imp-" +
-                      Date.now() +
-                      "-" +
-                      Math.random().toString(36).substr(2, 9),
-                    imported: true,
-                    importDate: new Date().toISOString(),
-                  }));
-                  if (importedReverif.length > 0) {
-                    setReverifDashers([...reverifDashers, ...importedReverif]);
-                  }
+              if (state.reverifDashers && state.reverifDashers.length > 0) {
+                const filtered = filterNewDashers(state.reverifDashers);
+                const importedReverif = filtered.map((dasher) => ({
+                  ...dasher,
+                  id:
+                    dasher.id +
+                    "-imp-" +
+                    Date.now() +
+                    "-" +
+                    Math.random().toString(36).substr(2, 9),
+                  imported: true,
+                  importDate: new Date().toISOString(),
+                }));
+                if (importedReverif.length > 0) {
+                  setReverifDashers([...reverifDashers, ...importedReverif]);
                 }
+              }
 
-                // Process individual notes
-                if (state.notes && state.notes.length > 0) {
-                  importedNoteCategory = {
-                    id: "imported-notes-" + Date.now(),
-                    name: "Imported Notes " + timestamp,
-                    notes: state.notes.map((n) => n.text || n),
-                  };
-                }
+              if (state.notes && state.notes.length > 0) {
+                importedNoteCategory = {
+                  id: "imported-notes-" + Date.now(),
+                  name: "Imported Notes " + timestamp,
+                  notes: state.notes.map((n) => n.text || n),
+                };
+              }
 
-                // Process full note categories
-                if (
-                  state.fullCategories &&
-                  state.fullCategories.note &&
-                  state.fullCategories.note.length > 0
-                ) {
-                  const importedCategories = state.fullCategories.note.map(
-                    (cat) => ({
-                      ...cat,
-                      id: cat.id + "-imp-" + Date.now(),
-                      name: cat.name + " (Imported)",
-                    }),
-                  );
-                  setNoteCategories([...noteCategories, ...importedCategories]);
-                } else if (importedNoteCategory) {
-                  setNoteCategories([...noteCategories, importedNoteCategory]);
-                }
+              if (
+                state.fullCategories &&
+                state.fullCategories.note &&
+                state.fullCategories.note.length > 0
+              ) {
+                const importedCategories = state.fullCategories.note.map(
+                  (cat) => ({
+                    ...cat,
+                    id: cat.id + "-imp-" + Date.now(),
+                    name: cat.name + " (Imported)",
+                  }),
+                );
+                setNoteCategories([...noteCategories, ...importedCategories]);
+              } else if (importedNoteCategory) {
+                setNoteCategories([...noteCategories, importedNoteCategory]);
+              }
 
-                // Process individual stores
-                if (state.stores && state.stores.length > 0) {
-                  importedStoreCategory = {
-                    id: "imported-stores-" + Date.now(),
-                    name: "Imported Stores " + timestamp,
-                    stores: state.stores.map((store) => ({
+              if (state.stores && state.stores.length > 0) {
+                importedStoreCategory = {
+                  id: "imported-stores-" + Date.now(),
+                  name: "Imported Stores " + timestamp,
+                  stores: state.stores.map((store) => ({
+                    ...store,
+                    id: store.id + "-imp-" + Date.now(),
+                  })),
+                };
+              }
+
+              if (
+                state.fullCategories &&
+                state.fullCategories.store &&
+                state.fullCategories.store.length > 0
+              ) {
+                const importedCategories = state.fullCategories.store.map(
+                  (cat) => ({
+                    ...cat,
+                    id: cat.id + "-imp-" + Date.now(),
+                    name: cat.name + " (Imported)",
+                    stores: cat.stores.map((store) => ({
                       ...store,
                       id: store.id + "-imp-" + Date.now(),
                     })),
-                  };
-                }
-
-                // Process full store categories
-                if (
-                  state.fullCategories &&
-                  state.fullCategories.store &&
-                  state.fullCategories.store.length > 0
-                ) {
-                  const importedCategories = state.fullCategories.store.map(
-                    (cat) => ({
-                      ...cat,
-                      id: cat.id + "-imp-" + Date.now(),
-                      name: cat.name + " (Imported)",
-                      stores: cat.stores.map((store) => ({
-                        ...store,
-                        id: store.id + "-imp-" + Date.now(),
-                      })),
-                    }),
-                  );
-                  setCategories([...categories, ...importedCategories]);
-                } else if (importedStoreCategory) {
-                  setCategories([...categories, importedStoreCategory]);
-                }
-
-                // Process messages (append to existing)
-                if (state.messages && state.messages.length > 0) {
-                  const existing = new Set(
-                    (messages || []).map((m) => String(m)),
-                  );
-                  const toAdd = (state.messages || []).filter(
-                    (m) => !existing.has(String(m)),
-                  );
-                  if (toAdd.length > 0)
-                    setMessages([...(messages || []), ...toAdd]);
-                }
-
-                setImportNotification(
-                  `✅ Imported selected items into new categories from ${file.name}`,
+                  }),
                 );
-                setTimeout(() => setImportNotification(""), 3000);
-                requestPersist();
-              } else {
-                // Handle full import with batched state updates (v1.9.4 Performance)
-                // Normalize data first to prevent issues
-                const normalized = normalizeImportedData(state);
-
-                // Build all state updates in a function
-                const applyBatchedImport = () => {
-                  // Target configuration
-                  const savedTarget = normalized.target || "99";
-                  const savedPreset =
-                    normalized.targetPreset ||
-                    (savedTarget === "99" || savedTarget === "120"
-                      ? savedTarget
-                      : "custom");
-
-                  setTarget(savedTarget);
-                  setTargetPreset(savedPreset);
-                  if (savedPreset === "custom") {
-                    setCustomTarget(savedTarget);
-                  }
-
-                  // Core data
-                  setPrices(normalized.prices || []);
-                  setMessages(normalized.messages || []);
-                  setCategories(normalized.categories || []);
-
-                  // Dasher data
-                  if (normalized.noteCategories) setNoteCategories(normalized.noteCategories);
-                  if (normalized.dasherCategories) setDasherCategories(normalized.dasherCategories);
-                  if (normalized.archivedDashers) setArchivedDashers(normalized.archivedDashers);
-                  if (normalized.deactivatedDashers) setDeactivatedDashers(normalized.deactivatedDashers);
-                  if (normalized.readyDashers) setReadyDashers(normalized.readyDashers);
-                  if (normalized.currentlyUsingDashers) setCurrentlyUsingDashers(normalized.currentlyUsingDashers);
-                  if (normalized.appealedDashers) setAppealedDashers(normalized.appealedDashers);
-                  if (normalized.lockedDashers) setLockedDashers(normalized.lockedDashers);
-                  if (normalized.appliedPendingDashers) setAppliedPendingDashers(normalized.appliedPendingDashers);
-                  if (normalized.reverifDashers) setReverifDashers(normalized.reverifDashers);
-
-                  // Collapsed states
-                  if (normalized.collapsedCategories) setCollapsedCategories(normalized.collapsedCategories);
-                  if (normalized.collapsedStores) setCollapsedStores(normalized.collapsedStores);
-                  if (normalized.collapsedDashers) setCollapsedDashers(normalized.collapsedDashers);
-                  if (normalized.collapsedArchivedDashers) setCollapsedArchivedDashers(normalized.collapsedArchivedDashers);
-                  if (normalized.collapsedDasherCategories) setCollapsedDasherCategories(normalized.collapsedDasherCategories);
-                  if (normalized.collapsedNoteCategories) setCollapsedNoteCategories(normalized.collapsedNoteCategories);
-                  if (normalized.collapsedDeactivatedDashers) setCollapsedDeactivatedDashers(normalized.collapsedDeactivatedDashers);
-                  if (normalized.collapsedLockedDashers) setCollapsedLockedDashers(normalized.collapsedLockedDashers);
-                  if (normalized.collapsedAppliedPendingDashers) setCollapsedAppliedPendingDashers(normalized.collapsedAppliedPendingDashers);
-                  if (normalized.collapsedReverifDashers) setCollapsedReverifDashers(normalized.collapsedReverifDashers);
-
-                  // UI states
-                  if (normalized.isArchivedDashersOpen !== undefined) setIsArchivedDashersOpen(normalized.isArchivedDashersOpen);
-                  if (normalized.isDeactivatedDashersOpen !== undefined) setIsDeactivatedDashersOpen(normalized.isDeactivatedDashersOpen);
-                  if (normalized.isReadyDashersOpen !== undefined) setIsReadyDashersOpen(normalized.isReadyDashersOpen);
-                  if (normalized.isCurrentlyUsingDashersOpen !== undefined) setIsCurrentlyUsingDashersOpen(normalized.isCurrentlyUsingDashersOpen);
-                  if (normalized.isAppealedDashersOpen !== undefined) setIsAppealedDashersOpen(normalized.isAppealedDashersOpen);
-                  if (normalized.isLockedDashersOpen !== undefined) setIsLockedDashersOpen(normalized.isLockedDashersOpen);
-                  if (normalized.isAppliedPendingDashersOpen !== undefined) setIsAppliedPendingDashersOpen(normalized.isAppliedPendingDashersOpen);
-                  if (normalized.isReverifDashersOpen !== undefined) setIsReverifDashersOpen(normalized.isReverifDashersOpen);
-                  if (normalized.showNonZeroOnly !== undefined) setShowNonZeroOnly(normalized.showNonZeroOnly);
-                  if (normalized.dasherSort) setDasherSort(normalized.dasherSort);
-                };
-
-                // Apply all updates in a non-blocking transition (React 18)
-                startImportTransition(() => {
-                  applyBatchedImport();
-                });
-
-                setImportNotification(`✅ Imported data from ${file.name}`);
-                setTimeout(() => setImportNotification(""), 3000);
+                setCategories([...categories, ...importedCategories]);
+              } else if (importedStoreCategory) {
+                setCategories([...categories, importedStoreCategory]);
               }
-            } catch (err) {
-              console.error("Import error:", err);
+
+              if (state.messages && state.messages.length > 0) {
+                const existing = new Set((messages || []).map((m) => String(m)));
+                const toAdd = (state.messages || []).filter(
+                  (m) => !existing.has(String(m)),
+                );
+                if (toAdd.length > 0)
+                  setMessages([...(messages || []), ...toAdd]);
+              }
+
               setImportNotification(
-                "❌ Failed to import - invalid file format",
+                `✅ Imported selected items into new categories from ${file.name}`,
               );
-              announceFailure("Failed to import data. Invalid file format");
               setTimeout(() => setImportNotification(""), 3000);
-            } finally {
-              // Clear import gate to resume normal operations (v1.9.5)
-              setIsImporting(false);
+              requestPersist();
+            };
+
+            const runFullImport = () => {
+              const normalized = normalizeImportedData(state);
+
+              const applyBatchedImport = () => {
+                const savedTarget = normalized.target || "99";
+                const savedPreset =
+                  normalized.targetPreset ||
+                  (savedTarget === "99" || savedTarget === "120"
+                    ? savedTarget
+                    : "custom");
+
+                setTarget(savedTarget);
+                setTargetPreset(savedPreset);
+                if (savedPreset === "custom") {
+                  setCustomTarget(savedTarget);
+                }
+
+                setPrices(normalized.prices || []);
+                setMessages(normalized.messages || []);
+                setCategories(normalized.categories || []);
+
+                if (normalized.noteCategories) setNoteCategories(normalized.noteCategories);
+                if (normalized.dasherCategories) setDasherCategories(normalized.dasherCategories);
+                if (normalized.archivedDashers) setArchivedDashers(normalized.archivedDashers);
+                if (normalized.deactivatedDashers) setDeactivatedDashers(normalized.deactivatedDashers);
+                if (normalized.readyDashers) setReadyDashers(normalized.readyDashers);
+                if (normalized.currentlyUsingDashers) setCurrentlyUsingDashers(normalized.currentlyUsingDashers);
+                if (normalized.appealedDashers) setAppealedDashers(normalized.appealedDashers);
+                if (normalized.lockedDashers) setLockedDashers(normalized.lockedDashers);
+                if (normalized.appliedPendingDashers) setAppliedPendingDashers(normalized.appliedPendingDashers);
+                if (normalized.reverifDashers) setReverifDashers(normalized.reverifDashers);
+
+                if (normalized.collapsedCategories) setCollapsedCategories(normalized.collapsedCategories);
+                if (normalized.collapsedStores) setCollapsedStores(normalized.collapsedStores);
+                if (normalized.collapsedDashers) setCollapsedDashers(normalized.collapsedDashers);
+                if (normalized.collapsedArchivedDashers) setCollapsedArchivedDashers(normalized.collapsedArchivedDashers);
+                if (normalized.collapsedDasherCategories) setCollapsedDasherCategories(normalized.collapsedDasherCategories);
+                if (normalized.collapsedNoteCategories) setCollapsedNoteCategories(normalized.collapsedNoteCategories);
+                if (normalized.collapsedDeactivatedDashers) setCollapsedDeactivatedDashers(normalized.collapsedDeactivatedDashers);
+                if (normalized.collapsedLockedDashers) setCollapsedLockedDashers(normalized.collapsedLockedDashers);
+                if (normalized.collapsedAppliedPendingDashers) setCollapsedAppliedPendingDashers(normalized.collapsedAppliedPendingDashers);
+                if (normalized.collapsedReverifDashers) setCollapsedReverifDashers(normalized.collapsedReverifDashers);
+
+                if (normalized.isArchivedDashersOpen !== undefined) setIsArchivedDashersOpen(normalized.isArchivedDashersOpen);
+                if (normalized.isDeactivatedDashersOpen !== undefined) setIsDeactivatedDashersOpen(normalized.isDeactivatedDashersOpen);
+                if (normalized.isReadyDashersOpen !== undefined) setIsReadyDashersOpen(normalized.isReadyDashersOpen);
+                if (normalized.isCurrentlyUsingDashersOpen !== undefined) setIsCurrentlyUsingDashersOpen(normalized.isCurrentlyUsingDashersOpen);
+                if (normalized.isAppealedDashersOpen !== undefined) setIsAppealedDashersOpen(normalized.isAppealedDashersOpen);
+                if (normalized.isLockedDashersOpen !== undefined) setIsLockedDashersOpen(normalized.isLockedDashersOpen);
+                if (normalized.isAppliedPendingDashersOpen !== undefined) setIsAppliedPendingDashersOpen(normalized.isAppliedPendingDashersOpen);
+                if (normalized.isReverifDashersOpen !== undefined) setIsReverifDashersOpen(normalized.isReverifDashersOpen);
+
+                if (normalized.showNonZeroOnly !== undefined) setShowNonZeroOnly(normalized.showNonZeroOnly);
+                if (normalized.dasherSort) setDasherSort(normalized.dasherSort);
+
+                if (normalized.results) setResults(normalized.results);
+                if (normalized.resultsSort) setResultsSort(normalized.resultsSort);
+                if (normalized.resultsBucketFilter) setResultsBucketFilter(normalized.resultsBucketFilter);
+                if (normalized.resultsFlagFilters) setResultsFlagFilters(normalized.resultsFlagFilters);
+
+                if (normalized.selectedItems) setSelectedItems(normalized.selectedItems);
+
+                if (normalized.dashboardFilters) setDashboardFilters(normalized.dashboardFilters);
+                if (normalized.dashboardSort) setDashboardSort(normalized.dashboardSort);
+
+                if (normalized.notesView) setNotesView(normalized.notesView);
+                if (normalized.selectionMode) setSelectionMode(normalized.selectionMode);
+              };
+
+              startImportTransition(() => {
+                applyBatchedImport();
+              });
+
+              setImportNotification(`✅ Imported data from ${file.name}`);
+              setTimeout(() => setImportNotification(""), 3000);
+            };
+
+            const runAllUpdates = () => {
+              if (state.version === "3.0" && state.exportType === "selective") {
+                runSelectiveImport();
+              } else {
+                runFullImport();
+              }
+            };
+
+            if (ReactDOM?.unstable_batchedUpdates) {
+              ReactDOM.unstable_batchedUpdates(runAllUpdates);
+            } else {
+              runAllUpdates();
             }
-          };
-          reader.readAsText(file);
-          event.target.value = ""; // Reset input
+          } catch (err) {
+            console.error("Import error:", err);
+            setImportNotification(
+              "❌ Failed to import - invalid file format",
+            );
+            announceFailure("Failed to import data. Invalid file format");
+            setTimeout(() => setImportNotification(""), 3000);
+          } finally {
+            state = null;
+            setIsImporting(false);
+            if (event?.target) {
+              try {
+                event.target.value = "";
+              } catch {}
+            }
+          }
         };
+
 
         const clearAllData = () => {
           if (

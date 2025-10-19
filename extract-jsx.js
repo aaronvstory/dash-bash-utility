@@ -10,9 +10,8 @@ const babelScriptRegex = /<script type="text\/babel">([\s\S]*?)<\/script>/;
 const match = html.match(babelScriptRegex);
 
 if (!match) {
-  console.error('❌ Could not find Babel script in index.html');
-  console.error('   Looking for: <script type="text/babel">...</script>');
-  process.exit(1);
+  console.warn('⚠️ No inline <script type="text/babel"> block found in index.html. Skipping extraction and using existing dash-bash-component.jsx');
+  process.exit(0);
 }
 
 const jsxCode = match[1];

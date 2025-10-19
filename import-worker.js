@@ -3,21 +3,25 @@
 
 self.onmessage = (event) => {
   try {
-    const { text } = event.data;
+    const message = event.data;
+    let jsonText;
 
-    // Parse JSON in worker thread (off main thread)
-    const data = JSON.parse(text);
+    if (message && message.type === "ARRAY_BUFFER") {
+      const buf = message.payload;
+      const decoder = new TextDecoder();
+      jsonText = decoder.decode(buf);
+    } else if (typeof message === "string") {
+      jsonText = message;
+    } else if (message && typeof message.text === "string") {
+      jsonText = message.text;
+    } else {
+      throw new Error("Unsupported payload passed to import-worker");
+    }
 
-    // Post success result back to main thread
-    self.postMessage({
-      ok: true,
-      data: data
-    });
+    const data = JSON.parse(jsonText);
+
+    self.postMessage({ ok: true, data });
   } catch (error) {
-    // Post error back to main thread
-    self.postMessage({
-      ok: false,
-      error: String(error)
-    });
+    self.postMessage({ ok: false, error: String(error && error.message || error) });
   }
 };
