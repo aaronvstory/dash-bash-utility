@@ -103,9 +103,11 @@
       const ShieldCheck = (props) =>
         React.createElement(Icon, { ...props, name: "shield-check" });
 
-      const ensureArray = (value) => (Array.isArray(value) ? value : []);
+      function ensureArray(value) {
+        return Array.isArray(value) ? value : [];
+      }
       // Shared announcers
-      const ensureLiveRegion = (id, mode = "polite") => {
+      function ensureLiveRegion(id, mode = "polite") {
         let el = document.getElementById(id);
         if (!el) {
           el = document.createElement("div");
@@ -120,8 +122,8 @@
           document.body.appendChild(el);
         }
         return el;
-      };
-      const announceSuccess = (msg) => {
+      }
+      function announceSuccess(msg) {
         try {
           const el = ensureLiveRegion("live-success", "polite");
           el.textContent = msg || "";
@@ -130,8 +132,8 @@
             if (el) el.textContent = "";
           }, 1500);
         } catch {}
-      };
-      const announceFailure = (msg) => {
+      }
+      function announceFailure(msg) {
         try {
           const el = ensureLiveRegion("live-error", "assertive");
           el.textContent = msg || "";
@@ -139,16 +141,16 @@
             if (el) el.textContent = "";
           }, 2000);
         } catch {}
-      };
-      const methodLabel = (s) => {
+      }
+      function methodLabel(s) {
         const t = String(s ?? "unspecified")
           .trim()
           .toLowerCase()
           .replace(/[_-]+/g, " ");
         return t.replace(/\b\w/g, (c) => c.toUpperCase());
-      };
+      }
 
-      const deriveNumericAmount = (value) => {
+      function deriveNumericAmount(value) {
         if (typeof value === "number") return value;
         if (typeof value === "string") {
           const normalized = value.replace(/,/g, "").trim();
@@ -156,7 +158,7 @@
           return parseFloat(normalized);
         }
         return NaN;
-      };
+      }
 
       const deriveDasherIdentity = (dasher, fallbackKey) => {
         if (
@@ -3189,7 +3191,7 @@
         };
 
         // Balance parsing helper with validation and clamping
-        const parseBalanceValue = (raw) => {
+        function parseBalanceValue(raw) {
           if (raw === null || raw === undefined) return 0;
           if (typeof raw === "number") {
             // Clamp to reasonable range: -1,000,000 to 1,000,000
@@ -3199,12 +3201,13 @@
           if (isNaN(n)) return 0;
           // Clamp parsed value to prevent extreme balances
           return Math.max(-1000000, Math.min(1000000, n));
-        };
+        }
 
-        const safeFieldSegment = (value) =>
-          String(value ?? "")
+        function safeFieldSegment(value) {
+          return String(value ?? "")
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, "-");
+        }
 
         // Global filter/sort helper (replaces useFilteredSortedDashers)
         function filterAndSortDashers(list) {
@@ -3250,13 +3253,13 @@
         }
 
         // Date/time formatting helper
-        const formatDateTime = (iso) => {
+        function formatDateTime(iso) {
           try {
             return new Date(iso).toLocaleString();
           } catch {
             return iso;
           }
-        };
+        }
 
         const renderCashOutHistory = (dasher, isEditing) => {
           if (!dasher) return null;
@@ -4005,10 +4008,30 @@
         // Cash out helper - records cash out entry, zeros balance, and saves
         // Local ID comparator to handle string/number mismatches safely
         const idsEq = (a, b) => String(a) === String(b);
-        const addCashOutEntry = (sourceKey, dasherId, method = "auto") => {
+        const addCashOutEntry = (
+          sourceKey,
+          dasherOrId,
+          method = "auto",
+        ) => {
           const normalizedMethod = (method && method.trim()) || "auto";
+          const candidateDasher =
+            dasherOrId && typeof dasherOrId === "object"
+              ? dasherOrId
+              : null;
+          const targetIdRaw =
+            candidateDasher && candidateDasher.id !== undefined && candidateDasher.id !== null
+              ? candidateDasher.id
+              : dasherOrId;
+          if (targetIdRaw === undefined || targetIdRaw === null) {
+            return;
+          }
+          const targetId = String(targetIdRaw);
           let dasherFound = null;
           let categoryKey = null;
+          const normalizedSourceKey =
+            typeof sourceKey === "string" && sourceKey.length > 0
+              ? sourceKey
+              : null;
           const showSuccessToast = (amountVal) => {
             const msg = `Cashed out $${Number(amountVal).toFixed(2)}`;
             const run = () => {
@@ -4023,14 +4046,29 @@
               }, 2000);
             };
             if (moveToastActiveRef.current) setTimeout(run, 2600);
-            else run();
+              else run();
+          };
+
+          const assignFromList = (list, bucketId) => {
+            if (!Array.isArray(list)) return false;
+            const match = list.find((d) => idsEq(d.id, targetId));
+            if (match) {
+              dasherFound = match;
+              categoryKey = bucketId;
+              return true;
+            }
+            return false;
           };
 
           const locateInCategories = (targetCategoryId) => {
             if (!Array.isArray(dasherCategories)) return null;
             for (const cat of dasherCategories) {
-              if (targetCategoryId && cat.id !== targetCategoryId) continue;
-              const match = cat.dashers?.find((d) => idsEq(d.id, dasherId));
+              if (
+                targetCategoryId &&
+                !idsEq(cat.id, targetCategoryId)
+              )
+                continue;
+              const match = cat.dashers?.find((d) => idsEq(d.id, targetId));
               if (match) {
                 categoryKey = cat.id;
                 return match;
@@ -4039,31 +4077,83 @@
             return null;
           };
 
-          if (sourceKey === "ready")
-            dasherFound = readyDashers.find((d) => idsEq(d.id, dasherId));
-          else if (sourceKey === "currently-using")
-            dasherFound = currentlyUsingDashers.find((d) =>
-              idsEq(d.id, dasherId),
-            );
-          else if (sourceKey === "appealed")
-            dasherFound = appealedDashers.find((d) => idsEq(d.id, dasherId));
-          else if (sourceKey === "locked")
-            dasherFound = lockedDashers.find((d) => idsEq(d.id, dasherId));
-          else if (sourceKey === "applied-pending")
-            dasherFound = appliedPendingDashers.find((d) =>
-              idsEq(d.id, dasherId),
-            );
-          else if (sourceKey === "deactivated")
-            dasherFound = deactivatedDashers.find((d) => idsEq(d.id, dasherId));
-          else if (sourceKey === "archived")
-            dasherFound = archivedDashers.find((d) => idsEq(d.id, dasherId));
-          else
+          if (normalizedSourceKey === "ready") {
+            assignFromList(readyDashers, "ready");
+          } else if (normalizedSourceKey === "currently-using") {
+            assignFromList(currentlyUsingDashers, "currently-using");
+          } else if (normalizedSourceKey === "appealed") {
+            assignFromList(appealedDashers, "appealed");
+          } else if (normalizedSourceKey === "applied-pending") {
+            assignFromList(appliedPendingDashers, "applied-pending");
+          } else if (normalizedSourceKey === "reverif") {
+            assignFromList(reverifDashers, "reverif");
+          } else if (normalizedSourceKey === "locked") {
+            assignFromList(lockedDashers, "locked");
+          } else if (normalizedSourceKey === "deactivated") {
+            assignFromList(deactivatedDashers, "deactivated");
+          } else if (normalizedSourceKey === "archived") {
+            assignFromList(archivedDashers, "archived");
+          } else if (normalizedSourceKey) {
             dasherFound =
-              locateInCategories(sourceKey) || locateInCategories(null);
+              locateInCategories(normalizedSourceKey) ||
+              locateInCategories(null);
+          }
 
-          const currentBalance = dasherFound
-            ? parseBalanceValue(dasherFound.balance)
-            : 0;
+          if (!dasherFound) {
+            const topBuckets = [
+              ["ready", readyDashers],
+              ["currently-using", currentlyUsingDashers],
+              ["appealed", appealedDashers],
+              ["applied-pending", appliedPendingDashers],
+              ["reverif", reverifDashers],
+              ["locked", lockedDashers],
+              ["deactivated", deactivatedDashers],
+              ["archived", archivedDashers],
+            ];
+            for (const [key, list] of topBuckets) {
+              if (assignFromList(list, key)) break;
+            }
+          }
+
+          if (!dasherFound) {
+            const located = locateInCategories(null);
+            if (located) dasherFound = located;
+          }
+
+          if (!dasherFound && candidateDasher) {
+            dasherFound = candidateDasher;
+          }
+
+          const balanceSource = dasherFound || candidateDasher;
+          const preferredBucketId =
+            typeof (categoryKey || normalizedSourceKey) === "string"
+              ? categoryKey || normalizedSourceKey
+              : null;
+
+          const descriptors =
+            balanceSource
+              ? getDescriptorsForDasher(balanceSource, {
+                  preferredBucketId,
+                  fallbackHint: `${preferredBucketId ?? "bucket"}-${targetId}`,
+                })
+              : [];
+
+          const descriptorBalances = descriptors
+            .map((descriptor) =>
+              parseBalanceValue(descriptor?.meta?.dasher?.balance),
+            )
+            .filter((val) => Number.isFinite(val));
+
+          const balanceCandidates = [
+            parseBalanceValue(dasherFound?.balance),
+            parseBalanceValue(candidateDasher?.balance),
+            ...descriptorBalances,
+          ].filter((val) => Number.isFinite(val));
+
+          const maxBalance =
+            balanceCandidates.length > 0 ? Math.max(...balanceCandidates) : 0;
+          const currentBalance =
+            Math.abs(maxBalance) < 0.005 ? 0 : maxBalance;
 
           if (currentBalance === 0) {
             // Modern toast, consistent with other notifications; don't clobber move toast
@@ -4086,20 +4176,25 @@
             return;
           }
 
-          const effectiveSourceKey = categoryKey || sourceKey;
+          const effectiveSourceKey =
+            categoryKey ||
+            normalizedSourceKey ||
+            descriptors.find((descriptor) => descriptor?.meta?.bucketId)?.meta
+              ?.bucketId ||
+            null;
           // Build contextual notes: selected cash-out + related info + source bucket
-          const sel = String(dasherFound?.selectedCashout || "").toLowerCase();
+          const sel = String(balanceSource?.selectedCashout || "").toLowerCase();
           let selLabel = "";
           if (sel === "crimson") selLabel = "Crimson";
           else if (sel === "fastpay") selLabel = "FastPay";
           const extraInfo =
             sel === "crimson"
-              ? dasherFound?.crimsonInfo
-                ? ` (${dasherFound.crimsonInfo})`
+              ? balanceSource?.crimsonInfo
+                ? ` (${balanceSource.crimsonInfo})`
                 : ""
               : sel === "fastpay"
-                ? dasherFound?.fastPayInfo
-                  ? ` (${dasherFound.fastPayInfo})`
+                ? balanceSource?.fastPayInfo
+                  ? ` (${balanceSource.fastPayInfo})`
                   : ""
                 : "";
           const bucketMap = {
@@ -4120,20 +4215,46 @@
             ? `${selLabel}${extraInfo}${bucketNote}`.trim()
             : bucketNote.trim() || undefined;
 
-          const historyEntry = {
-            amount: currentBalance,
-            method: selLabel || normalizedMethod,
-            at: new Date().toISOString(),
-            ...(autoNotes ? { notes: autoNotes } : {}),
-          };
+          const nowIso = new Date().toISOString();
 
           lastCashOutRef.current = {
-            dasherId,
+            dasherId: targetId,
             sourceKey: effectiveSourceKey,
             amount: currentBalance,
             method: normalizedMethod,
-            timestamp: historyEntry.at,
+            timestamp: nowIso,
           };
+
+          if (descriptors.length > 0) {
+            descriptors.forEach((descriptor) => {
+              mutateDasherByMeta(descriptor, (existing) => {
+                if (!existing) return existing;
+                const existingBalance = parseBalanceValue(existing.balance);
+                const entryAmount = Number(
+                  (
+                    Number.isFinite(existingBalance)
+                      ? existingBalance
+                      : currentBalance
+                  ).toFixed(2),
+                );
+                const history = ensureArray(existing.cashOutHistory);
+                const historyEntry = {
+                  amount: entryAmount,
+                  method: selLabel || normalizedMethod,
+                  at: nowIso,
+                  ...(autoNotes ? { notes: autoNotes } : {}),
+                };
+                return {
+                  ...existing,
+                  balance: 0,
+                  cashOutHistory: [historyEntry, ...history],
+                };
+              });
+            });
+            requestPersist();
+            showSuccessToast(currentBalance);
+            return;
+          }
 
           const commit = (mutator) => {
             mutator();
@@ -4144,13 +4265,28 @@
             commit(() => {
               setter(
                 list.map((d) =>
-                  idsEq(d.id, dasherId)
+                  idsEq(d.id, targetId)
                     ? {
                         ...d,
                         balance: 0,
                         cashOutHistory: d.cashOutHistory
-                          ? [historyEntry, ...d.cashOutHistory]
-                          : [historyEntry],
+                          ? [
+                              {
+                                amount: currentBalance,
+                                method: selLabel || normalizedMethod,
+                                at: nowIso,
+                                ...(autoNotes ? { notes: autoNotes } : {}),
+                              },
+                              ...d.cashOutHistory,
+                            ]
+                          : [
+                              {
+                                amount: currentBalance,
+                                method: selLabel || normalizedMethod,
+                                at: nowIso,
+                                ...(autoNotes ? { notes: autoNotes } : {}),
+                              },
+                            ],
                       }
                     : d,
                 ),
@@ -4196,17 +4332,32 @@
           commit(() => {
             setDasherCategories((prev) =>
               prev.map((cat) => {
-                if (cat.id !== effectiveSourceKey) return cat;
+                if (!idsEq(cat.id, effectiveSourceKey)) return cat;
                 return {
                   ...cat,
                   dashers: cat.dashers.map((d) =>
-                    idsEq(d.id, dasherId)
+                    idsEq(d.id, targetId)
                       ? {
                           ...d,
                           balance: 0,
                           cashOutHistory: d.cashOutHistory
-                            ? [historyEntry, ...d.cashOutHistory]
-                            : [historyEntry],
+                            ? [
+                                {
+                                  amount: currentBalance,
+                                  method: selLabel || normalizedMethod,
+                                  at: nowIso,
+                                  ...(autoNotes ? { notes: autoNotes } : {}),
+                                },
+                                ...d.cashOutHistory,
+                              ]
+                            : [
+                                {
+                                  amount: currentBalance,
+                                  method: selLabel || normalizedMethod,
+                                  at: nowIso,
+                                  ...(autoNotes ? { notes: autoNotes } : {}),
+                                },
+                              ],
                         }
                       : d,
                   ),
@@ -6115,21 +6266,44 @@
 
             // Identity-aware balance update across duplicates.
             const primaryDescriptors = gatherDescriptorsForDasher();
+            const rawInput =
+              typeof value === "string"
+                ? value
+                : value === null || value === undefined
+                  ? ""
+                  : String(value);
+            const trimmedInput = rawInput.trim();
+            const isInterimValue =
+              trimmedInput === "" ||
+              trimmedInput === "-" ||
+              trimmedInput === "." ||
+              trimmedInput === "-." ||
+              trimmedInput === "+";
+
+            const hasFiniteValue = Number.isFinite(
+              parseFloat(
+                trimmedInput === "" || trimmedInput === "+" ? "NaN" : trimmedInput,
+              ),
+            );
+
             if (!primaryDescriptors || primaryDescriptors.length === 0) {
               // Fallback: local-only update
               setList((prev) =>
                 prev.map((d) =>
-                  d.id === dasher.id ? { ...d, balance: value } : d,
+                  d.id === dasher.id ? { ...d, balance: rawInput } : d,
                 ),
               );
-              requestPersist();
+              if (hasFiniteValue && !isInterimValue) {
+                requestPersist();
+              }
               return;
             }
 
             const prevNum = parseBalanceValue(dasher.balance);
-            const nextNum = parseBalanceValue(value);
-            const delta = nextNum - prevNum;
-            const historyUpdatesByIdentity = new Map();
+            const nextNum = hasFiniteValue ? parseBalanceValue(rawInput) : prevNum;
+            const delta = hasFiniteValue ? nextNum - prevNum : 0;
+            const shouldSyncPeers = hasFiniteValue && !isInterimValue;
+            const historyUpdatesByIdentity = shouldSyncPeers ? new Map() : null;
 
             primaryDescriptors.forEach((descriptor) => {
               const descriptorIdentity =
@@ -6140,25 +6314,31 @@
                 const existingPrev = parseBalanceValue(existing.balance);
                 const history = ensureArray(existing.earningsHistory);
 
-                let nextBalanceValue =
-                  descriptor.meta.dasher === dasher
-                    ? nextNum
-                    : existingPrev + delta;
-                if (!Number.isFinite(nextBalanceValue)) {
-                  nextBalanceValue = existingPrev;
+                if (!shouldSyncPeers && descriptor.meta.dasher !== dasher) {
+                  return existing;
                 }
-                const clampedBalance = Math.max(
-                  -1000000,
-                  Math.min(1000000, nextBalanceValue),
-                );
-                const formattedBalance = Number.isFinite(clampedBalance)
-                  ? clampedBalance.toFixed(2)
-                  : existingPrev.toFixed(2);
+
+                let nextBalanceValue;
+                if (descriptor.meta.dasher === dasher) {
+                  nextBalanceValue = rawInput;
+                } else {
+                  const updatedValue = shouldSyncPeers
+                    ? existingPrev + delta
+                    : existingPrev;
+                  const clampedBalance = Math.max(
+                    -1000000,
+                    Math.min(1000000, Number.isFinite(updatedValue) ? updatedValue : existingPrev),
+                  );
+                  nextBalanceValue = Number.isFinite(clampedBalance)
+                    ? clampedBalance.toFixed(2)
+                    : existingPrev.toFixed(2);
+                }
 
                 let nextHistory = history;
-                if (delta > 0.000001) {
+                if (shouldSyncPeers && delta > 0.000001) {
                   if (
                     descriptorIdentity &&
+                    historyUpdatesByIdentity &&
                     historyUpdatesByIdentity.has(descriptorIdentity)
                   ) {
                     nextHistory =
@@ -6170,7 +6350,7 @@
                       source: "balance-edit",
                     };
                     const updatedHistory = [...history, historyEntry];
-                    if (descriptorIdentity) {
+                    if (descriptorIdentity && historyUpdatesByIdentity) {
                       historyUpdatesByIdentity.set(
                         descriptorIdentity,
                         updatedHistory,
@@ -6179,7 +6359,9 @@
                     nextHistory = updatedHistory;
                   }
                 } else if (
+                  shouldSyncPeers &&
                   descriptorIdentity &&
+                  historyUpdatesByIdentity &&
                   historyUpdatesByIdentity.has(descriptorIdentity)
                 ) {
                   nextHistory =
@@ -6188,35 +6370,63 @@
 
                 return {
                   ...existing,
-                  balance: formattedBalance,
+                  balance: nextBalanceValue,
                   earningsHistory: nextHistory,
                 };
               });
             });
 
-            requestPersist();
+            if (shouldSyncPeers) {
+              requestPersist();
+            }
           };
 
           const updateFlag = (flag, checked) => {
+            const timestamp = checked ? new Date().toISOString() : null;
             const patch = { [flag]: checked };
-            if (flag === "crimson")
-              patch.crimsonAt = checked ? new Date().toISOString() : null;
-            if (flag === "redCard")
-              patch.redCardAt = checked ? new Date().toISOString() : null;
-            if (flag === "appealed")
-              patch.appealedAt = checked ? new Date().toISOString() : null;
+            if (flag === "crimson") patch.crimsonAt = timestamp;
+            if (flag === "redCard") patch.redCardAt = timestamp;
+            if (flag === "appealed") patch.appealedAt = timestamp;
+
             setList((prev) =>
               prev.map((d) => (d.id === dasher.id ? { ...d, ...patch } : d)),
             );
+
+            const descriptors = gatherDescriptorsForDasher();
+            if (Array.isArray(descriptors) && descriptors.length > 0) {
+              descriptors.forEach((descriptor) => {
+                mutateDasherByMeta(descriptor, (existing) => {
+                  if (!existing) return existing;
+                  return { ...existing, ...patch };
+                });
+              });
+            } else {
+              patchDasherEverywhere(patch);
+            }
+
             requestPersist();
           };
 
           const resetAppealedLocal = () => {
+            const patch = { appealedAt: null };
             setList((prev) =>
               prev.map((d) =>
-                d.id === dasher.id ? { ...d, appealedAt: null } : d,
+                d.id === dasher.id ? { ...d, ...patch } : d,
               ),
             );
+
+            const descriptors = gatherDescriptorsForDasher();
+            if (Array.isArray(descriptors) && descriptors.length > 0) {
+              descriptors.forEach((descriptor) => {
+                mutateDasherByMeta(descriptor, (existing) => {
+                  if (!existing) return existing;
+                  return { ...existing, ...patch };
+                });
+              });
+            } else {
+              patchDasherEverywhere(patch);
+            }
+
             requestPersist();
           };
 
@@ -6266,6 +6476,36 @@
               preferredBucketId: categoryId ?? null,
               fallbackHint: `${categoryId ?? "bucket"}-${dasher?.id ?? dasher?.email ?? dasher?.phone ?? "dash"}`,
             });
+
+          const patchDasherEverywhere = (patch) => {
+            const applyToArray = (arr) => {
+              if (!Array.isArray(arr)) return arr;
+              return arr.map((d) =>
+                d && d.id === dasher.id ? { ...d, ...patch } : d,
+              );
+            };
+
+            setReadyDashers((prev) => applyToArray(prev));
+            setCurrentlyUsingDashers((prev) => applyToArray(prev));
+            setAppealedDashers((prev) => applyToArray(prev));
+            setAppliedPendingDashers((prev) => applyToArray(prev));
+            setReverifDashers((prev) => applyToArray(prev));
+            setLockedDashers((prev) => applyToArray(prev));
+            setDeactivatedDashers((prev) => applyToArray(prev));
+            setArchivedDashers((prev) => applyToArray(prev));
+            setDasherCategories((prev) =>
+              prev.map((cat) => {
+                if (!cat || !Array.isArray(cat.dashers)) return cat;
+                const nextDashers = cat.dashers.map((d) =>
+                  d && d.id === dasher.id ? { ...d, ...patch } : d,
+                );
+                return {
+                  ...cat,
+                  dashers: nextDashers,
+                };
+              }),
+            );
+          };
 
           return React.createElement(
             "div",
@@ -11467,7 +11707,7 @@
                                                         onClick={() =>
                                                           addCashOutEntry(
                                                             category.id,
-                                                            dasher.id,
+                                                            dasher,
                                                             "auto",
                                                           )
                                                         }
@@ -11661,7 +11901,7 @@
                                   onStartTimer={() => bucketTimerHandlers["ready"].start(dasher.id)}
                                   onResetTimer={() => bucketTimerHandlers["ready"].reset(dasher.id)}
                                   onToggleEdit={() => toggleEditDasher("ready", dasher.id)}
-                                  onCashOut={() => addCashOutEntry("ready", dasher.id, "auto")}
+                                  onCashOut={() => addCashOutEntry("ready", dasher, "auto")}
                                   onDelete={() => {
                                     if (confirm("Delete this dasher?")) {
                                       setReadyDashers((prev) => prev.filter((d) => d.id !== dasher.id));
@@ -11985,7 +12225,7 @@
                                               onClick={() =>
                                                 addCashOutEntry(
                                                   "currently-using",
-                                                  dasher.id,
+                                                  dasher,
                                                   "auto",
                                                 )
                                               }
@@ -12328,7 +12568,7 @@
                                             onClick={() =>
                                               addCashOutEntry(
                                                 "appealed",
-                                                dasher.id,
+                                                dasher,
                                                 "auto",
                                               )
                                             }
@@ -12658,7 +12898,7 @@
                                               onClick={() =>
                                                 addCashOutEntry(
                                                   "applied-pending",
-                                                  dasher.id,
+                                                  dasher,
                                                   "auto",
                                                 )
                                               }
@@ -12981,7 +13221,7 @@
                                             onClick={() =>
                                               addCashOutEntry(
                                                 "reverif",
-                                                dasher.id,
+                                                dasher,
                                                 "auto",
                                               )
                                             }
@@ -13298,7 +13538,7 @@
                                             onClick={() =>
                                               addCashOutEntry(
                                                 "locked",
-                                                dasher.id,
+                                                dasher,
                                                 "auto",
                                               )
                                             }
@@ -13640,7 +13880,7 @@
                                           onClick={() =>
                                             addCashOutEntry(
                                               "deactivated",
-                                              dasher.id,
+                                              dasher,
                                               "auto",
                                             )
                                           }
@@ -13969,7 +14209,7 @@
                                           onClick={() =>
                                             addCashOutEntry(
                                               "archived",
-                                              dasher.id,
+                                              dasher,
                                               "auto",
                                             )
                                           }
