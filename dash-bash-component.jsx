@@ -2115,6 +2115,12 @@
           }
         };
 
+        // Auto-save when collapsedDashers changes
+        useEffect(() => {
+          console.log('[AUTO-SAVE] collapsedDashers changed, requesting persist');
+          requestPersist();
+        }, [collapsedDashers]);
+
         const openDasherBucket = useCallback(
           (bucketKey, meta = {}) => {
             let shouldPersist = false;
@@ -6464,10 +6470,7 @@
 
         const isDasherCollapsed = (categoryId, dasherId) => {
           const key = categoryId + "-" + dasherId;
-          // Default to collapsed (true) if no saved state exists
-          return collapsedDashers[key] !== undefined
-            ? collapsedDashers[key]
-            : true;
+          return collapsedDashers[key] || false;
         };
 
         const calculateAppealedTimeStatus = (appealedAtTime) => {
@@ -9034,28 +9037,40 @@
 
         // Expand/Collapse all dashers in a specific category
         const expandAllDashersInCategory = (categoryId) => {
+          console.log('[EXPAND ALL] Called for category:', categoryId);
           const category = dasherCategories.find((c) => c.id === categoryId);
+          console.log('[EXPAND ALL] Category found:', category?.name, 'Dashers count:', category?.dashers?.length);
           if (category) {
             const updatedCollapsed = { ...collapsedDashers };
+            console.log('[EXPAND ALL] Before update:', Object.keys(updatedCollapsed).filter(k => k.startsWith(categoryId)).length, 'keys');
             category.dashers.forEach((dasher) => {
               const key = `${categoryId}-${dasher.id}`;
               updatedCollapsed[key] = false;
+              console.log('[EXPAND ALL] Set key:', key, '= false');
             });
+            console.log('[EXPAND ALL] After update:', Object.keys(updatedCollapsed).filter(k => k.startsWith(categoryId)).length, 'keys');
+            console.log('[EXPAND ALL] Sample values:', Object.entries(updatedCollapsed).filter(([k]) => k.startsWith(categoryId)).slice(0, 3));
             setCollapsedDashers(updatedCollapsed);
-            requestPersist();
+            // Auto-save handled by useEffect
           }
         };
 
         const collapseAllDashersInCategory = (categoryId) => {
+          console.log('[COLLAPSE ALL] Called for category:', categoryId);
           const category = dasherCategories.find((c) => c.id === categoryId);
+          console.log('[COLLAPSE ALL] Category found:', category?.name, 'Dashers count:', category?.dashers?.length);
           if (category) {
             const updatedCollapsed = { ...collapsedDashers };
+            console.log('[COLLAPSE ALL] Before update:', Object.keys(updatedCollapsed).filter(k => k.startsWith(categoryId)).length, 'keys');
             category.dashers.forEach((dasher) => {
               const key = `${categoryId}-${dasher.id}`;
               updatedCollapsed[key] = true;
+              console.log('[COLLAPSE ALL] Set key:', key, '= true');
             });
+            console.log('[COLLAPSE ALL] After update:', Object.keys(updatedCollapsed).filter(k => k.startsWith(categoryId)).length, 'keys');
+            console.log('[COLLAPSE ALL] Sample values:', Object.entries(updatedCollapsed).filter(([k]) => k.startsWith(categoryId)).slice(0, 3));
             setCollapsedDashers(updatedCollapsed);
-            requestPersist();
+            // Auto-save handled by useEffect
           }
         };
 
