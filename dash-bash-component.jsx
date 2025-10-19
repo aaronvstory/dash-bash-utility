@@ -6103,6 +6103,113 @@
           return null;
         };
 
+        /**
+         * Shared helper: Update a dasher's balance across all state arrays
+         * @param {string} categoryId - The bucket/category ID
+         * @param {string} dasherId - The dasher's unique ID
+         * @param {string|number} newBalance - The new balance value (raw input, can include formatting)
+         * @returns {boolean} - Success status
+         */
+        const updateDasherBalance = (categoryId, dasherId, newBalance) => {
+          // Validate inputs
+          if (!categoryId || !dasherId || newBalance === undefined || newBalance === null) {
+            console.warn('[updateDasherBalance] Missing required parameters', { categoryId, dasherId, newBalance });
+            return false;
+          }
+
+          // Convert to string for consistency
+          const rawInput = typeof newBalance === "string" ? newBalance : String(newBalance);
+          const trimmedInput = rawInput.trim();
+
+          // Validate that it's a finite number (allow interim values like "-" or "." during typing)
+          const isInterimValue = 
+            trimmedInput === "" ||
+            trimmedInput === "-" ||
+            trimmedInput === "." ||
+            trimmedInput === "-." ||
+            trimmedInput === "+";
+
+          const hasFiniteValue = Number.isFinite(parseFloat(trimmedInput === "" || trimmedInput === "+" ? "NaN" : trimmedInput));
+
+          // For saving (non-interim), require a valid finite value
+          if (!isInterimValue && !hasFiniteValue) {
+            console.warn('[updateDasherBalance] Invalid balance value', { rawInput, trimmedInput });
+            return false;
+          }
+
+          // Verify dasher exists
+          const dasher = findDasherById(categoryId, dasherId);
+          if (!dasher) {
+            console.warn('[updateDasherBalance] Dasher not found', { categoryId, dasherId });
+            return false;
+          }
+
+          // Helper to update dashers in a category array
+          const updateDashersInCategory = (categories) => {
+            return categories.map(cat => {
+              if (cat.id === categoryId && cat.dashers) {
+                return {
+                  ...cat,
+                  dashers: cat.dashers.map(d =>
+                    d.id === dasherId ? { ...d, balance: rawInput } : d
+                  )
+                };
+              }
+              return cat;
+            });
+          };
+
+          // Update the appropriate state based on categoryId
+          try {
+            if (categoryId === "ready") {
+              setReadyDashers(prev => prev.map(d =>
+                d.id === dasherId ? { ...d, balance: rawInput } : d
+              ));
+            } else if (categoryId === "currently-using") {
+              setCurrentlyUsingDashers(prev => prev.map(d =>
+                d.id === dasherId ? { ...d, balance: rawInput } : d
+              ));
+            } else if (categoryId === "appealed") {
+              setAppealedDashers(prev => prev.map(d =>
+                d.id === dasherId ? { ...d, balance: rawInput } : d
+              ));
+            } else if (categoryId === "applied-pending") {
+              setAppliedPendingDashers(prev => prev.map(d =>
+                d.id === dasherId ? { ...d, balance: rawInput } : d
+              ));
+            } else if (categoryId === "reverif") {
+              setReverifDashers(prev => prev.map(d =>
+                d.id === dasherId ? { ...d, balance: rawInput } : d
+              ));
+            } else if (categoryId === "locked") {
+              setLockedDashers(prev => prev.map(d =>
+                d.id === dasherId ? { ...d, balance: rawInput } : d
+              ));
+            } else if (categoryId === "deactivated") {
+              setDeactivatedDashers(prev => prev.map(d =>
+                d.id === dasherId ? { ...d, balance: rawInput } : d
+              ));
+            } else if (categoryId === "archived") {
+              setArchivedDashers(prev => prev.map(d =>
+                d.id === dasherId ? { ...d, balance: rawInput } : d
+              ));
+            } else {
+              // Update in dasher categories (custom categories)
+              setDasherCategories(prev => updateDashersInCategory(prev));
+            }
+
+            // Trigger save only for valid finite values (not during typing)
+            if (hasFiniteValue && !isInterimValue) {
+              setTimeout(() => saveAllToLocalStorage(), 100);
+            }
+
+            return true;
+          } catch (error) {
+            console.error('[updateDasherBalance] Error updating state', error);
+            return false;
+          }
+        };
+
         // [PERF-STAGE7] measure edit toggle
         const toggleEditDasher = (categoryId, dasherId) => {
           performance.mark('toggleEdit-start');
@@ -6111,72 +6218,15 @@
             editingDasher.categoryId === categoryId &&
             editingDasher.dasherId === dasherId
           ) {
-            // Exiting edit mode - save the balance value
+            // Exiting edit mode - save the balance value using shared helper
             if (editingBalanceValue !== "") {
-              // Save the balance value when exiting edit mode
-              const rawInput = editingBalanceValue;
-              const trimmedInput = rawInput.trim();
-              const hasFiniteValue = Number.isFinite(parseFloat(trimmedInput === "" ? "NaN" : trimmedInput));
-              
-              if (hasFiniteValue) {
-                const dasher = findDasherById(categoryId, dasherId);
-                if (dasher) {
-                  // Update the dasher's balance directly
-                  const updateDashersInCategory = (categories) => {
-                    return categories.map(cat => {
-                      if (cat.id === categoryId && cat.dashers) {
-                        return {
-                          ...cat,
-                          dashers: cat.dashers.map(d =>
-                            d.id === dasherId ? { ...d, balance: rawInput } : d
-                          )
-                        };
-                      }
-                      return cat;
-                    });
-                  };
-                  
-                  // Update in the appropriate state based on categoryId
-                  if (categoryId === "ready") {
-                    setReadyDashers(prev => prev.map(d =>
-                      d.id === dasherId ? { ...d, balance: rawInput } : d
-                    ));
-                  } else if (categoryId === "currently-using") {
-                    setCurrentlyUsingDashers(prev => prev.map(d =>
-                      d.id === dasherId ? { ...d, balance: rawInput } : d
-                    ));
-                  } else if (categoryId === "appealed") {
-                    setAppealedDashers(prev => prev.map(d =>
-                      d.id === dasherId ? { ...d, balance: rawInput } : d
-                    ));
-                  } else if (categoryId === "applied-pending") {
-                    setAppliedPendingDashers(prev => prev.map(d =>
-                      d.id === dasherId ? { ...d, balance: rawInput } : d
-                    ));
-                  } else if (categoryId === "reverif") {
-                    setReverifDashers(prev => prev.map(d =>
-                      d.id === dasherId ? { ...d, balance: rawInput } : d
-                    ));
-                  } else if (categoryId === "locked") {
-                    setLockedDashers(prev => prev.map(d =>
-                      d.id === dasherId ? { ...d, balance: rawInput } : d
-                    ));
-                  } else if (categoryId === "deactivated") {
-                    setDeactivatedDashers(prev => prev.map(d =>
-                      d.id === dasherId ? { ...d, balance: rawInput } : d
-                    ));
-                  } else if (categoryId === "archived") {
-                    setArchivedDashers(prev => prev.map(d =>
-                      d.id === dasherId ? { ...d, balance: rawInput } : d
-                    ));
-                  } else {
-                    // Update in dasher categories
-                    setDasherCategories(prev => updateDashersInCategory(prev));
-                  }
-                  
-                  // Trigger save
-                  setTimeout(() => saveAllToLocalStorage(), 100);
-                }
+              const success = updateDasherBalance(categoryId, dasherId, editingBalanceValue);
+              if (!success) {
+                console.warn('[toggleEditDasher] Failed to update balance', { 
+                  categoryId, 
+                  dasherId, 
+                  editingBalanceValue 
+                });
               }
             }
             setEditingDasher({ categoryId: "", dasherId: "" });
