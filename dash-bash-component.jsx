@@ -525,6 +525,9 @@
       );
 
       const EnhancedCalculator = () => {
+        // Import gate (v1.9.5): Prevents re-renders, localStorage writes, and timer updates during import
+        const [isImporting, setIsImporting] = useState(false);
+        
         const [target, setTarget] = useState("99");
         const [targetPreset, setTargetPreset] = useState("99"); // '99', '120', or 'custom'
         const [isEditingTarget, setIsEditingTarget] = useState(false);
@@ -1120,6 +1123,14 @@
         // Import transition for non-blocking state updates (v1.9.4)
         const [isImportPending, startImportTransition] = useTransition();
 
+        // Web Worker for async JSON parsing (v1.9.5)
+        const importWorker = useMemo(() => {
+          if (typeof Worker !== 'undefined') {
+            return new Worker('import-worker.js');
+          }
+          return null;
+        }, []);
+
         // Undo support for cash outs
         const lastCashOutRef = React.useRef(null);
         const saveDebouncedRef = React.useRef(null);
@@ -1205,6 +1216,9 @@
 
         useEffect(() => {
           const interval = setInterval(() => {
+            // Timer gate (v1.9.5): Don't tick during import to prevent console floods
+            if (isImporting) return;
+            
             const now = Date.now();
             const hasVisibleDashers = visibleDasherIds && visibleDasherIds.size > 0;
 
@@ -1224,7 +1238,7 @@
             }
           }, 1000); // Check every second but only update state when needed
           return () => clearInterval(interval);
-        }, [visibleDasherIds]);
+        }, [visibleDasherIds, isImporting]);
 
         // MOVED UP: Filtered dasher useMemo hooks (must appear before useEffect that uses them)
         const filteredReadyDashers = useMemo(
@@ -1842,6 +1856,9 @@
 
         // State Management Functions
         const saveAllToLocalStorage = () => {
+          // localStorage gate (v1.9.5): Block writes during import to prevent thrashing
+          if (isImporting) return;
+          
           try {
             const state = {
               target,
@@ -2576,14 +2593,43 @@
           return normalized;
         };
 
+        // Parse JSON using Web Worker to avoid main thread blocking (v1.9.5)
+        const parseJSONInWorker = (text) => {
+          return new Promise((resolve, reject) => {
+            if (!importWorker) {
+              // Fallback to synchronous parse if worker unavailable
+              try {
+                resolve(JSON.parse(text));
+              } catch (err) {
+                reject(err);
+              }
+              return;
+            }
+
+            importWorker.onmessage = (e) => {
+              if (e.data.ok) {
+                resolve(e.data.data);
+              } else {
+                reject(new Error(e.data.error));
+              }
+            };
+
+            importWorker.postMessage({ text });
+          });
+        };
+
         const importFromJSON = (event) => {
           const file = event.target.files[0];
           if (!file) return;
 
           const reader = new FileReader();
-          reader.onload = (e) => {
+          reader.onload = async (e) => {
+            // Set import gate to prevent re-renders, localStorage writes, timer updates (v1.9.5)
+            setIsImporting(true);
+
             try {
-              const state = JSON.parse(e.target.result);
+              // Parse JSON in Web Worker to avoid blocking main thread
+              const state = await parseJSONInWorker(e.target.result);
               migrateLegacyDashers(state);
 
               // Helpers for deduplication ("unless identical")
@@ -3032,6 +3078,9 @@
               );
               announceFailure("Failed to import data. Invalid file format");
               setTimeout(() => setImportNotification(""), 3000);
+            } finally {
+              // Clear import gate to resume normal operations (v1.9.5)
+              setIsImporting(false);
             }
           };
           reader.readAsText(file);
@@ -8709,6 +8758,20 @@
         };
 
         const targetAmount = parseFloat(target) || 0;
+
+        // Render gate (v1.9.5): Show loading overlay during import to prevent DOM reconciliation
+        if (isImporting) {
+          return (
+            <div className="fixed inset-0 flex items-center justify-center bg-gray-900/80 backdrop-blur-sm z-[9999]">
+              <div className="bg-gray-800 border border-gray-700 rounded-xl p-8 shadow-2xl">
+                <div className="flex items-center gap-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
+                  <span className="text-xl text-gray-200">Importing data...</span>
+                </div>
+              </div>
+            </div>
+          );
+        }
 
         return (
           <div className="min-h-screen text-white">

@@ -1,5 +1,5 @@
 // Service Worker for Dash Bash Utility PWA (network-first shell with versioned cache)
-const APP_VERSION = "1.9.3"; // Fix: network-first for compiled JS to prevent stale cache
+const APP_VERSION = "1.9.5"; // Web Worker JSON parsing + import gates to eliminate console floods
 const CORE_CACHE = `dashbash-core-${APP_VERSION}`;
 const RUNTIME_CACHE = `dashbash-runtime-${APP_VERSION}`;
 const PRECACHE_URLS = [
