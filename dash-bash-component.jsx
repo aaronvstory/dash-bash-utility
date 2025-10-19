@@ -5135,14 +5135,14 @@
         // Unified DasherFilterBar component for consistent filtering across all sections
         // DasherFilterBar removed in v1.7.0 - replaced by global control bar
 
-        const formatTime = (timeStr) => {
+        function formatTime(timeStr) {
           if (!timeStr || timeStr.length !== 4) return "";
           const hours = timeStr.substring(0, 2);
           const minutes = timeStr.substring(2, 4);
           return `${hours}:${minutes}`;
-        };
+        }
 
-        const calculateTimeStatus = (closeTimeStr) => {
+        function calculateTimeStatus(closeTimeStr) {
           if (!closeTimeStr || closeTimeStr.length !== 4) return null;
 
           const closeHours = parseInt(closeTimeStr.substring(0, 2));
@@ -5177,7 +5177,7 @@
             color,
             formatted: `${closeHours.toString().padStart(2, "0")}:${closeMinutes.toString().padStart(2, "0")}`,
           };
-        };
+        }
 
         const addCategory = () => {
           if (newCategoryName.trim()) {
