@@ -2438,6 +2438,275 @@
           }
         };
 
+        // CSV Export Helper Functions
+        const escapeCsvField = (value) => {
+          if (value === null || value === undefined) return "N/A";
+          const str = String(value);
+          // Escape quotes and wrap field if contains comma, quote, or newline
+          if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+            return `"${str.replace(/"/g, '""')}"`;
+          }
+          return str;
+        };
+
+        const formatTimestampForCsv = (isoString) => {
+          if (!isoString) return "N/A";
+          try {
+            const date = new Date(isoString);
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const year = date.getFullYear();
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${month}/${day}/${year} ${hours}:${minutes}`;
+          } catch {
+            return "N/A";
+          }
+        };
+
+        const extractDasherForCsv = (dasher, bucketName = "", categoryName = "") => {
+          // Exclude cashout fields: cashOutHistory, lastCashOutRef, selectedCashout
+          return {
+            bucket: bucketName,
+            category: categoryName,
+            id: dasher.id || "N/A",
+            name: dasher.name || "N/A",
+            email: dasher.email || "N/A",
+            emailPw: dasher.emailPw || "N/A",
+            dasherPw: dasher.dasherPw || "N/A",
+            phone: dasher.phone || "N/A",
+            balance: dasher.balance ?? "N/A",
+            crimson: dasher.crimson ? "true" : "false",
+            redCard: dasher.redCard ? "true" : "false",
+            appealed: dasher.appealed ? "true" : "false",
+            fastPay: dasher.fastPay ? "true" : "false",
+            deactivated: dasher.deactivated ? "true" : "false",
+            ready: dasher.ready ? "true" : "false",
+            fastPayInfo: dasher.fastPayInfo || "N/A",
+            crimsonInfo: dasher.crimsonInfo || "N/A",
+            appealedAt: formatTimestampForCsv(dasher.appealedAt),
+            crimsonAt: formatTimestampForCsv(dasher.crimsonAt),
+            redCardAt: formatTimestampForCsv(dasher.redCardAt),
+            deactivatedAt: formatTimestampForCsv(dasher.deactivatedAt),
+            readyAt: formatTimestampForCsv(dasher.readyAt),
+            lastUsed: formatTimestampForCsv(dasher.lastUsed),
+            notes: Array.isArray(dasher.notes) ? dasher.notes.join('\n') : (dasher.notes || "N/A"),
+          };
+        };
+
+        const exportDashersGroupedCsv = () => {
+          try {
+            // Collect all dashers from all buckets
+            const allBuckets = [];
+
+            // Main categories
+            if (Array.isArray(dasherCategories)) {
+              dasherCategories.forEach(cat => {
+                if (cat.dashers && cat.dashers.length > 0) {
+                  allBuckets.push({
+                    name: cat.name || "Unnamed Category",
+                    dashers: cat.dashers.map(d => ({ ...d, _category: cat.name }))
+                  });
+                }
+              });
+            }
+
+            // Other buckets
+            const otherBuckets = [
+              { name: "Ready", dashers: readyDashers },
+              { name: "Currently Using", dashers: currentlyUsingDashers },
+              { name: "Appealed", dashers: appealedDashers },
+              { name: "Deactivated", dashers: deactivatedDashers },
+              { name: "Archived", dashers: archivedDashers },
+              { name: "Locked", dashers: lockedDashers },
+              { name: "Applied Pending", dashers: appliedPendingDashers },
+              { name: "Reverif", dashers: reverifDashers },
+            ];
+
+            otherBuckets.forEach(bucket => {
+              if (bucket.dashers && bucket.dashers.length > 0) {
+                allBuckets.push(bucket);
+              }
+            });
+
+            if (allBuckets.length === 0) {
+              setSaveNotification("⚠️ No dashers to export");
+              setTimeout(() => setSaveNotification(""), 3000);
+              return;
+            }
+
+            // CSV header
+            const headers = [
+              "Bucket", "Category", "ID", "Name", "Email", "Email Password",
+              "Dasher Password", "Phone", "Balance", "Crimson", "Red Card",
+              "Appealed", "FastPay", "Deactivated", "Ready", "FastPay Info",
+              "Crimson Info", "Appealed At", "Crimson At", "Red Card At",
+              "Deactivated At", "Ready At", "Last Used", "Notes"
+            ];
+
+            let csvContent = headers.map(escapeCsvField).join(',') + '\n';
+
+            // Add dashers grouped by bucket
+            allBuckets.forEach(bucket => {
+              // Section header with blank row before
+              csvContent += '\n';
+              // Section header as valid CSV row (24 columns to match header)
+              csvContent += `"=== ${bucket.name} ===","","","","","","","","","","","","","","","","","","","","","","",""\n`;
+
+              bucket.dashers.forEach(dasher => {
+                const extracted = extractDasherForCsv(dasher, bucket.name, dasher._category || "N/A");
+                const row = [
+                  extracted.bucket,
+                  extracted.category,
+                  extracted.id,
+                  extracted.name,
+                  extracted.email,
+                  extracted.emailPw,
+                  extracted.dasherPw,
+                  extracted.phone,
+                  extracted.balance,
+                  extracted.crimson,
+                  extracted.redCard,
+                  extracted.appealed,
+                  extracted.fastPay,
+                  extracted.deactivated,
+                  extracted.ready,
+                  extracted.fastPayInfo,
+                  extracted.crimsonInfo,
+                  extracted.appealedAt,
+                  extracted.crimsonAt,
+                  extracted.redCardAt,
+                  extracted.deactivatedAt,
+                  extracted.readyAt,
+                  extracted.lastUsed,
+                  extracted.notes,
+                ];
+                csvContent += row.map(escapeCsvField).join(',') + '\n';
+              });
+            });
+
+            // Download
+            const timestamp = new Date()
+              .toISOString()
+              .replace(/[:.]/g, '-')
+              .slice(0, -5);
+            const fileName = `dashbash-dashers-grouped-${timestamp}.csv`;
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = fileName;
+            link.click();
+            URL.revokeObjectURL(link.href);
+
+            setSaveNotification(`✅ Exported grouped CSV: ${fileName}`);
+            announceSuccess(`Exported grouped CSV: ${fileName}`);
+            setTimeout(() => setSaveNotification(""), 3000);
+          } catch (error) {
+            console.error("CSV export error:", error);
+            setSaveNotification("❌ Failed to export CSV");
+            announceFailure("Failed to export CSV");
+            setTimeout(() => setSaveNotification(""), 3000);
+          }
+        };
+
+        const exportDashersUngroupedCsv = () => {
+          try {
+            // Collect all dashers from all buckets
+            const allDashers = [];
+
+            // Main categories
+            if (Array.isArray(dasherCategories)) {
+              dasherCategories.forEach(cat => {
+                (cat.dashers || []).forEach(d => {
+                  allDashers.push(extractDasherForCsv(d, "Main Category", cat.name || "Unnamed"));
+                });
+              });
+            }
+
+            // Other buckets
+            (readyDashers || []).forEach(d => allDashers.push(extractDasherForCsv(d, "Ready", "N/A")));
+            (currentlyUsingDashers || []).forEach(d => allDashers.push(extractDasherForCsv(d, "Currently Using", "N/A")));
+            (appealedDashers || []).forEach(d => allDashers.push(extractDasherForCsv(d, "Appealed", "N/A")));
+            (deactivatedDashers || []).forEach(d => allDashers.push(extractDasherForCsv(d, "Deactivated", "N/A")));
+            (archivedDashers || []).forEach(d => allDashers.push(extractDasherForCsv(d, "Archived", "N/A")));
+            (lockedDashers || []).forEach(d => allDashers.push(extractDasherForCsv(d, "Locked", "N/A")));
+            (appliedPendingDashers || []).forEach(d => allDashers.push(extractDasherForCsv(d, "Applied Pending", "N/A")));
+            (reverifDashers || []).forEach(d => allDashers.push(extractDasherForCsv(d, "Reverif", "N/A")));
+
+            if (allDashers.length === 0) {
+              setSaveNotification("⚠️ No dashers to export");
+              setTimeout(() => setSaveNotification(""), 3000);
+              return;
+            }
+
+            // CSV header
+            const headers = [
+              "Bucket", "Category", "ID", "Name", "Email", "Email Password",
+              "Dasher Password", "Phone", "Balance", "Crimson", "Red Card",
+              "Appealed", "FastPay", "Deactivated", "Ready", "FastPay Info",
+              "Crimson Info", "Appealed At", "Crimson At", "Red Card At",
+              "Deactivated At", "Ready At", "Last Used", "Notes"
+            ];
+
+            let csvContent = headers.map(escapeCsvField).join(',') + '\n';
+
+            // Add all dashers
+            allDashers.forEach(dasher => {
+              const row = [
+                dasher.bucket,
+                dasher.category,
+                dasher.id,
+                dasher.name,
+                dasher.email,
+                dasher.emailPw,
+                dasher.dasherPw,
+                dasher.phone,
+                dasher.balance,
+                dasher.crimson,
+                dasher.redCard,
+                dasher.appealed,
+                dasher.fastPay,
+                dasher.deactivated,
+                dasher.ready,
+                dasher.fastPayInfo,
+                dasher.crimsonInfo,
+                dasher.appealedAt,
+                dasher.crimsonAt,
+                dasher.redCardAt,
+                dasher.deactivatedAt,
+                dasher.readyAt,
+                dasher.lastUsed,
+                dasher.notes,
+              ];
+              csvContent += row.map(escapeCsvField).join(',') + '\n';
+            });
+
+            // Download
+            const timestamp = new Date()
+              .toISOString()
+              .replace(/[:.]/g, '-')
+              .slice(0, -5);
+            const fileName = `dashbash-dashers-export-${timestamp}.csv`;
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = fileName;
+            link.click();
+            URL.revokeObjectURL(link.href);
+
+            setSaveNotification(`✅ Exported ungrouped CSV: ${fileName}`);
+            announceSuccess(`Exported ungrouped CSV: ${fileName}`);
+            setTimeout(() => setSaveNotification(""), 3000);
+          } catch (error) {
+            console.error("CSV export error:", error);
+            setSaveNotification("❌ Failed to export CSV");
+            announceFailure("Failed to export CSV");
+            setTimeout(() => setSaveNotification(""), 3000);
+          }
+        };
+
         const exportToJSON = () => {
           try {
             const state = {
@@ -15890,6 +16159,32 @@
                             className="hidden"
                           />
                         </label>
+
+                        {/* Export Ungrouped CSV */}
+                        <button
+                          onClick={exportDashersUngroupedCsv}
+                          className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                          title="Export all dashers as flat CSV with bucket column"
+                          aria-label="Export all dashers as ungrouped CSV file"
+                        >
+                          <Download size={18} />
+                          <span className="text-sm font-medium">
+                            Export CSV
+                          </span>
+                        </button>
+
+                        {/* Export Grouped CSV */}
+                        <button
+                          onClick={exportDashersGroupedCsv}
+                          className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                          title="Export all dashers as CSV with section headers"
+                          aria-label="Export all dashers as grouped CSV file"
+                        >
+                          <Download size={18} />
+                          <span className="text-sm font-medium">
+                            Export Grouped CSV
+                          </span>
+                        </button>
 
                         {/* Clear All Data */}
                         <button
