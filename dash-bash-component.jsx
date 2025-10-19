@@ -10746,6 +10746,7 @@
                             setShowNonZeroOnly(false);
                             setDasherSort({ key: "none", dir: "desc" });
                             setGlobalQuery("");
+                            globalQueryDebouncedRef.current = "";
                             requestPersist();
                           }}
                           className="px-2 py-1 rounded text-[11px] bg-gray-600/60 hover:bg-gray-500 text-gray-100 border border-gray-500/60"
@@ -11296,6 +11297,7 @@
                                                 className="text-gray-300 hover:text-gray-200"
                                                 onClick={() => {
                                                   setGlobalQuery("");
+                                                  globalQueryDebouncedRef.current = "";
                                                   setShowNonZeroOnly(false);
                                                   resetResultsControls();
                                                   requestPersist();
