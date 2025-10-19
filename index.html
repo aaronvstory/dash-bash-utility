@@ -36,18 +36,17 @@
     />
     <meta name="mobile-web-app-capable" content="yes" />
 
-    <!-- React and Dependencies -->
+    <!-- React and Dependencies - Local vendor builds for GitHub Pages compatibility -->
     <!-- BUILD STAMP: injected at 2025-09-30T08:05Z for version 1.4.3 (badge wiring, flag badges + icon-btn) -->
-    <script
-      crossorigin
-      src="https://unpkg.com/react@18/umd/react.production.min.js"
-    ></script>
-    <script
-      crossorigin
-      src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
-    ></script>
-<!-- Tailwind CSS (MUST load first to allow custom styles to override) -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="./vendor/react.production.min.js"></script>
+    <script crossorigin src="./vendor/react-dom.production.min.js"></script>
+    <!-- react-window for virtualization (PERF-STAGE6) - Local vendor build -->
+    <script src="./vendor/react-window.js"></script>
+    <!-- react-window compatibility adapter (maps List to FixedSizeList) -->
+    <script src="./vendor/react-window-adapter.js"></script>
+
+    <!-- Tailwind CSS - Local build (MUST load first to allow custom styles to override) -->
+    <link rel="stylesheet" href="./tailwind.css?v=1.9.5" />
 
     <!-- Google Fonts - Modern Sans-Serif -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -60,8 +59,8 @@
     <!-- External Stylesheets (MUST load after Tailwind to override defaults) -->
     <link rel="stylesheet" href="styles.css?v=1.9.5" />
 
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@0.545.0/dist/umd/lucide.min.js"></script>
+    <!-- Lucide Icons - Local vendor build -->
+    <script src="./vendor/lucide.min.js"></script>
   </head>
   <body class="theme-jp" data-style-version="1.4.3">
     <div id="root"></div>

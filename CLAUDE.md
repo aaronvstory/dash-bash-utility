@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Dash Bash Utility is a React-based Progressive Web App (PWA) designed for delivery service drivers (primarily DoorDash). Uses **precompiled JSX** with Babel CLI for optimal performance.
 
-**Current Version**: 1.9.1 (October 2025) - JSX Precompilation Release
+**Current Version**: 1.9.6 (October 2025) - GitHub Pages-Safe Release (Local Vendor Files)
 
 **Core Features:**
 - **Target Calculator**: Calculates optimal quantities to reach target dollar amounts ($99/$120/custom)
@@ -32,7 +32,9 @@ python serve-pwa.py
 # Access at: http://localhost:8443/index.html
 ```
 
-**Build Process**: Uses Babel CLI to precompile JSX offline. Run `npm run build` before deploying changes.
+**Build Process**: Uses Babel CLI to precompile JSX offline and Tailwind CSS for local builds. Run `npm run build` before deploying changes.
+
+**GitHub Pages Safe**: All dependencies (React, ReactDOM, Lucide, Tailwind) bundled locally in `vendor/` directory - no CDN dependencies.
 
 ### Testing PWA Features
 ```bash
@@ -88,17 +90,19 @@ git checkout main
 ### Core Design Pattern
 React application using functional components and hooks with **precompiled JSX** for optimal performance.
 
-**Architecture** (v1.9.1+):
+**Architecture** (v1.9.6+):
 - **Source**: `dash-bash-component.jsx` (extracted from index.html)
 - **Compiled**: `dash-bash-compiled.js` (optimized, minified JavaScript)
 - **Served**: `index.html` (11.5 KB) + `dash-bash-compiled.js` (303 KB)
-- **CDN**: React, ReactDOM, Tailwind CSS, Lucide Icons
+- **Vendor Files** (Local): React, ReactDOM, react-window, Lucide Icons
+- **CSS**: Tailwind CSS (built locally), styles.css (custom styles)
 
 **Performance Gains** (vs v1.9.0):
 - 98.4% reduction in HTML size (720 KB → 11.5 KB)
 - No browser-side Babel compilation
 - Optimized, minified JavaScript
 - 80-95% faster page loads
+- No CDN dependencies (GitHub Pages safe)
 
 ### Development Workflow
 
@@ -118,7 +122,7 @@ React application using functional components and hooks with **precompiled JSX**
 **Common Mistake**: Editing only the TSX file and expecting changes to appear. The browser only reads `index.html`!
 
 ### Icon Implementation Pattern
-The app uses Lucide icons via CDN with a custom wrapper pattern:
+The app uses Lucide icons (loaded from local vendor file) with a custom wrapper pattern:
 
 ```javascript
 // In index.html, icons are defined using React.createElement
@@ -137,6 +141,46 @@ const Copy = (props) => React.createElement(lucide.Copy, props);
 2. Add definition: `const IconName = (props) => React.createElement(lucide.IconName, props);`
 3. Use PascalCase for component name
 4. Place definition at top of script block with other icon definitions
+
+### Vendor Files & GitHub Pages Deployment (v1.9.6+)
+
+All external dependencies are bundled locally for reliable GitHub Pages deployment:
+
+**Vendor Directory Structure:**
+```
+vendor/
+├── react.production.min.js      (11 KB) - React 18
+├── react-dom.production.min.js  (129 KB) - ReactDOM 18
+├── react-window.js              (14 KB) - Virtualization library
+└── lucide.min.js                (366 KB) - Icon library
+```
+
+**CSS Files:**
+- `tailwind.css` (31 KB) - Built locally with Tailwind CLI
+- `styles.css` - Custom application styles
+
+**Why Local Vendor Files?**
+- No CDN dependencies = No CORS issues on GitHub Pages
+- Reliable loading without external service dependencies
+- Works offline with service worker
+- Version locked (no surprise updates)
+- Faster load times (no external requests)
+
+**Updating Vendor Files:**
+```bash
+# Download/update all vendor files
+npm run vendor:prepare
+
+# Build Tailwind CSS
+npm run build:css
+
+# Full build (CSS + JSX compilation)
+npm run build
+```
+
+**Important:** Always commit the `vendor/` directory and `tailwind.css` file to the repository. These are NOT in .gitignore and must be tracked in git for GitHub Pages deployment.
+
+See `GITHUB_PAGES_DEPLOYMENT.md` for complete deployment guide.
 
 ### State Management
 - **Unified State**: Single `dashBashState` key in localStorage containing all app data
@@ -748,8 +792,12 @@ The app deploys automatically via GitHub Actions:
 dash-bash-utility/
 ├── index.html                          # Main application (standalone HTML/React)
 ├── styles.css                          # External stylesheet with theming support
-├── enhanced-calculator-addressbook.tsx # React component source
+├── tailwind.css                        # Built Tailwind CSS (commit this!)
+├── tailwind.config.js                  # Tailwind configuration
+├── dash-bash-component.jsx             # React component source (JSX)
+├── dash-bash-compiled.js               # Compiled React component (commit this!)
 ├── CLAUDE.md                           # This file - AI assistance guide
+├── GITHUB_PAGES_DEPLOYMENT.md          # GitHub Pages deployment guide
 ├── VERSION_UPDATE_GUIDE.md             # Version update instructions
 ├── STYLE_GUIDE.md                      # Comprehensive style documentation
 ├── README.md                           # User documentation
@@ -758,6 +806,13 @@ dash-bash-utility/
 ├── favicon.svg                         # App icon
 ├── serve-pwa.py                        # Local HTTPS server
 ├── serve-pwa.bat                       # Windows launcher
+├── src/
+│   └── input.css                      # Tailwind CSS source
+├── vendor/                             # Local vendor files (commit this!)
+│   ├── react.production.min.js
+│   ├── react-dom.production.min.js
+│   ├── react-window.js
+│   └── lucide.min.js
 ├── .claude/                            # Claude Code configuration
 │   └── research/                       # Research notes from development
 ├── archives/                           # Old versions and scripts

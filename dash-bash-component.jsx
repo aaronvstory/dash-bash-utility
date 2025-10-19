@@ -2,6 +2,8 @@
       const { useState, useEffect, useRef, useCallback, useMemo, useTransition } = React;
       // [PERF-STAGE2] Phase 2 memo helper
       const memo = React.memo;
+      // [PERF-STAGE6] react-window for virtualization
+      const { FixedSizeList: VirtualList } = window.ReactWindow || {};
 
       // Simple icon component wrapper for Lucide
       const Icon = ({ name, size = 20, className = "" }) => {
@@ -308,6 +310,9 @@
       const NotesSection      = memo(function NotesSection({ children }) { return children; });
       const StatisticsSection = memo(function StatisticsSection({ children }) { return children; });
 
+      // [PERF-STAGE7] runtime render counter
+      let dasherCardRenderCounter = 0;
+
       // Memoized DasherCard component to prevent unnecessary re-renders (v1.9.2 Performance Optimization)
       // [PERF-STAGE1] Added local timer to eliminate global re-renders
       const DasherCard = React.memo(
@@ -330,6 +335,7 @@
           onToggleEdit,
           onCashOut,
           onDelete,
+          onDraftCommit,   // [PERF-STAGE4] parent commit hook
           // Render functions
           getDasherTitle,
           renderMoveButtons,
@@ -346,9 +352,35 @@
           editingBalanceValue,
           setEditingBalanceValue,
         }) => {
+          // [PERF-STAGE7] Log render count for profiling
+          useEffect(() => {
+            dasherCardRenderCounter++;
+            if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
+              console.debug(`[Render ${dasherCardRenderCounter}] DasherCard ${dasher?.id}`);
+            }
+          });
+
           // [PERF-STAGE1] Local timer - only ticks when card is expanded
           const [localTick, setLocalTick] = useState(0);
-          
+
+          // [PERF-STAGE4] local draft copy of dasher fields that are editable
+          const [draft, setDraft] = useState(() => ({
+            name: dasher?.name ?? "",
+            email: dasher?.email ?? "",
+            balance: dasher?.balance ?? "",
+            notes: Array.isArray(dasher?.notes) ? dasher.notes.join("\n") : (dasher?.notes ?? ""),
+          }));
+
+          // keep draft in sync when the card switches to a different dasher id
+          useEffect(() => {
+            setDraft({
+              name: dasher?.name ?? "",
+              email: dasher?.email ?? "",
+              balance: dasher?.balance ?? "",
+              notes: Array.isArray(dasher?.notes) ? dasher.notes.join("\n") : (dasher?.notes ?? ""),
+            });
+          }, [dasher?.id]); // only when identity changes
+
           useEffect(() => {
             if (isCollapsed) return; // Don't tick when collapsed
             const id = setInterval(() => setLocalTick(t => t + 1), 1000);
@@ -358,6 +390,28 @@
           const dasherTitle = getDasherTitle(dasher, localTick);
           const anchorIdentity = deriveDasherIdentity(dasher, identityFallback);
           const anchorId = getDasherAnchorId(anchorIdentity);
+
+          // [PERF-STAGE4] local edit helpers
+          const setField = useCallback((k, v) => {
+            setDraft(prev => (prev[k] === v ? prev : { ...prev, [k]: v }));
+          }, []);
+
+          const commit = useCallback(() => {
+            onDraftCommit?.(dasher?.id, {
+              ...draft,
+              // normalize notes back to array if parent expects it
+              notes: typeof draft.notes === "string" ? draft.notes.split("\n").filter(Boolean) : draft.notes,
+            });
+          }, [onDraftCommit, dasher?.id, draft]);
+
+          const cancel = useCallback(() => {
+            setDraft({
+              name: dasher?.name ?? "",
+              email: dasher?.email ?? "",
+              balance: dasher?.balance ?? "",
+              notes: Array.isArray(dasher?.notes) ? dasher.notes.join("\n") : (dasher?.notes ?? ""),
+            });
+          }, [dasher?.id, dasher?.name, dasher?.email, dasher?.balance, dasher?.notes]);
 
           return (
             <div
@@ -511,17 +565,79 @@
               {/* Details */}
               {!isCollapsed && (
                 <div className="border-b border-gray-800 px-4 py-2 bg-gray-900/30">
-                  {renderDasherDetails(
-                    dasher,
-                    dashersArray,
-                    setDashersArray,
-                    saveAllToLocalStorage,
-                    copyToClipboard,
-                    null,
-                    isEditing,
-                    bucketType,
-                    editingBalanceValue,
-                    setEditingBalanceValue,
+                  {isEditing ? (
+                    /* [PERF-STAGE4] editable fields bound to local draft */
+                    <div className="space-y-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-gray-400 w-20">Name:</label>
+                        <input
+                          type="text"
+                          value={draft.name}
+                          onChange={(e) => setField('name', e.target.value)}
+                          onBlur={commit}
+                          className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-gray-400"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-gray-400 w-20">Email:</label>
+                        <input
+                          type="email"
+                          value={draft.email}
+                          onChange={(e) => setField('email', e.target.value)}
+                          onBlur={commit}
+                          className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-gray-400"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-gray-400 w-20">Balance:</label>
+                        <input
+                          type="text"
+                          value={draft.balance}
+                          onChange={(e) => setField('balance', e.target.value)}
+                          onBlur={commit}
+                          className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-gray-400"
+                        />
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <label className="text-xs text-gray-400 w-20">Notes:</label>
+                        <textarea
+                          rows={3}
+                          value={draft.notes}
+                          onChange={(e) => setField('notes', e.target.value)}
+                          onBlur={commit}
+                          className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-gray-400"
+                        />
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          onClick={commit}
+                          className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white text-xs rounded"
+                          title="Save edits"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={cancel}
+                          className="px-3 py-1 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded"
+                          title="Discard local edits"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    renderDasherDetails(
+                      dasher,
+                      dashersArray,
+                      setDashersArray,
+                      saveAllToLocalStorage,
+                      copyToClipboard,
+                      null,
+                      isEditing,
+                      bucketType,
+                      editingBalanceValue,
+                      setEditingBalanceValue,
+                    )
                   )}
                 </div>
               )}
@@ -1956,14 +2072,29 @@
           }
         };
 
+        // [PERF-STAGE5] Non-blocking persistence via idle callback
         const requestPersist = () => {
           if (saveDebouncedRef.current) {
+            if (typeof cancelIdleCallback !== 'undefined') {
+              cancelIdleCallback(saveDebouncedRef.current);
+            }
             clearTimeout(saveDebouncedRef.current);
           }
-          saveDebouncedRef.current = setTimeout(() => {
-            saveAllToLocalStorage();
-            saveDebouncedRef.current = null;
-          }, 120);
+
+          const performSave = () => {
+            try {
+              saveAllToLocalStorage();
+            } finally {
+              saveDebouncedRef.current = null;
+            }
+          };
+
+          // prefer idle callback when supported
+          if (typeof requestIdleCallback !== 'undefined') {
+            saveDebouncedRef.current = requestIdleCallback(performSave, { timeout: 500 });
+          } else {
+            saveDebouncedRef.current = setTimeout(performSave, 250);
+          }
         };
 
         const openDasherBucket = useCallback(
@@ -4040,11 +4171,14 @@
         // Cash out helper - records cash out entry, zeros balance, and saves
         // Local ID comparator to handle string/number mismatches safely
         const idsEq = (a, b) => String(a) === String(b);
-        const addCashOutEntry = (
+        // [PERF-STAGE3] Wrap in useCallback for stable identity
+        // [PERF-STAGE7] measure cash-out performance
+        const addCashOutEntry = useCallback((
           sourceKey,
           dasherOrId,
           method = "auto",
         ) => {
+          performance.mark('cashOut-start');
           const normalizedMethod = (method && method.trim()) || "auto";
           const candidateDasher =
             dasherOrId && typeof dasherOrId === "object"
@@ -4398,7 +4532,17 @@
             );
           });
           showSuccessToast(currentBalance);
-        };
+
+          performance.mark('cashOut-end');
+          performance.measure('cashOut', 'cashOut-start', 'cashOut-end');
+        }, [
+          dasherCategories, readyDashers, currentlyUsingDashers, appealedDashers,
+          reverifDashers, lockedDashers, appliedPendingDashers, archivedDashers,
+          setDasherCategories, setReadyDashers, setCurrentlyUsingDashers, setAppealedDashers,
+          setReverifDashers, setLockedDashers, setAppliedPendingDashers, setArchivedDashers,
+          deriveDasherIdentity, parseBalanceValue, requestPersist, setSaveNotification,
+          saveNotificationTimeoutRef, moveToastActiveRef
+        ]); // [PERF-STAGE3]
 
         // Undo last cash out - restores balance and removes history entry
         const undoLastCashOut = () => {
@@ -5943,7 +6087,10 @@
           return null;
         };
 
+        // [PERF-STAGE7] measure edit toggle
         const toggleEditDasher = (categoryId, dasherId) => {
+          performance.mark('toggleEdit-start');
+
           if (
             editingDasher.categoryId === categoryId &&
             editingDasher.dasherId === dasherId
@@ -5965,6 +6112,9 @@
               setEditingBalanceValue(balanceStr);
             }
           }
+
+          performance.mark('toggleEdit-end');
+          performance.measure('toggleEdit', 'toggleEdit-start', 'toggleEdit-end');
         };
 
         const isDasherEditing = (categoryId, dasherId) => {
@@ -6019,6 +6169,53 @@
             saveAllToLocalStorage();
           }, 100);
         };
+
+        // [PERF-STAGE4] commit edited fields from a card
+        const onDraftCommit = useCallback((dasherId, draft) => {
+          if (!dasherId) return;
+
+          const apply = (list, setList) => {
+            setList(prev => {
+              let touched = false;
+              const next = prev.map(d => {
+                if (String(d.id) !== String(dasherId)) return d;
+                touched = true;
+                return {
+                  ...d,
+                  name: draft.name ?? d.name,
+                  email: draft.email ?? d.email,
+                  balance: draft.balance ?? d.balance,
+                  notes: Array.isArray(draft.notes) ? draft.notes : (typeof draft.notes === "string" ? draft.notes.split("\n").filter(Boolean) : d.notes),
+                  lastEditedAt: new Date().toISOString(),
+                };
+              });
+              return touched ? next : prev;
+            });
+          };
+
+          // Try each bucket until we find the dasher
+          apply(readyDashers, setReadyDashers);
+          apply(currentlyUsingDashers, setCurrentlyUsingDashers);
+          apply(appealedDashers, setAppealedDashers);
+          apply(reverifDashers, setReverifDashers);
+          apply(lockedDashers, setLockedDashers);
+          apply(appliedPendingDashers, setAppliedPendingDashers);
+          apply(deactivatedDashers, setDeactivatedDashers);
+          apply(archivedDashers, setArchivedDashers);
+
+          // queue persistence (Phase 5 will batch this)
+          requestPersist();
+        }, [
+          readyDashers, setReadyDashers,
+          currentlyUsingDashers, setCurrentlyUsingDashers,
+          appealedDashers, setAppealedDashers,
+          reverifDashers, setReverifDashers,
+          lockedDashers, setLockedDashers,
+          appliedPendingDashers, setAppliedPendingDashers,
+          deactivatedDashers, setDeactivatedDashers,
+          archivedDashers, setArchivedDashers,
+          requestPersist
+        ]);
 
         const toggleDasherCollapse = (categoryId, dasherId) => {
           const key = categoryId + "-" + dasherId;
@@ -8246,7 +8443,8 @@
         }
 
         // Bucket timer handlers for consistent timer management
-        const bucketTimerHandlers = {
+        // [PERF-STAGE3] Wrap in useMemo to stabilize object identity
+        const bucketTimerHandlers = useMemo(() => ({
           ready: {
             start: (id) => {
               setReadyDashers((prev) =>
@@ -8305,7 +8503,23 @@
               requestPersist();
             },
           },
-        };
+        }), [setReadyDashers, setCurrentlyUsingDashers, setAppealedDashers, requestPersist]); // [PERF-STAGE3]
+
+        // [PERF-STAGE3] Stable handler factories to avoid inline arrow functions
+        const handleToggleSelectReady = useCallback((dasherId) => {
+          setSelectedItems(prev => {
+            const next = new Set(prev.readyDashers);
+            next.has(dasherId) ? next.delete(dasherId) : next.add(dasherId);
+            return { ...prev, readyDashers: next };
+          });
+        }, []);
+
+        const handleDeleteReady = useCallback((dasherId) => {
+          if (confirm("Delete this dasher?")) {
+            setReadyDashers((prev) => prev.filter((d) => d.id !== dasherId));
+            requestPersist();
+          }
+        }, [setReadyDashers, requestPersist]);
 
         // Expand/Collapse all for Address Book
         const expandAllCategories = () => {
@@ -8689,7 +8903,8 @@
         };
 
         // Row-level toggle that updates the right map for the active bucket
-        const toggleBucketRowCollapsed = (bucketKey, dasherId, next) => {
+        // [PERF-STAGE3] Wrap in useCallback for stable identity
+        const toggleBucketRowCollapsed = useCallback((bucketKey, dasherId, next) => {
           const updater = (prev) => {
             const v = next !== undefined ? !!next : !prev[dasherId];
             return { ...prev, [dasherId]: v };
@@ -8724,7 +8939,12 @@
               break;
           }
           requestPersist();
-        };
+        }, [
+          setCollapsedDashers, setCollapsedReadyDashers, setCollapsedCurrentlyUsingDashers,
+          setCollapsedAppealedDashers, setCollapsedAppliedPendingDashers, setCollapsedReverifDashers,
+          setCollapsedLockedDashers, setCollapsedDeactivatedDashers, setCollapsedArchivedDashers,
+          requestPersist
+        ]); // [PERF-STAGE3]
 
         // Reusable chevrons component for bucket headers
         const BucketChevrons = ({
@@ -9177,6 +9397,21 @@
             </div>
           );
         }
+
+        // [PERF-STAGE7] periodic performance summary logger
+        useEffect(() => {
+          const interval = setInterval(() => {
+            const measures = performance.getEntriesByType('measure');
+            const recent = measures.slice(-5);
+            if (recent.length > 0) {
+              console.table(recent.map(m => ({
+                name: m.name,
+                duration: m.duration.toFixed(1) + ' ms'
+              })));
+            }
+          }, 8000);
+          return () => clearInterval(interval);
+        }, []);
 
         return (
           <div className="min-h-screen text-white">
@@ -11979,58 +12214,61 @@
                               No ready dashers
                             </div>
                           ) : (
-                            filteredReadyDashers.map((dasher, index) => {
-                              const isSelected = selectedItems.readyDashers.has(dasher.id);
-                              const isCollapsed = !!collapsedReadyDashers[dasher.id];
-                              const isEditing = isDasherEditing("ready", dasher.id);
-                              const cardRecentlyMoved = recentlyMoved instanceof Set && recentlyMoved.has(dasher.id);
-                              const movedNote = dasher.readyAt ? `Ready: ${formatRelativeTime(dasher.readyAt)}` : null;
-                              const identityFallback = `ready-${index}`;
+                            /* [PERF-STAGE6] Virtualized Ready Dashers List with search-safe filter */
+                            filteredReadyDashers.length > 0 && VirtualList
+                              ? React.createElement(VirtualList, {
+                                  height: 600,
+                                  itemCount: filteredReadyDashers.length,
+                                  itemSize: 160,
+                                  width: "100%",
+                                  overscanCount: 4,
+                                  children: ({ index, style }) => {
+                                    const dasher = filteredReadyDashers[index];
+                                    if (!dasher) return null;
+                                    const isSelected = selectedItems.readyDashers.has(dasher.id);
+                                    const isCollapsed = !!collapsedReadyDashers[dasher.id];
+                                    const isEditing = isDasherEditing("ready", dasher.id);
+                                    const cardRecentlyMoved = recentlyMoved instanceof Set && recentlyMoved.has(dasher.id);
+                                    const movedNote = dasher.readyAt ? `Ready: ${formatRelativeTime(dasher.readyAt)}` : null;
+                                    const identityFallback = `ready-${index}`;
 
-                              return (
-                                <DasherCard
-                                  key={dasher.id}
-                                  dasher={dasher}
-                                  bucketType="ready"
-                                  index={index}
-                                  isSelected={isSelected}
-                                  isCollapsed={isCollapsed}
-                                  isEditing={isEditing}
-                                  isEditMode={isEditMode}
-                                  cardRecentlyMoved={cardRecentlyMoved}
-                                  movedNote={movedNote}
-                                  identityFallback={identityFallback}
-                                  onToggleSelect={() => {
-                                    const next = new Set(selectedItems.readyDashers);
-                                    isSelected ? next.delete(dasher.id) : next.add(dasher.id);
-                                    setSelectedItems({ ...selectedItems, readyDashers: next });
-                                  }}
-                                  onToggleCollapse={() => toggleBucketRowCollapsed("ready", dasher.id)}
-                                  onStartTimer={() => bucketTimerHandlers["ready"].start(dasher.id)}
-                                  onResetTimer={() => bucketTimerHandlers["ready"].reset(dasher.id)}
-                                  onToggleEdit={() => toggleEditDasher("ready", dasher.id)}
-                                  onCashOut={() => addCashOutEntry("ready", dasher, "auto")}
-                                  onDelete={() => {
-                                    if (confirm("Delete this dasher?")) {
-                                      setReadyDashers((prev) => prev.filter((d) => d.id !== dasher.id));
-                                      requestPersist();
-                                    }
-                                  }}
-                                  getDasherTitle={getDasherTitle}
-                                  renderMoveButtons={renderMoveButtons}
-                                  renderDasherDetails={renderDasherDetails}
-                                  dashersArray={readyDashers}
-                                  setDashersArray={setReadyDashers}
-                                  saveAllToLocalStorage={saveAllToLocalStorage}
-                                  copyToClipboard={copyToClipboard}
-                                  deriveDasherIdentity={deriveDasherIdentity}
-                                  getDasherAnchorId={getDasherAnchorId}
-                                  parseBalanceValue={parseBalanceValue}
-                                  editingBalanceValue={editingBalanceValue}
-                                  setEditingBalanceValue={setEditingBalanceValue}
-                                />
-                              );
-                            })
+                                    return React.createElement("div", { style, key: dasher.id },
+                                      React.createElement(DasherCard, {
+                                        dasher: dasher,
+                                        bucketType: "ready",
+                                        index: index,
+                                        isSelected: isSelected,
+                                        isCollapsed: isCollapsed,
+                                        isEditing: isEditing,
+                                        isEditMode: isEditMode,
+                                        cardRecentlyMoved: cardRecentlyMoved,
+                                        movedNote: movedNote,
+                                        identityFallback: identityFallback,
+                                        onToggleSelect: () => handleToggleSelectReady(dasher.id),
+                                        onToggleCollapse: () => toggleBucketRowCollapsed("ready", dasher.id),
+                                        onStartTimer: () => bucketTimerHandlers["ready"].start(dasher.id),
+                                        onResetTimer: () => bucketTimerHandlers["ready"].reset(dasher.id),
+                                        onToggleEdit: () => toggleEditDasher("ready", dasher.id),
+                                        onCashOut: () => addCashOutEntry("ready", dasher, "auto"),
+                                        onDelete: () => handleDeleteReady(dasher.id),
+                                        onDraftCommit: onDraftCommit,
+                                        getDasherTitle: getDasherTitle,
+                                        renderMoveButtons: renderMoveButtons,
+                                        renderDasherDetails: renderDasherDetails,
+                                        dashersArray: readyDashers,
+                                        setDashersArray: setReadyDashers,
+                                        saveAllToLocalStorage: saveAllToLocalStorage,
+                                        copyToClipboard: copyToClipboard,
+                                        deriveDasherIdentity: deriveDasherIdentity,
+                                        getDasherAnchorId: getDasherAnchorId,
+                                        parseBalanceValue: parseBalanceValue,
+                                        editingBalanceValue: editingBalanceValue,
+                                        setEditingBalanceValue: setEditingBalanceValue
+                                      })
+                                    );
+                                  }
+                                })
+                              : null
                           )}
                         </div>
                       </div>
