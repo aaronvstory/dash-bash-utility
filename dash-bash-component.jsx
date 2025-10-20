@@ -572,69 +572,8 @@
               </div>
               {/* Details */}
               {!isCollapsed && (
-                <div className="border-b border-gray-800 px-4 py-2 bg-gray-900/30">
-                  {isEditing ? (
-                    /* [PERF-STAGE4] editable fields bound to local draft */
-                    <div className="space-y-2 text-xs">
-                      <div className="flex items-center gap-2">
-                        <label className="text-xs text-gray-400 w-20">Name:</label>
-                        <input
-                          type="text"
-                          value={draft.name}
-                          onChange={(e) => setField('name', e.target.value)}
-                          onBlur={commit}
-                          className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-gray-400"
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <label className="text-xs text-gray-400 w-20">Email:</label>
-                        <input
-                          type="email"
-                          value={draft.email}
-                          onChange={(e) => setField('email', e.target.value)}
-                          onBlur={commit}
-                          className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-gray-400"
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <label className="text-xs text-gray-400 w-20">Balance:</label>
-                        <input
-                          type="text"
-                          value={draft.balance}
-                          onChange={(e) => setField('balance', e.target.value)}
-                          onBlur={commit}
-                          className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-gray-400"
-                        />
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <label className="text-xs text-gray-400 w-20">Notes:</label>
-                        <textarea
-                          rows={3}
-                          value={draft.notes}
-                          onChange={(e) => setField('notes', e.target.value)}
-                          onBlur={commit}
-                          className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-gray-400"
-                        />
-                      </div>
-                      <div className="flex gap-2 justify-end">
-                        <button
-                          onClick={commit}
-                          className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white text-xs rounded"
-                          title="Save edits"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={cancel}
-                          className="px-3 py-1 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded"
-                          title="Discard local edits"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    renderDasherDetails(
+                <div className="space-y-2 p-3 pt-0 border-t border-gray-600/30">
+                  {renderDasherDetails(
                       dasher,
                       dashersArray,
                       setDashersArray,
@@ -645,8 +584,7 @@
                       bucketType,
                       editingBalanceValue,
                       setEditingBalanceValue,
-                    )
-                  )}
+                    )}
                 </div>
               )}
             </div>
