@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dash Bash Utility</title>
 
-    <!-- Version 1.9.5 - Web Worker JSON parsing + import gates (console flood fix) -->
+    <!-- Version 1.9.6 - Web Worker JSON parsing + import gates (console flood fix) -->
     <meta name="app-version" content="1.9.6" />
 
     <!-- Cache Control Headers -->
@@ -16,7 +16,7 @@
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
 
-    <link rel="icon" type="image/svg+xml" href="favicon.svg?v=1.9.5" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg?v=1.9.6" />
     <link
       rel="alternate icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%231f2937'/%3E%3Ctext x='16' y='22' font-family='Arial, sans-serif' font-size='18' font-weight='bold' text-anchor='middle' fill='%23fbbf24'%3E$%3C/text%3E%3Crect x='6' y='8' width='6' height='2' fill='%2360a5fa' opacity='0.8'/%3E%3Crect x='20' y='8' width='6' height='2' fill='%2360a5fa' opacity='0.8'/%3E%3Crect x='6' y='22' width='6' height='2' fill='%23a78bfa' opacity='0.8'/%3E%3Crect x='20' y='22' width='6' height='2' fill='%23a78bfa' opacity='0.8'/%3E%3C/svg%3E"
@@ -28,7 +28,7 @@
     <meta name="theme-color" content="#111827" />
 
     <!-- PWA Support -->
-    <link rel="manifest" href="manifest.json?v=1.9.5" />
+    <link rel="manifest" href="manifest.json?v=1.9.6" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta
       name="apple-mobile-web-app-status-bar-style"
@@ -37,7 +37,7 @@
     <meta name="mobile-web-app-capable" content="yes" />
 
     <!-- React and Dependencies - Local vendor builds for GitHub Pages compatibility -->
-    <!-- BUILD STAMP: injected at 2025-09-30T08:05Z for version 1.4.3 (badge wiring, flag badges + icon-btn) -->
+    <!-- BUILD: Local vendor builds for GitHub Pages compatibility -->
     <script crossorigin src="./vendor/react.production.min.js"></script>
     <script crossorigin src="./vendor/react-dom.production.min.js"></script>
     <!-- react-window for virtualization (PERF-STAGE6) - Local vendor build -->
@@ -61,15 +61,6 @@
 
     <!-- Lucide Icons - Local vendor build -->
     <script src="./vendor/lucide.min.js"></script>
-    <script>
-      // Diagnostic: Check if Lucide loaded
-      if (window.lucide && window.lucide.createIcons) {
-        console.log("✅ Lucide loaded with createIcons function");
-      } else {
-        console.error("❌ Lucide did NOT load correctly!");
-        console.log("  window.lucide:", window.lucide);
-      }
-    </script>
   </head>
   <body class="theme-jp" data-style-version="1.4.3">
     <div id="root"></div>
@@ -77,7 +68,7 @@
     <!-- Service Worker Registration with Version Check -->
     <script>
       console.log(
-        "%cDash Bash Utility build 1.9.5 (Import performance fix) loaded",
+        "%cDash Bash Utility build 1.9.6 loaded",
         "background:#222;color:#f39ac5;padding:4px 8px;border-radius:4px",
       );
       const APP_VERSION = "1.9.6"; // React Window adapter fix
@@ -178,13 +169,6 @@
           });
         }
       };
-      // Log active stylesheets for debugging theme cascade
-      window.addEventListener("load", () => {
-        const sheets = [...document.styleSheets].map(
-          (s) => s.href && s.href.split("/").pop(),
-        );
-        console.log("[DashBash] Active stylesheets:", sheets.filter(Boolean));
-      });
 
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
@@ -284,41 +268,7 @@
       window.addEventListener("focus", () => requestVersionCheck("focus"));
     </script>
 
-    <script src="dash-bash-compiled.js?v=1.9.6.3"></script>
+    <script src="dash-bash-compiled.js?v=1.9.6"></script>
 
-    <!-- Diagnostic: Log all component names being used -->
-    <script>
-      (function() {
-        console.log("🔍 Checking all components are defined:");
-        const components = [
-          'Icon', 'Trash2', 'Plus', 'Copy', 'ChevronDown', 'ChevronUp',
-          'ChevronsDown', 'ChevronsUp', 'Edit2', 'Check', 'Save', 'X',
-          'GripVertical', 'Clock', 'MapPin', 'Calculator', 'MessageSquare',
-          'Building2', 'Settings', 'Download', 'Upload', 'RefreshCw',
-          'CheckSquare', 'FolderOpen', 'FileText', 'Timer', 'Users',
-          'TimerOff', 'BarChart3', 'Archive', 'ArchiveRestore', 'UserX',
-          'UserCheck', 'CircleCheck', 'Activity', 'Banknote', 'Lock',
-          'RotateCcw', 'ShieldCheck', 'Spinner', 'CalculatorSection',
-          'MessagesSection', 'AddressBookSection', 'NotesSection',
-          'StatisticsSection', 'DasherCard', 'EnhancedCalculator'
-        ];
-
-        components.forEach(name => {
-          if (typeof window[name] === 'undefined') {
-            console.error(`❌ ${name} is UNDEFINED!`);
-          } else {
-            console.log(`✅ ${name}: ${typeof window[name]}`);
-          }
-        });
-
-        console.log("🔍 Checking getVirtualList:");
-        if (typeof getVirtualList === 'function') {
-          const VList = getVirtualList();
-          console.log(`✅ getVirtualList() returns: ${typeof VList}`, VList);
-        } else {
-          console.error("❌ getVirtualList is not defined!");
-        }
-      })();
-    </script>
   </body>
 </html>

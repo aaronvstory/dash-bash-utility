@@ -1,14 +1,10 @@
 
-      console.log("🚀 SCRIPT LOADING - Top of dash-bash-component.jsx");
-
       // Build stamp for version tracking
       window.__DBU_BUILD__ = "2025-10-19T17:22:00Z-centralized-updateDasherEverywhere";
-      console.log("📦 Build:", window.__DBU_BUILD__);
 
       const { useState, useEffect, useRef, useCallback, useMemo, useTransition } = React;
       // [PERF-STAGE2] Phase 2 memo helper
       const memo = React.memo;
-      console.log("✅ React hooks destructured successfully");
       // [PERF-STAGE6] react-window for virtualization
       // Use getter function instead of destructuring to avoid timing issues with adapter
       const getVirtualList = () => window.ReactWindow?.FixedSizeList || window.ReactWindow?.List;
