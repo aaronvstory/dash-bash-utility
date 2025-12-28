@@ -9631,9 +9631,10 @@
         };
 
         // [PERSISTENCE-FIX v1.9.8] Must set explicit false, not {} (since ?? true is default)
+        // [PR-FIX] Guard against undefined to prevent runtime crash
         const expandAllArchivedDashers = () => {
           const allExpanded = {};
-          archivedDashers.forEach((dasher) => {
+          (archivedDashers || []).forEach((dasher) => {
             allExpanded[dasher.id] = false;
           });
           setCollapsedArchivedDashers(allExpanded);
@@ -9644,7 +9645,7 @@
 
         const collapseAllArchivedDashers = () => {
           const allCollapsed = {};
-          archivedDashers.forEach((dasher) => {
+          (archivedDashers || []).forEach((dasher) => {
             allCollapsed[dasher.id] = true;
           });
           setCollapsedArchivedDashers(allCollapsed);
