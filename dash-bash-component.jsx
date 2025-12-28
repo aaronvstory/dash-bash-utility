@@ -3036,13 +3036,26 @@
           }
 
           return new Promise((resolve, reject) => {
-            const handleMessage = (e) => {
-              const { ok, data, error } = e.data || {};
+            const WORKER_TIMEOUT_MS = 10000; // 10 second timeout for large files
+            let timeoutId = null;
+            let settled = false;
+
+            const cleanup = () => {
+              if (timeoutId) clearTimeout(timeoutId);
               worker.removeEventListener("message", handleMessage);
+              worker.removeEventListener("error", handleError);
+              worker.removeEventListener("messageerror", handleError);
               try {
                 worker.terminate();
               } catch {}
               importWorkerRef.current = null;
+            };
+
+            const handleMessage = (e) => {
+              if (settled) return;
+              settled = true;
+              const { ok, data, error } = e.data || {};
+              cleanup();
               if (ok) {
                 resolve(data);
               } else {
@@ -3050,7 +3063,27 @@
               }
             };
 
+            const handleError = (e) => {
+              if (settled) return;
+              settled = true;
+              cleanup();
+              const errorMsg = e?.message || (e?.error?.message) || "Worker script failed to load";
+              console.warn("Import worker error:", errorMsg);
+              reject(new Error(errorMsg));
+            };
+
+            // Timeout guard - prevents infinite hang if worker silently fails
+            timeoutId = setTimeout(() => {
+              if (settled) return;
+              settled = true;
+              cleanup();
+              console.warn("Import worker timeout - falling back to main thread");
+              reject(new Error("Worker timeout"));
+            }, WORKER_TIMEOUT_MS);
+
             worker.addEventListener("message", handleMessage);
+            worker.addEventListener("error", handleError);
+            worker.addEventListener("messageerror", handleError);
 
             try {
               if (isArrayBuffer && payload instanceof ArrayBuffer) {
@@ -3059,11 +3092,9 @@
                 worker.postMessage(payload);
               }
             } catch (postErr) {
-              worker.removeEventListener("message", handleMessage);
-              try {
-                worker.terminate();
-              } catch {}
-              importWorkerRef.current = null;
+              if (settled) return;
+              settled = true;
+              cleanup();
               reject(postErr);
             }
           });
