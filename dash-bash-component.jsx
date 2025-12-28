@@ -6391,8 +6391,13 @@
         };
 
         // Expand/Collapse all note categories
+        // [PR-FIX] Must set explicit false (not {}) since ?? true is default
         const expandAllNoteCategories = () => {
-          setCollapsedNoteCategories({});
+          const allExpanded = {};
+          noteCategories.forEach((cat) => {
+            allExpanded[cat.id] = false;
+          });
+          setCollapsedNoteCategories(allExpanded);
           // Auto-save after expanding all
           setTimeout(() => {
             saveAllToLocalStorage();
@@ -9416,8 +9421,13 @@
         }, [setReadyDashers, requestPersist]);
 
         // Expand/Collapse all for Address Book
+        // [PR-FIX] Must set explicit false (not {}) since ?? true is default
         const expandAllCategories = () => {
-          setCollapsedCategories({});
+          const allExpanded = {};
+          categories.forEach((cat) => {
+            allExpanded[cat.id] = false;
+          });
+          setCollapsedCategories(allExpanded);
           // Auto-save after expanding all
           setTimeout(() => {
             saveAllToLocalStorage();
@@ -9437,9 +9447,14 @@
         };
 
         // Expand/Collapse all dashers (keep categories visible, like Store Address Book)
+        // [PR-FIX] Must set explicit false (not {}) since ?? true is default
         const expandAllDasherCategories = () => {
-          // Expand all categories (make them visible)
-          setCollapsedDasherCategories({});
+          // Expand all categories (make them visible) - explicit false
+          const allCategoriesExpanded = {};
+          dasherCategories.forEach((cat) => {
+            allCategoriesExpanded[cat.id] = false;
+          });
+          setCollapsedDasherCategories(allCategoriesExpanded);
 
           // Expand all individual dashers within categories
           // Must explicitly set to false since default is true
@@ -9461,8 +9476,12 @@
         };
 
         const collapseAllDasherCategories = () => {
-          // Keep categories expanded/visible (don't collapse them)
-          setCollapsedDasherCategories({});
+          // Keep categories expanded/visible - explicit false (not {})
+          const allCategoriesExpanded = {};
+          dasherCategories.forEach((cat) => {
+            allCategoriesExpanded[cat.id] = false;
+          });
+          setCollapsedDasherCategories(allCategoriesExpanded);
 
           // Collapse all individual dashers only
           const allDashersCollapsed = {};
@@ -9744,7 +9763,16 @@
             return m;
           }, {});
 
+        // [PR-FIX] Normalize a list into an expanded map { [id]: false }
+        // With ?? true default, {} means collapsed, so we need explicit false
+        const toExpandedMap = (list = []) =>
+          list.reduce((m, d) => {
+            if (d && d.id !== undefined && d.id !== null) m[d.id] = false;
+            return m;
+          }, {});
+
         // Expand/collapse an entire bucket in one click
+        // [PR-FIX] Must set explicit false values (not {}) since ?? true is default
         const expandBucket = (key) => {
           switch (key) {
             case "main": // Main "Dashers" (categories)
@@ -9752,28 +9780,28 @@
               expandAllDasherCategories();
               break;
             case "ready":
-              setCollapsedReadyDashers({});
+              setCollapsedReadyDashers(toExpandedMap(readyDashers));
               break;
             case "currently-using":
-              setCollapsedCurrentlyUsingDashers({});
+              setCollapsedCurrentlyUsingDashers(toExpandedMap(currentlyUsingDashers));
               break;
             case "appealed":
-              setCollapsedAppealedDashers({});
+              setCollapsedAppealedDashers(toExpandedMap(appealedDashers));
               break;
             case "applied-pending":
-              setCollapsedAppliedPendingDashers({});
+              setCollapsedAppliedPendingDashers(toExpandedMap(appliedPendingDashers));
               break;
             case "reverif":
-              setCollapsedReverifDashers({});
+              setCollapsedReverifDashers(toExpandedMap(reverifDashers));
               break;
             case "locked":
-              setCollapsedLockedDashers({});
+              setCollapsedLockedDashers(toExpandedMap(lockedDashers));
               break;
             case "deactivated":
-              setCollapsedDeactivatedDashers({});
+              setCollapsedDeactivatedDashers(toExpandedMap(deactivatedDashers));
               break;
             case "archived":
-              setCollapsedArchivedDashers({});
+              setCollapsedArchivedDashers(toExpandedMap(archivedDashers));
               break;
           }
           requestPersist();
