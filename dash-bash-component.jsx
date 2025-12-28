@@ -6392,9 +6392,10 @@
 
         // Expand/Collapse all note categories
         // [PR-FIX] Must set explicit false (not {}) since ?? true is default
+        // [PR-FIX] Guard against undefined to prevent runtime crash
         const expandAllNoteCategories = () => {
           const allExpanded = {};
-          noteCategories.forEach((cat) => {
+          (noteCategories || []).forEach((cat) => {
             allExpanded[cat.id] = false;
           });
           setCollapsedNoteCategories(allExpanded);
@@ -6406,7 +6407,7 @@
 
         const collapseAllNoteCategories = () => {
           const allCollapsed = {};
-          noteCategories.forEach((cat) => {
+          (noteCategories || []).forEach((cat) => {
             allCollapsed[cat.id] = true;
           });
           setCollapsedNoteCategories(allCollapsed);
@@ -9422,9 +9423,10 @@
 
         // Expand/Collapse all for Address Book
         // [PR-FIX] Must set explicit false (not {}) since ?? true is default
+        // [PR-FIX] Guard against undefined to prevent runtime crash
         const expandAllCategories = () => {
           const allExpanded = {};
-          categories.forEach((cat) => {
+          (categories || []).forEach((cat) => {
             allExpanded[cat.id] = false;
           });
           setCollapsedCategories(allExpanded);
@@ -9436,7 +9438,7 @@
 
         const collapseAllCategories = () => {
           const allCollapsed = {};
-          categories.forEach((cat) => {
+          (categories || []).forEach((cat) => {
             allCollapsed[cat.id] = true;
           });
           setCollapsedCategories(allCollapsed);
@@ -9448,10 +9450,11 @@
 
         // Expand/Collapse all dashers (keep categories visible, like Store Address Book)
         // [PR-FIX] Must set explicit false (not {}) since ?? true is default
+        // [PR-FIX] Guard against undefined to prevent runtime crash
         const expandAllDasherCategories = () => {
           // Expand all categories (make them visible) - explicit false
           const allCategoriesExpanded = {};
-          dasherCategories.forEach((cat) => {
+          (dasherCategories || []).forEach((cat) => {
             allCategoriesExpanded[cat.id] = false;
           });
           setCollapsedDasherCategories(allCategoriesExpanded);
@@ -9459,7 +9462,7 @@
           // Expand all individual dashers within categories
           // Must explicitly set to false since default is true
           const allDashersExpanded = {};
-          dasherCategories.forEach((cat) => {
+          (dasherCategories || []).forEach((cat) => {
             if (cat.dashers) {
               cat.dashers.forEach((dasher) => {
                 const key = `${cat.id}-${dasher.id}`;
@@ -9478,15 +9481,15 @@
         const collapseAllDasherCategories = () => {
           // Keep categories expanded/visible - explicit false (not {})
           const allCategoriesExpanded = {};
-          dasherCategories.forEach((cat) => {
+          (dasherCategories || []).forEach((cat) => {
             allCategoriesExpanded[cat.id] = false;
           });
           setCollapsedDasherCategories(allCategoriesExpanded);
 
           // Collapse all individual dashers only
           const allDashersCollapsed = {};
-          dasherCategories.forEach((cat) => {
-            cat.dashers.forEach((dasher) => {
+          (dasherCategories || []).forEach((cat) => {
+            (cat.dashers || []).forEach((dasher) => {
               const key = `${cat.id}-${dasher.id}`;
               allDashersCollapsed[key] = true;
             });
