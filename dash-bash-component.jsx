@@ -617,10 +617,95 @@
         },
       );
 
+      // =========================================================================
+      // [PERSISTENCE-FIX] IndexedDB Singleton for Backup Storage
+      // =========================================================================
+      const IDB_NAME = 'DashBashDB';
+      const IDB_STORE = 'appState';
+      const IDB_VERSION = 1;
+      const CURRENT_SCHEMA_VERSION = 5;
+
+      // Singleton connection - persists across re-renders
+      let idbInstance = null;
+      let idbPromise = null;
+
+      function getIDB() {
+        if (idbInstance) return Promise.resolve(idbInstance);
+        if (idbPromise) return idbPromise;
+
+        idbPromise = new Promise((resolve, reject) => {
+          try {
+            const request = indexedDB.open(IDB_NAME, IDB_VERSION);
+            request.onerror = () => {
+              idbPromise = null;
+              console.warn('[IDB] Failed to open database:', request.error);
+              reject(request.error);
+            };
+            request.onsuccess = () => {
+              idbInstance = request.result;
+              // Handle connection closing unexpectedly
+              idbInstance.onclose = () => {
+                idbInstance = null;
+                idbPromise = null;
+              };
+              resolve(idbInstance);
+            };
+            request.onupgradeneeded = (event) => {
+              const db = event.target.result;
+              if (!db.objectStoreNames.contains(IDB_STORE)) {
+                db.createObjectStore(IDB_STORE);
+              }
+            };
+          } catch (err) {
+            idbPromise = null;
+            console.warn('[IDB] IndexedDB not available:', err);
+            reject(err);
+          }
+        });
+
+        return idbPromise;
+      }
+
+      async function saveToIDB(key, value) {
+        try {
+          const db = await getIDB();
+          return new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE, 'readwrite');
+            tx.objectStore(IDB_STORE).put(value, key);
+            tx.oncomplete = () => resolve(true);
+            tx.onerror = () => reject(tx.error);
+          });
+        } catch (err) {
+          console.warn('[IDB] Save failed:', err);
+          return false;
+        }
+      }
+
+      async function loadFromIDB(key) {
+        try {
+          const db = await getIDB();
+          return new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE, 'readonly');
+            const request = tx.objectStore(IDB_STORE).get(key);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+          });
+        } catch (err) {
+          console.warn('[IDB] Load failed:', err);
+          return null;
+        }
+      }
+      // =========================================================================
+
       const EnhancedCalculator = () => {
         // Import gate (v1.9.5): Prevents re-renders, localStorage writes, and timer updates during import
         const [isImporting, setIsImporting] = useState(false);
-        
+
+        // [PERSISTENCE-FIX] Track save state for emergency handlers and visual feedback
+        const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+        const [lastSavedAt, setLastSavedAt] = useState(null);
+        const [localStorageDisabled, setLocalStorageDisabled] = useState(false);
+
         const [target, setTarget] = useState("99");
         const [targetPreset, setTargetPreset] = useState("99"); // '99', '120', or 'custom'
         const [isEditingTarget, setIsEditingTarget] = useState(false);
@@ -1229,6 +1314,11 @@
         const saveNotificationTimeoutRef = React.useRef(null);
         const moveToastActiveRef = React.useRef(false);
 
+        // [PERSISTENCE-FIX] Save coordination refs - prevents race conditions
+        const saveInFlightRef = React.useRef(false);
+        const pendingSaveRef = React.useRef(false);
+        const saveVersionRef = React.useRef(0);
+
         const DEV =
           typeof window !== "undefined" &&
           window?.location &&
@@ -1291,6 +1381,68 @@
               }
             }
           }
+        }, []);
+
+        // [PERSISTENCE-FIX] Enhanced initialization - check IndexedDB for recovery
+        useEffect(() => {
+          const checkIDBBackup = async () => {
+            try {
+              const idbData = await loadFromIDB("dashBashState");
+              if (!idbData) return; // No backup available
+
+              // Compare with localStorage timestamp
+              const localRaw = localStorage.getItem("dashBashState");
+              let localTime = new Date(0);
+              if (localRaw) {
+                try {
+                  const localState = JSON.parse(localRaw);
+                  localTime = new Date(localState.timestamp || 0);
+                } catch (e) {
+                  console.warn("[PERSISTENCE] localStorage corrupted:", e);
+                  // localStorage is corrupted, IDB backup is critical
+                  localTime = new Date(0);
+                }
+              }
+
+              const idbTime = new Date(idbData.timestamp || 0);
+
+              if (idbTime > localTime) {
+                console.log("[PERSISTENCE] IndexedDB has newer data - restoring");
+                // IndexedDB has newer data - apply it
+                if (idbData.target) setTarget(idbData.target);
+                if (idbData.targetPreset) setTargetPreset(idbData.targetPreset);
+                if (idbData.prices) setPrices(idbData.prices);
+                if (idbData.messages) setMessages(idbData.messages);
+                if (idbData.categories) setCategories(idbData.categories);
+                if (idbData.noteCategories) setNoteCategories(idbData.noteCategories);
+                if (idbData.dasherCategories) setDasherCategories(idbData.dasherCategories);
+                if (idbData.archivedDashers) setArchivedDashers(idbData.archivedDashers);
+                if (idbData.deactivatedDashers) setDeactivatedDashers(idbData.deactivatedDashers);
+                if (idbData.readyDashers) setReadyDashers(idbData.readyDashers);
+                if (idbData.currentlyUsingDashers) setCurrentlyUsingDashers(idbData.currentlyUsingDashers);
+                if (idbData.appealedDashers) setAppealedDashers(idbData.appealedDashers);
+                if (idbData.reverifDashers) setReverifDashers(idbData.reverifDashers);
+                if (idbData.lockedDashers) setLockedDashers(idbData.lockedDashers);
+                if (idbData.appliedPendingDashers) setAppliedPendingDashers(idbData.appliedPendingDashers);
+
+                // Sync IDB data back to localStorage
+                try {
+                  localStorage.setItem("dashBashState", JSON.stringify(idbData));
+                } catch (e) {
+                  console.warn("[PERSISTENCE] Failed to sync IDB to localStorage:", e);
+                }
+
+                setSaveNotification("Restored from backup");
+                setTimeout(() => setSaveNotification(""), 3000);
+              }
+            } catch (err) {
+              console.warn("[PERSISTENCE] IndexedDB check failed:", err);
+            }
+          };
+
+          // Delay IDB check slightly to allow localStorage init to complete
+          const timeoutId = setTimeout(checkIDBBackup, 500);
+          return () => clearTimeout(timeoutId);
         }, []);
 
         // Update current time every minute
@@ -1956,60 +2108,113 @@
         };
 
         // State Management Functions
-        const saveAllToLocalStorage = () => {
+
+        // [PERSISTENCE-FIX] Memoized state builder - stable reference for emergency saves
+        const buildStateObject = useCallback(() => {
+          return {
+            target,
+            targetPreset,
+            prices,
+            messages,
+            categories,
+            noteCategories,
+            dasherCategories,
+            archivedDashers,
+            deactivatedDashers,
+            readyDashers,
+            currentlyUsingDashers,
+            appealedDashers,
+            reverifDashers,
+            lockedDashers,
+            appliedPendingDashers,
+            collapsedCategories,
+            collapsedStores,
+            collapsedDashers,
+            collapsedReadyDashers,
+            collapsedCurrentlyUsingDashers,
+            collapsedAppealedDashers,
+            collapsedArchivedDashers,
+            collapsedDeactivatedDashers,
+            collapsedReverifDashers,
+            collapsedLockedDashers,
+            collapsedAppliedPendingDashers,
+            collapsedDasherCategories,
+            collapsedNoteCategories,
+            // Persist collapsed notes preferences
+            collapsedDasherNotes,
+            collapsedStoreNotes,
+            collapsedCashOutNotes,
+            collapsedCategoryNotes,
+            isArchivedDashersOpen,
+            isDeactivatedDashersOpen,
+            isReadyDashersOpen,
+            isCurrentlyUsingDashersOpen,
+            isAppealedDashersOpen,
+            isReverifDashersOpen,
+            isLockedDashersOpen,
+            isAppliedPendingDashersOpen,
+            // Cash analytics filters intentionally remain session-scoped so they refresh on new loads
+            showNonZeroOnly,
+            dasherSort,
+            timestamp: new Date().toISOString(),
+            schemaVersion: CURRENT_SCHEMA_VERSION,
+          };
+        }, [
+          target, targetPreset, prices, messages, categories, noteCategories,
+          dasherCategories, archivedDashers, deactivatedDashers, readyDashers,
+          currentlyUsingDashers, appealedDashers, reverifDashers, lockedDashers,
+          appliedPendingDashers, collapsedCategories, collapsedStores, collapsedDashers,
+          collapsedReadyDashers, collapsedCurrentlyUsingDashers, collapsedAppealedDashers,
+          collapsedArchivedDashers, collapsedDeactivatedDashers, collapsedReverifDashers,
+          collapsedLockedDashers, collapsedAppliedPendingDashers, collapsedDasherCategories,
+          collapsedNoteCategories, collapsedDasherNotes, collapsedStoreNotes,
+          collapsedCashOutNotes, collapsedCategoryNotes, isArchivedDashersOpen,
+          isDeactivatedDashersOpen, isReadyDashersOpen, isCurrentlyUsingDashersOpen,
+          isAppealedDashersOpen, isReverifDashersOpen, isLockedDashersOpen,
+          isAppliedPendingDashersOpen, showNonZeroOnly, dasherSort
+        ]);
+
+        // [PERSISTENCE-FIX] Enhanced save with dual-write (localStorage + IndexedDB) and quota handling
+        const saveAllToLocalStorage = useCallback(async () => {
           // localStorage gate (v1.9.5): Block writes during import to prevent thrashing
           if (isImporting) return;
-          
+
           try {
-            const state = {
-              target,
-              targetPreset,
-              prices,
-              messages,
-              categories,
-              noteCategories,
-              dasherCategories,
-              archivedDashers,
-              deactivatedDashers,
-              readyDashers,
-              currentlyUsingDashers,
-              appealedDashers,
-              reverifDashers,
-              lockedDashers,
-              appliedPendingDashers,
-              collapsedCategories,
-              collapsedStores,
-              collapsedDashers,
-              collapsedReadyDashers,
-              collapsedCurrentlyUsingDashers,
-              collapsedAppealedDashers,
-              collapsedArchivedDashers,
-              collapsedDeactivatedDashers,
-              collapsedReverifDashers,
-              collapsedLockedDashers,
-              collapsedAppliedPendingDashers,
-              collapsedDasherCategories,
-              collapsedNoteCategories,
-              // Persist collapsed notes preferences
-              collapsedDasherNotes,
-              collapsedStoreNotes,
-              collapsedCashOutNotes,
-              collapsedCategoryNotes,
-              isArchivedDashersOpen,
-              isDeactivatedDashersOpen,
-              isReadyDashersOpen,
-              isCurrentlyUsingDashersOpen,
-              isAppealedDashersOpen,
-              isReverifDashersOpen,
-              isLockedDashersOpen,
-              isAppliedPendingDashersOpen,
-              // Cash analytics filters intentionally remain session-scoped so they refresh on new loads
-              showNonZeroOnly,
-              dasherSort,
-              timestamp: new Date().toISOString(),
-              schemaVersion: 5, // Schema version for data migration
-            };
-            localStorage.setItem("dashBashState", JSON.stringify(state));
+            const state = buildStateObject();
+            const stateJson = JSON.stringify(state);
+
+            // Primary: localStorage (synchronous, fast) - unless disabled due to quota
+            if (!localStorageDisabled) {
+              try {
+                localStorage.setItem("dashBashState", stateJson);
+              } catch (e) {
+                if (e.name === 'QuotaExceededError') {
+                  console.warn("[PERSISTENCE] localStorage quota exceeded, switching to IndexedDB-only mode");
+                  setLocalStorageDisabled(true);
+                  setSaveNotification("Storage full - using backup storage");
+                } else {
+                  throw e;
+                }
+              }
+            }
+
+            // Secondary: IndexedDB (async, reliable backup) - with timeout
+            try {
+              await Promise.race([
+                saveToIDB("dashBashState", state),
+                new Promise((_, reject) =>
+                  setTimeout(() => reject(new Error('IDB timeout')), 5000)
+                )
+              ]);
+            } catch (err) {
+              console.warn("[PERSISTENCE] IndexedDB backup failed:", err);
+            }
+
+            // Update tracking state
+            setLastSavedAt(new Date());
+            setHasUnsavedChanges(false);
+
+            // Show notification (if not during move toast)
             if (!moveToastActiveRef.current) {
               if (saveNotificationTimeoutRef.current) {
                 clearTimeout(saveNotificationTimeoutRef.current);
@@ -2022,14 +2227,46 @@
               }, 3000);
             }
           } catch (e) {
+            console.error("[PERSISTENCE] Save failed:", e);
             setSaveNotification("Failed to save data");
             announceFailure("Failed to save data");
             setTimeout(() => setSaveNotification(""), 3000);
           }
-        };
+        }, [buildStateObject, isImporting, localStorageDisabled]);
+
+        // [PERSISTENCE-FIX] Coordinated save - prevents race conditions from multiple triggers
+        const coordinatedSave = useCallback(async () => {
+          // If save is in flight, mark as pending and return
+          if (saveInFlightRef.current) {
+            pendingSaveRef.current = true;
+            return;
+          }
+
+          saveInFlightRef.current = true;
+          const currentVersion = ++saveVersionRef.current;
+
+          try {
+            await saveAllToLocalStorage();
+          } finally {
+            saveInFlightRef.current = false;
+
+            // If another save was requested while we were saving, do it now
+            if (pendingSaveRef.current) {
+              pendingSaveRef.current = false;
+              // Only proceed if no newer version was requested
+              if (currentVersion === saveVersionRef.current) {
+                coordinatedSave();
+              }
+            }
+          }
+        }, [saveAllToLocalStorage]);
 
         // [PERF-STAGE5] Non-blocking persistence via idle callback
-        const requestPersist = () => {
+        // [PERSISTENCE-FIX] Now uses coordinatedSave and tracks unsaved changes
+        const requestPersist = useCallback(() => {
+          // Mark that we have unsaved changes
+          setHasUnsavedChanges(true);
+
           if (saveDebouncedRef.current) {
             if (typeof cancelIdleCallback !== 'undefined') {
               cancelIdleCallback(saveDebouncedRef.current);
@@ -2039,25 +2276,147 @@
 
           const performSave = () => {
             try {
-              saveAllToLocalStorage();
+              coordinatedSave();
             } finally {
               saveDebouncedRef.current = null;
             }
           };
 
-          // prefer idle callback when supported
+          // prefer idle callback when supported, with 500ms debounce
           if (typeof requestIdleCallback !== 'undefined') {
             saveDebouncedRef.current = requestIdleCallback(performSave, { timeout: 500 });
           } else {
-            saveDebouncedRef.current = setTimeout(performSave, 250);
+            saveDebouncedRef.current = setTimeout(performSave, 500);
           }
-        };
+        }, [coordinatedSave]);
 
+        // =========================================================================
+        // [PERSISTENCE-FIX] Emergency Save Handlers
+        // =========================================================================
+
+        // PRIMARY: visibilitychange - most reliable for tab switches and closes
+        const handleVisibilityChange = useCallback(() => {
+          if (document.visibilityState === "hidden") {
+            console.log("[PERSISTENCE] Tab hidden - emergency save triggered");
+            // Synchronous save - must complete before tab is suspended
+            try {
+              const state = buildStateObject();
+              localStorage.setItem("dashBashState", JSON.stringify(state));
+              setHasUnsavedChanges(false);
+            } catch (err) {
+              console.error("[PERSISTENCE] Emergency save on visibility change failed:", err);
+            }
+          }
+        }, [buildStateObject]);
+
+        useEffect(() => {
+          document.addEventListener("visibilitychange", handleVisibilityChange);
+          return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+        }, [handleVisibilityChange]);
+
+        // BACKUP: beforeunload - less reliable but provides user warning
+        const handleBeforeUnload = useCallback((e) => {
+          console.log("[PERSISTENCE] beforeunload - emergency save triggered");
+          // Synchronous save - must complete before page closes
+          try {
+            const state = buildStateObject();
+            localStorage.setItem("dashBashState", JSON.stringify(state));
+          } catch (err) {
+            console.error("[PERSISTENCE] Emergency save on beforeunload failed:", err);
+          }
+
+          // Show warning if unsaved changes (increases save likelihood)
+          if (hasUnsavedChanges) {
+            e.preventDefault();
+            e.returnValue = "You have unsaved changes.";
+          }
+        }, [buildStateObject, hasUnsavedChanges]);
+
+        useEffect(() => {
+          window.addEventListener("beforeunload", handleBeforeUnload);
+          return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+        }, [handleBeforeUnload]);
+
+        // MOBILE: pagehide - for mobile Safari and bfcache
+        const handlePageHide = useCallback((e) => {
+          if (e.persisted) return; // Page is being cached, not closed
+          console.log("[PERSISTENCE] pagehide - emergency save triggered");
+          try {
+            const state = buildStateObject();
+            localStorage.setItem("dashBashState", JSON.stringify(state));
+          } catch (err) {
+            console.error("[PERSISTENCE] Emergency save on pagehide failed:", err);
+          }
+        }, [buildStateObject]);
+
+        useEffect(() => {
+          window.addEventListener("pagehide", handlePageHide);
+          return () => window.removeEventListener("pagehide", handlePageHide);
+        }, [handlePageHide]);
+
+        // =========================================================================
+        // [PERSISTENCE-FIX] Comprehensive Auto-Save
+        // =========================================================================
+
+        // Track when any state changes that needs saving
+        useEffect(() => {
+          if (isImporting) return; // Skip during imports
+          setHasUnsavedChanges(true);
+        }, [
+          target, targetPreset, prices, messages, categories, noteCategories,
+          dasherCategories, archivedDashers, deactivatedDashers, readyDashers,
+          currentlyUsingDashers, appealedDashers, reverifDashers, lockedDashers,
+          appliedPendingDashers, isImporting
+        ]);
+
+        // Auto-save when state changes (500ms debounce for main thread)
+        useEffect(() => {
+          if (isImporting) return; // Skip during imports
+          if (!hasUnsavedChanges) return; // Nothing to save
+
+          const timeoutId = setTimeout(() => {
+            console.log("[PERSISTENCE] Auto-save triggered after state change");
+            coordinatedSave();
+          }, 500);
+
+          return () => clearTimeout(timeoutId);
+        }, [hasUnsavedChanges, isImporting, coordinatedSave]);
+
+        // =========================================================================
+        // [PERSISTENCE-FIX] Multi-Tab Awareness
+        // =========================================================================
+
+        useEffect(() => {
+          const handleStorageChange = (e) => {
+            if (e.key === "dashBashState" && e.newValue) {
+              try {
+                const newState = JSON.parse(e.newValue);
+                const newTime = new Date(newState.timestamp);
+                const currentTime = lastSavedAt || new Date(0);
+
+                if (newTime > currentTime) {
+                  // Another tab has newer data
+                  console.log("[PERSISTENCE] Another tab has updated data");
+                  setSaveNotification("Data updated from another tab");
+                  setTimeout(() => setSaveNotification(""), 5000);
+                  // Note: Auto-reload is too disruptive; user can manually reload
+                }
+              } catch (err) {
+                console.warn("[PERSISTENCE] Failed to parse storage event:", err);
+              }
+            }
+          };
+
+          window.addEventListener("storage", handleStorageChange);
+          return () => window.removeEventListener("storage", handleStorageChange);
+        }, [lastSavedAt]);
+
+        // Legacy auto-save (kept for backward compatibility during transition)
         // Auto-save when collapsedDashers changes
         useEffect(() => {
           console.log('[AUTO-SAVE] collapsedDashers changed, requesting persist');
           requestPersist();
-        }, [collapsedDashers]);
+        }, [collapsedDashers, requestPersist]);
 
         const openDasherBucket = useCallback(
           (bucketKey, meta = {}) => {
@@ -16070,8 +16429,24 @@
                       <span className="text-lg font-medium">
                         State Management{" "}
                         <span className="text-sm text-gray-400 ml-2">
-                          v1.8.9
+                          v1.9.7
                         </span>
+                        {/* [PERSISTENCE-FIX] Last saved indicator */}
+                        {lastSavedAt && (
+                          <span className="text-xs text-gray-500 ml-3" title={lastSavedAt.toLocaleString()}>
+                            • Saved {(() => {
+                              const seconds = Math.floor((Date.now() - lastSavedAt.getTime()) / 1000);
+                              if (seconds < 5) return "just now";
+                              if (seconds < 60) return `${seconds}s ago`;
+                              const minutes = Math.floor(seconds / 60);
+                              if (minutes < 60) return `${minutes}m ago`;
+                              return lastSavedAt.toLocaleTimeString();
+                            })()}
+                          </span>
+                        )}
+                        {hasUnsavedChanges && (
+                          <span className="text-xs text-amber-400 ml-2">• Unsaved</span>
+                        )}
                       </span>
                     </div>
                     {isStateManagementOpen ? (

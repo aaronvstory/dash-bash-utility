@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dash Bash Utility</title>
 
-    <!-- Version 1.9.5 - Web Worker JSON parsing + import gates (console flood fix) -->
-    <meta name="app-version" content="1.9.6" />
+    <!-- Version 1.9.7 - localStorage persistence fix with IndexedDB backup -->
+    <meta name="app-version" content="1.9.7" />
 
     <!-- Cache Control Headers -->
     <meta
@@ -46,7 +46,7 @@
     <script src="./vendor/react-window-adapter.js"></script>
 
     <!-- Tailwind CSS - Local build (MUST load first to allow custom styles to override) -->
-    <link rel="stylesheet" href="./tailwind.css?v=1.9.6" />
+    <link rel="stylesheet" href="./tailwind.css?v=1.9.7" />
 
     <!-- Google Fonts - Modern Sans-Serif -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -57,7 +57,7 @@
     />
 
     <!-- External Stylesheets (MUST load after Tailwind to override defaults) -->
-    <link rel="stylesheet" href="styles.css?v=1.9.6" />
+    <link rel="stylesheet" href="styles.css?v=1.9.7" />
 
     <!-- Lucide Icons - Local vendor build -->
     <script src="./vendor/lucide.min.js"></script>
@@ -77,10 +77,10 @@
     <!-- Service Worker Registration with Version Check -->
     <script>
       console.log(
-        "%cDash Bash Utility build 1.9.5 (Import performance fix) loaded",
+        "%cDash Bash Utility build 1.9.7 (localStorage persistence fix) loaded",
         "background:#222;color:#f39ac5;padding:4px 8px;border-radius:4px",
       );
-      const APP_VERSION = "1.9.6"; // React Window adapter fix
+      const APP_VERSION = "1.9.7"; // localStorage persistence fix with IndexedDB backup
       const versionState = {
         registration: null,
         banner: null,
