@@ -6971,7 +6971,8 @@
           );
         };
 
-        const toggleDasherCategoryCollapse = (categoryId) => {
+        // [PR-FIX] useCallback for stable identity (reduces re-renders of memoized children)
+        const toggleDasherCategoryCollapse = useCallback((categoryId) => {
           setCollapsedDasherCategories((prev) => {
             // Default is true (collapsed), so we need to handle undefined properly
             const currentState = prev[categoryId] ?? true;
@@ -6980,7 +6981,7 @@
               [categoryId]: !currentState,
             };
           });
-        };
+        }, []);
 
         const startDasherTimer = (categoryId, dasherId) => {
           const now = new Date().toISOString();
@@ -9591,12 +9592,15 @@
 
         // Archived Dasher Collapse Functions
         // [PERSISTENCE-FIX v1.9.8] Toggle must handle ?? true default
+        // [PR-FIX] Compute from prev inside setState to avoid stale closure
         const toggleArchivedDasherCollapse = (dasherId) => {
-          const isCurrentlyCollapsed = collapsedArchivedDashers[dasherId] ?? true;
-          setCollapsedArchivedDashers((prev) => ({
-            ...prev,
-            [dasherId]: !isCurrentlyCollapsed,
-          }));
+          setCollapsedArchivedDashers((prev) => {
+            const isCurrentlyCollapsed = prev[dasherId] ?? true;
+            return {
+              ...prev,
+              [dasherId]: !isCurrentlyCollapsed,
+            };
+          });
 
           // Auto-save
           setTimeout(() => {
