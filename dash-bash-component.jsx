@@ -1364,6 +1364,54 @@
               if (state.collapsedArchivedDashers) {
                 setCollapsedArchivedDashers(state.collapsedArchivedDashers);
               }
+
+              // [PERSISTENCE-FIX v1.9.8] Load ALL collapsed states on mount
+              // Previously only collapsedArchivedDashers was loaded here
+              if (state.collapsedCategories)
+                setCollapsedCategories(state.collapsedCategories);
+              if (state.collapsedStores)
+                setCollapsedStores(state.collapsedStores);
+              if (state.collapsedDashers)
+                setCollapsedDashers(state.collapsedDashers);
+              if (state.collapsedDasherCategories)
+                setCollapsedDasherCategories(state.collapsedDasherCategories);
+              if (state.collapsedReadyDashers)
+                setCollapsedReadyDashers(state.collapsedReadyDashers);
+              if (state.collapsedCurrentlyUsingDashers)
+                setCollapsedCurrentlyUsingDashers(state.collapsedCurrentlyUsingDashers);
+              if (state.collapsedAppealedDashers)
+                setCollapsedAppealedDashers(state.collapsedAppealedDashers);
+              if (state.collapsedDeactivatedDashers)
+                setCollapsedDeactivatedDashers(state.collapsedDeactivatedDashers);
+              if (state.collapsedReverifDashers)
+                setCollapsedReverifDashers(state.collapsedReverifDashers);
+              if (state.collapsedLockedDashers)
+                setCollapsedLockedDashers(state.collapsedLockedDashers);
+              if (state.collapsedAppliedPendingDashers)
+                setCollapsedAppliedPendingDashers(state.collapsedAppliedPendingDashers);
+              if (state.collapsedNoteCategories)
+                setCollapsedNoteCategories(state.collapsedNoteCategories);
+
+              // [PERSISTENCE-FIX v1.9.8] Load section open/closed states
+              if (state.isReadyDashersOpen !== undefined)
+                setIsReadyDashersOpen(state.isReadyDashersOpen);
+              if (state.isCurrentlyUsingDashersOpen !== undefined)
+                setIsCurrentlyUsingDashersOpen(state.isCurrentlyUsingDashersOpen);
+              if (state.isAppealedDashersOpen !== undefined)
+                setIsAppealedDashersOpen(state.isAppealedDashersOpen);
+              if (state.isDeactivatedDashersOpen !== undefined)
+                setIsDeactivatedDashersOpen(state.isDeactivatedDashersOpen);
+              if (state.isReverifDashersOpen !== undefined)
+                setIsReverifDashersOpen(state.isReverifDashersOpen);
+              if (state.isLockedDashersOpen !== undefined)
+                setIsLockedDashersOpen(state.isLockedDashersOpen);
+              if (state.isAppliedPendingDashersOpen !== undefined)
+                setIsAppliedPendingDashersOpen(state.isAppliedPendingDashersOpen);
+              if (state.isDashersOpen !== undefined)
+                setIsDashersOpen(state.isDashersOpen);
+              if (state.isArchivedDashersOpen !== undefined)
+                setIsArchivedDashersOpen(state.isArchivedDashersOpen);
+
               // Note: noteCategories and dasherCategories are now loaded via lazy initialization
             } catch (e) {
               console.error("Error loading saved state:", e);
@@ -6343,8 +6391,14 @@
         };
 
         // Expand/Collapse all note categories
+        // [PR-FIX] Must set explicit false (not {}) since ?? true is default
+        // [PR-FIX] Guard against undefined to prevent runtime crash
         const expandAllNoteCategories = () => {
-          setCollapsedNoteCategories({});
+          const allExpanded = {};
+          (noteCategories || []).forEach((cat) => {
+            allExpanded[cat.id] = false;
+          });
+          setCollapsedNoteCategories(allExpanded);
           // Auto-save after expanding all
           setTimeout(() => {
             saveAllToLocalStorage();
@@ -6353,7 +6407,7 @@
 
         const collapseAllNoteCategories = () => {
           const allCollapsed = {};
-          noteCategories.forEach((cat) => {
+          (noteCategories || []).forEach((cat) => {
             allCollapsed[cat.id] = true;
           });
           setCollapsedNoteCategories(allCollapsed);
@@ -6923,12 +6977,17 @@
           );
         };
 
-        const toggleDasherCategoryCollapse = (categoryId) => {
-          setCollapsedDasherCategories((prev) => ({
-            ...prev,
-            [categoryId]: !prev[categoryId],
-          }));
-        };
+        // [PR-FIX] useCallback for stable identity (reduces re-renders of memoized children)
+        const toggleDasherCategoryCollapse = useCallback((categoryId) => {
+          setCollapsedDasherCategories((prev) => {
+            // Default is true (collapsed), so we need to handle undefined properly
+            const currentState = prev[categoryId] ?? true;
+            return {
+              ...prev,
+              [categoryId]: !currentState,
+            };
+          });
+        }, []);
 
         const startDasherTimer = (categoryId, dasherId) => {
           const now = new Date().toISOString();
@@ -7057,17 +7116,21 @@
           });
         }, [updateDasherEverywhere]);
 
+        // [PERSISTENCE-FIX v1.9.8] Toggle must handle ?? true default
+        // undefined/null → collapsed by default, so toggle to false (expand)
         const toggleDasherCollapse = (categoryId, dasherId) => {
           const key = categoryId + "-" + dasherId;
           setCollapsedDashers((prev) => ({
             ...prev,
-            [key]: !prev[key],
+            [key]: !(prev[key] ?? true),
           }));
         };
 
+        // [PERSISTENCE-FIX v1.9.8] Default to collapsed (was || false = expanded)
+        // Now matches store behavior: ?? true means collapsed by default
         const isDasherCollapsed = (categoryId, dasherId) => {
           const key = categoryId + "-" + dasherId;
-          return collapsedDashers[key] || false;
+          return collapsedDashers[key] ?? true;
         };
 
         const calculateAppealedTimeStatus = (appealedAtTime) => {
@@ -9359,8 +9422,14 @@
         }, [setReadyDashers, requestPersist]);
 
         // Expand/Collapse all for Address Book
+        // [PR-FIX] Must set explicit false (not {}) since ?? true is default
+        // [PR-FIX] Guard against undefined to prevent runtime crash
         const expandAllCategories = () => {
-          setCollapsedCategories({});
+          const allExpanded = {};
+          (categories || []).forEach((cat) => {
+            allExpanded[cat.id] = false;
+          });
+          setCollapsedCategories(allExpanded);
           // Auto-save after expanding all
           setTimeout(() => {
             saveAllToLocalStorage();
@@ -9369,7 +9438,7 @@
 
         const collapseAllCategories = () => {
           const allCollapsed = {};
-          categories.forEach((cat) => {
+          (categories || []).forEach((cat) => {
             allCollapsed[cat.id] = true;
           });
           setCollapsedCategories(allCollapsed);
@@ -9380,14 +9449,20 @@
         };
 
         // Expand/Collapse all dashers (keep categories visible, like Store Address Book)
+        // [PR-FIX] Must set explicit false (not {}) since ?? true is default
+        // [PR-FIX] Guard against undefined to prevent runtime crash
         const expandAllDasherCategories = () => {
-          // Expand all categories (make them visible)
-          setCollapsedDasherCategories({});
+          // Expand all categories (make them visible) - explicit false
+          const allCategoriesExpanded = {};
+          (dasherCategories || []).forEach((cat) => {
+            allCategoriesExpanded[cat.id] = false;
+          });
+          setCollapsedDasherCategories(allCategoriesExpanded);
 
           // Expand all individual dashers within categories
           // Must explicitly set to false since default is true
           const allDashersExpanded = {};
-          dasherCategories.forEach((cat) => {
+          (dasherCategories || []).forEach((cat) => {
             if (cat.dashers) {
               cat.dashers.forEach((dasher) => {
                 const key = `${cat.id}-${dasher.id}`;
@@ -9404,13 +9479,17 @@
         };
 
         const collapseAllDasherCategories = () => {
-          // Keep categories expanded/visible (don't collapse them)
-          setCollapsedDasherCategories({});
+          // Keep categories expanded/visible - explicit false (not {})
+          const allCategoriesExpanded = {};
+          (dasherCategories || []).forEach((cat) => {
+            allCategoriesExpanded[cat.id] = false;
+          });
+          setCollapsedDasherCategories(allCategoriesExpanded);
 
           // Collapse all individual dashers only
           const allDashersCollapsed = {};
-          dasherCategories.forEach((cat) => {
-            cat.dashers.forEach((dasher) => {
+          (dasherCategories || []).forEach((cat) => {
+            (cat.dashers || []).forEach((dasher) => {
               const key = `${cat.id}-${dasher.id}`;
               allDashersCollapsed[key] = true;
             });
@@ -9534,14 +9613,16 @@
         };
 
         // Archived Dasher Collapse Functions
+        // [PERSISTENCE-FIX v1.9.8] Toggle must handle ?? true default
+        // [PR-FIX] Compute from prev inside setState to avoid stale closure
         const toggleArchivedDasherCollapse = (dasherId) => {
-          const newCollapsed = { ...collapsedArchivedDashers };
-          if (newCollapsed[dasherId]) {
-            delete newCollapsed[dasherId];
-          } else {
-            newCollapsed[dasherId] = true;
-          }
-          setCollapsedArchivedDashers(newCollapsed);
+          setCollapsedArchivedDashers((prev) => {
+            const isCurrentlyCollapsed = prev[dasherId] ?? true;
+            return {
+              ...prev,
+              [dasherId]: !isCurrentlyCollapsed,
+            };
+          });
 
           // Auto-save
           setTimeout(() => {
@@ -9549,8 +9630,14 @@
           }, 100);
         };
 
+        // [PERSISTENCE-FIX v1.9.8] Must set explicit false, not {} (since ?? true is default)
+        // [PR-FIX] Guard against undefined to prevent runtime crash
         const expandAllArchivedDashers = () => {
-          setCollapsedArchivedDashers({});
+          const allExpanded = {};
+          (archivedDashers || []).forEach((dasher) => {
+            allExpanded[dasher.id] = false;
+          });
+          setCollapsedArchivedDashers(allExpanded);
           setTimeout(() => {
             saveAllToLocalStorage();
           }, 100);
@@ -9558,7 +9645,7 @@
 
         const collapseAllArchivedDashers = () => {
           const allCollapsed = {};
-          archivedDashers.forEach((dasher) => {
+          (archivedDashers || []).forEach((dasher) => {
             allCollapsed[dasher.id] = true;
           });
           setCollapsedArchivedDashers(allCollapsed);
@@ -9567,8 +9654,9 @@
           }, 100);
         };
 
+        // [PERSISTENCE-FIX v1.9.8] Default collapsed
         const isArchivedDasherCollapsed = (dasherId) => {
-          return collapsedArchivedDashers[dasherId] || false;
+          return collapsedArchivedDashers[dasherId] ?? true;
         };
 
         // Expand/Collapse all for Dashers
@@ -9679,7 +9767,16 @@
             return m;
           }, {});
 
+        // [PR-FIX] Normalize a list into an expanded map { [id]: false }
+        // With ?? true default, {} means collapsed, so we need explicit false
+        const toExpandedMap = (list = []) =>
+          list.reduce((m, d) => {
+            if (d && d.id !== undefined && d.id !== null) m[d.id] = false;
+            return m;
+          }, {});
+
         // Expand/collapse an entire bucket in one click
+        // [PR-FIX] Must set explicit false values (not {}) since ?? true is default
         const expandBucket = (key) => {
           switch (key) {
             case "main": // Main "Dashers" (categories)
@@ -9687,28 +9784,28 @@
               expandAllDasherCategories();
               break;
             case "ready":
-              setCollapsedReadyDashers({});
+              setCollapsedReadyDashers(toExpandedMap(readyDashers));
               break;
             case "currently-using":
-              setCollapsedCurrentlyUsingDashers({});
+              setCollapsedCurrentlyUsingDashers(toExpandedMap(currentlyUsingDashers));
               break;
             case "appealed":
-              setCollapsedAppealedDashers({});
+              setCollapsedAppealedDashers(toExpandedMap(appealedDashers));
               break;
             case "applied-pending":
-              setCollapsedAppliedPendingDashers({});
+              setCollapsedAppliedPendingDashers(toExpandedMap(appliedPendingDashers));
               break;
             case "reverif":
-              setCollapsedReverifDashers({});
+              setCollapsedReverifDashers(toExpandedMap(reverifDashers));
               break;
             case "locked":
-              setCollapsedLockedDashers({});
+              setCollapsedLockedDashers(toExpandedMap(lockedDashers));
               break;
             case "deactivated":
-              setCollapsedDeactivatedDashers({});
+              setCollapsedDeactivatedDashers(toExpandedMap(deactivatedDashers));
               break;
             case "archived":
-              setCollapsedArchivedDashers({});
+              setCollapsedArchivedDashers(toExpandedMap(archivedDashers));
               break;
           }
           requestPersist();
@@ -9756,9 +9853,11 @@
 
         // Row-level toggle that updates the right map for the active bucket
         // [PERF-STAGE3] Wrap in useCallback for stable identity
+        // [PERSISTENCE-FIX v1.9.8] Toggle must handle ?? true default
         const toggleBucketRowCollapsed = useCallback((bucketKey, dasherId, next) => {
           const updater = (prev) => {
-            const v = next !== undefined ? !!next : !prev[dasherId];
+            // Use ?? true default since collapsed is now the default state
+            const v = next !== undefined ? !!next : !(prev[dasherId] ?? true);
             return { ...prev, [dasherId]: v };
           };
           switch (bucketKey) {
@@ -13102,7 +13201,8 @@
                             /* Direct rendering without virtualization (bucket sections typically have few items) */
                             filteredReadyDashers.map((dasher, index) => {
                               const isSelected = selectedItems.readyDashers.has(dasher.id);
-                              const isCollapsed = !!collapsedReadyDashers[dasher.id];
+                              // [PERSISTENCE-FIX v1.9.8] Default collapsed
+                              const isCollapsed = collapsedReadyDashers[dasher.id] ?? true;
                               const isEditing = isDasherEditing("ready", dasher.id);
                               const cardRecentlyMoved = recentlyMoved instanceof Set && recentlyMoved.has(dasher.id);
                               const movedNote = dasher.readyAt ? `Ready: ${formatRelativeTime(dasher.readyAt)}` : null;
@@ -13227,7 +13327,8 @@
                                     dasher.id,
                                   );
                                 const isCollapsed =
-                                  !!collapsedCurrentlyUsingDashers[dasher.id];
+                                  // [PERSISTENCE-FIX v1.9.8] Default collapsed
+                                  collapsedCurrentlyUsingDashers[dasher.id] ?? true;
                                 const isEditing = isDasherEditing(
                                   "currently-using",
                                   dasher.id,
@@ -13579,7 +13680,8 @@
                               const isSelected =
                                 selectedItems.appealedDashers.has(dasher.id);
                               const isCollapsed =
-                                !!collapsedAppealedDashers[dasher.id];
+                                // [PERSISTENCE-FIX v1.9.8] Default collapsed
+                                collapsedAppealedDashers[dasher.id] ?? true;
                               const isEditing = isDasherEditing(
                                 "appealed",
                                 dasher.id,
@@ -13928,7 +14030,8 @@
                                     dasher.id,
                                   );
                                 const isCollapsed =
-                                  !!collapsedAppliedPendingDashers[dasher.id];
+                                  // [PERSISTENCE-FIX v1.9.8] Default collapsed
+                                  collapsedAppliedPendingDashers[dasher.id] ?? true;
                                 const isEditing = isDasherEditing(
                                   "applied-pending",
                                   dasher.id,
@@ -14259,7 +14362,8 @@
                                   ? selectedItems.reverifDashers.has(dasher.id)
                                   : false;
                               const isCollapsed =
-                                !!collapsedReverifDashers[dasher.id];
+                                // [PERSISTENCE-FIX v1.9.8] Default collapsed
+                                collapsedReverifDashers[dasher.id] ?? true;
                               const isEditing = isDasherEditing(
                                 "reverif",
                                 dasher.id,
@@ -14579,7 +14683,8 @@
                               const isSelected =
                                 selectedItems.lockedDashers.has(dasher.id);
                               const isCollapsed =
-                                !!collapsedLockedDashers[dasher.id];
+                                // [PERSISTENCE-FIX v1.9.8] Default collapsed
+                                collapsedLockedDashers[dasher.id] ?? true;
                               const isEditing = isDasherEditing(
                                 "locked",
                                 dasher.id,
@@ -14895,7 +15000,8 @@
                               dasher.id,
                             );
                             const isCollapsed =
-                              !!collapsedDeactivatedDashers[dasher.id];
+                              // [PERSISTENCE-FIX v1.9.8] Default collapsed
+                              collapsedDeactivatedDashers[dasher.id] ?? true;
                             const timeStatus = calculateDasherTimeStatus(
                               dasher.lastUsed,
                               dasher.id
