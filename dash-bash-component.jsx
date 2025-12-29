@@ -146,6 +146,7 @@
               request.onsuccess = () => window.location.reload();
               request.onerror = () => window.location.reload();
             } catch (e) {
+              console.error("[ERROR BOUNDARY] Clear data failed:", e);
               window.location.reload();
             }
           }
@@ -687,8 +688,9 @@
             </div>
           );
         },
-        // v1.10.0: Simplified memo - use default shallow comparison + dasher reference check
-        // Previously had brittle hardcoded property list that could miss new properties
+        // v1.10.0: Simplified memo - uses object reference check for dasher instead of
+        // individual property comparison. UI-state props checked explicitly.
+        // Previous approach had brittle hardcoded property list that could miss new dasher fields.
         (prevProps, nextProps) => {
           if (!prevProps || !nextProps) return false;
           // Same dasher object reference = no re-render needed
@@ -3617,7 +3619,9 @@
             if (importWorkerRef.current) {
               try {
                 importWorkerRef.current.terminate();
-              } catch {}
+              } catch (e) {
+                console.warn("[IMPORT] Worker termination failed:", e);
+              }
               importWorkerRef.current = null;
             }
           };
@@ -4090,7 +4094,9 @@
             if (event?.target) {
               try {
                 event.target.value = "";
-              } catch {}
+              } catch (e) {
+                console.warn("[IMPORT] Could not reset file input:", e);
+              }
             }
           }
         };
