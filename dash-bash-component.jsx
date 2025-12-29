@@ -1482,24 +1482,43 @@
                 setCollapsedNoteCategories(state.collapsedNoteCategories);
 
               // [PERSISTENCE-FIX v1.9.8] Load section open/closed states
-              if (state.isReadyDashersOpen !== undefined)
+              // [FIX v1.10.1] Also set renderReady=true for open buckets to prevent infinite spinner
+              if (state.isReadyDashersOpen !== undefined) {
                 setIsReadyDashersOpen(state.isReadyDashersOpen);
-              if (state.isCurrentlyUsingDashersOpen !== undefined)
+                if (state.isReadyDashersOpen) setReadyRenderReady(true);
+              }
+              if (state.isCurrentlyUsingDashersOpen !== undefined) {
                 setIsCurrentlyUsingDashersOpen(state.isCurrentlyUsingDashersOpen);
-              if (state.isAppealedDashersOpen !== undefined)
+                if (state.isCurrentlyUsingDashersOpen) setUsingRenderReady(true);
+              }
+              if (state.isAppealedDashersOpen !== undefined) {
                 setIsAppealedDashersOpen(state.isAppealedDashersOpen);
-              if (state.isDeactivatedDashersOpen !== undefined)
+                if (state.isAppealedDashersOpen) setAppealedRenderReady(true);
+              }
+              if (state.isDeactivatedDashersOpen !== undefined) {
                 setIsDeactivatedDashersOpen(state.isDeactivatedDashersOpen);
-              if (state.isReverifDashersOpen !== undefined)
+                if (state.isDeactivatedDashersOpen) setDeactivatedRenderReady(true);
+              }
+              if (state.isReverifDashersOpen !== undefined) {
                 setIsReverifDashersOpen(state.isReverifDashersOpen);
-              if (state.isLockedDashersOpen !== undefined)
+                if (state.isReverifDashersOpen) setReverifRenderReady(true);
+              }
+              if (state.isLockedDashersOpen !== undefined) {
                 setIsLockedDashersOpen(state.isLockedDashersOpen);
-              if (state.isAppliedPendingDashersOpen !== undefined)
+                if (state.isLockedDashersOpen) setLockedRenderReady(true);
+              }
+              if (state.isAppliedPendingDashersOpen !== undefined) {
                 setIsAppliedPendingDashersOpen(state.isAppliedPendingDashersOpen);
-              if (state.isDashersOpen !== undefined)
+                if (state.isAppliedPendingDashersOpen) setAppliedRenderReady(true);
+              }
+              if (state.isDashersOpen !== undefined) {
                 setIsDashersOpen(state.isDashersOpen);
-              if (state.isArchivedDashersOpen !== undefined)
+                if (state.isDashersOpen) setDashersRenderReady(true);
+              }
+              if (state.isArchivedDashersOpen !== undefined) {
                 setIsArchivedDashersOpen(state.isArchivedDashersOpen);
+                if (state.isArchivedDashersOpen) setArchivedRenderReady(true);
+              }
 
               // Note: noteCategories and dasherCategories are now loaded via lazy initialization
             } catch (e) {
@@ -2858,20 +2877,31 @@
                 setCollapsedCashOutNotes(state.collapsedCashOutNotes);
               if (state.collapsedCategoryNotes)
                 setCollapsedCategoryNotes(state.collapsedCategoryNotes);
-              if (state.isArchivedDashersOpen !== undefined)
+              // [FIX v1.10.1] Also set renderReady=true for open buckets to prevent infinite spinner
+              if (state.isArchivedDashersOpen !== undefined) {
                 setIsArchivedDashersOpen(state.isArchivedDashersOpen);
-              if (state.isDeactivatedDashersOpen !== undefined)
+                if (state.isArchivedDashersOpen) setArchivedRenderReady(true);
+              }
+              if (state.isDeactivatedDashersOpen !== undefined) {
                 setIsDeactivatedDashersOpen(state.isDeactivatedDashersOpen);
-              if (state.isReadyDashersOpen !== undefined)
+                if (state.isDeactivatedDashersOpen) setDeactivatedRenderReady(true);
+              }
+              if (state.isReadyDashersOpen !== undefined) {
                 setIsReadyDashersOpen(state.isReadyDashersOpen);
-              if (state.isCurrentlyUsingDashersOpen !== undefined)
-                setIsCurrentlyUsingDashersOpen(
-                  state.isCurrentlyUsingDashersOpen,
-                );
-              if (state.isAppealedDashersOpen !== undefined)
+                if (state.isReadyDashersOpen) setReadyRenderReady(true);
+              }
+              if (state.isCurrentlyUsingDashersOpen !== undefined) {
+                setIsCurrentlyUsingDashersOpen(state.isCurrentlyUsingDashersOpen);
+                if (state.isCurrentlyUsingDashersOpen) setUsingRenderReady(true);
+              }
+              if (state.isAppealedDashersOpen !== undefined) {
                 setIsAppealedDashersOpen(state.isAppealedDashersOpen);
-              if (state.isReverifDashersOpen !== undefined)
+                if (state.isAppealedDashersOpen) setAppealedRenderReady(true);
+              }
+              if (state.isReverifDashersOpen !== undefined) {
                 setIsReverifDashersOpen(state.isReverifDashersOpen);
+                if (state.isReverifDashersOpen) setReverifRenderReady(true);
+              }
               if (state.showNonZeroOnly !== undefined)
                 setShowNonZeroOnly(state.showNonZeroOnly);
               if (state.dasherSort) setDasherSort(state.dasherSort);
