@@ -2,7 +2,7 @@
   "name": "Dash Bash Utility",
   "short_name": "DashBash",
   "description": "Target Calculator & Address Book for delivery services",
-  "app_version": "1.8.10",
+  "app_version": "1.10.0",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#111827",
@@ -10,7 +10,7 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-  "src": "favicon.svg?v=1.8.10",
+  "src": "favicon.svg?v=1.10.0",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"

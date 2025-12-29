@@ -115,6 +115,103 @@
       const ShieldCheck = (props) =>
         React.createElement(Icon, { ...props, name: "shield-check" });
 
+      // =========================================================================
+      // Error Boundary - Prevents white screen crashes
+      // =========================================================================
+      class ErrorBoundary extends React.Component {
+        constructor(props) {
+          super(props);
+          this.state = { hasError: false, error: null, errorInfo: null };
+        }
+
+        static getDerivedStateFromError(error) {
+          return { hasError: true };
+        }
+
+        componentDidCatch(error, errorInfo) {
+          console.error("[ERROR BOUNDARY] Caught error:", error, errorInfo);
+          this.setState({ error, errorInfo });
+        }
+
+        handleReset = () => {
+          this.setState({ hasError: false, error: null, errorInfo: null });
+        }
+
+        handleClearDataAndReload = () => {
+          if (window.confirm("This will clear all app data and reload. Are you sure?")) {
+            try {
+              localStorage.removeItem("dashBashState");
+              // Also clear IndexedDB
+              const request = indexedDB.deleteDatabase("DashBashDB");
+              request.onsuccess = () => window.location.reload();
+              request.onerror = () => window.location.reload();
+            } catch (e) {
+              window.location.reload();
+            }
+          }
+        }
+
+        render() {
+          if (this.state.hasError) {
+            return React.createElement(
+              "div",
+              {
+                className: "min-h-screen bg-gray-900 flex items-center justify-center p-4",
+              },
+              React.createElement(
+                "div",
+                { className: "bg-gray-800 rounded-lg p-6 max-w-lg w-full text-center" },
+                React.createElement("h1", { className: "text-2xl font-bold text-red-400 mb-4" }, "Something went wrong"),
+                React.createElement(
+                  "p",
+                  { className: "text-gray-300 mb-4" },
+                  "The app encountered an error. Your data is likely still saved."
+                ),
+                React.createElement(
+                  "div",
+                  { className: "flex flex-col gap-3" },
+                  React.createElement(
+                    "button",
+                    {
+                      onClick: this.handleReset,
+                      className: "px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors",
+                    },
+                    "Try Again"
+                  ),
+                  React.createElement(
+                    "button",
+                    {
+                      onClick: () => window.location.reload(),
+                      className: "px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors",
+                    },
+                    "Reload Page"
+                  ),
+                  React.createElement(
+                    "button",
+                    {
+                      onClick: this.handleClearDataAndReload,
+                      className: "px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm",
+                    },
+                    "Clear Data & Reload (Last Resort)"
+                  )
+                ),
+                this.state.error && React.createElement(
+                  "details",
+                  { className: "mt-4 text-left" },
+                  React.createElement("summary", { className: "text-gray-400 cursor-pointer" }, "Error Details"),
+                  React.createElement(
+                    "pre",
+                    { className: "mt-2 p-2 bg-gray-900 rounded text-xs text-red-300 overflow-auto max-h-40" },
+                    String(this.state.error)
+                  )
+                )
+              )
+            );
+          }
+          return this.props.children;
+        }
+      }
+
       function ensureArray(value) {
         return Array.isArray(value) ? value : [];
       }
@@ -590,30 +687,20 @@
             </div>
           );
         },
+        // v1.10.0: Simplified memo - use default shallow comparison + dasher reference check
+        // Previously had brittle hardcoded property list that could miss new properties
         (prevProps, nextProps) => {
-          // Custom comparison function - only re-render if these props actually changed
-          // [FIX] Add null check for initial mount when prevProps is undefined
-          if (!prevProps || !prevProps.dasher || !nextProps || !nextProps.dasher) {
-            return false; // Re-render if props are missing
+          if (!prevProps || !nextProps) return false;
+          // Same dasher object reference = no re-render needed
+          if (prevProps.dasher === nextProps.dasher &&
+              prevProps.isSelected === nextProps.isSelected &&
+              prevProps.isCollapsed === nextProps.isCollapsed &&
+              prevProps.isEditing === nextProps.isEditing &&
+              prevProps.isEditMode === nextProps.isEditMode &&
+              prevProps.cardRecentlyMoved === nextProps.cardRecentlyMoved) {
+            return true;
           }
-          return (
-            prevProps.dasher.id === nextProps.dasher.id &&
-            prevProps.dasher.name === nextProps.dasher.name &&
-            prevProps.dasher.email === nextProps.dasher.email &&
-            prevProps.dasher.balance === nextProps.dasher.balance &&
-            prevProps.dasher.lastUsed === nextProps.dasher.lastUsed &&
-            prevProps.dasher.crimson === nextProps.dasher.crimson &&
-            prevProps.dasher.fastPay === nextProps.dasher.fastPay &&
-            prevProps.dasher.fastPayInfo === nextProps.dasher.fastPayInfo &&
-            prevProps.dasher.redCard === nextProps.dasher.redCard &&
-            prevProps.dasher.appealed === nextProps.dasher.appealed &&
-            prevProps.dasher.selectedCashout === nextProps.dasher.selectedCashout &&
-            prevProps.isSelected === nextProps.isSelected &&
-            prevProps.isCollapsed === nextProps.isCollapsed &&
-            prevProps.isEditing === nextProps.isEditing &&
-            prevProps.isEditMode === nextProps.isEditMode &&
-            prevProps.cardRecentlyMoved === nextProps.cardRecentlyMoved
-          );
+          return false; // Different props = re-render
         },
       );
 
@@ -2345,6 +2432,11 @@
         // PRIMARY: visibilitychange - most reliable for tab switches and closes
         const handleVisibilityChange = useCallback(() => {
           if (document.visibilityState === "hidden") {
+            // CRITICAL: Skip save during import to prevent data corruption
+            if (isImporting) {
+              console.log("[PERSISTENCE] Tab hidden during import - skipping emergency save");
+              return;
+            }
             console.log("[PERSISTENCE] Tab hidden - emergency save triggered");
             // Synchronous save - must complete before tab is suspended
             try {
@@ -2355,7 +2447,7 @@
               console.error("[PERSISTENCE] Emergency save on visibility change failed:", err);
             }
           }
-        }, [buildStateObject]);
+        }, [buildStateObject, isImporting]);
 
         useEffect(() => {
           document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -2364,6 +2456,14 @@
 
         // BACKUP: beforeunload - less reliable but provides user warning
         const handleBeforeUnload = useCallback((e) => {
+          // CRITICAL: Skip save during import to prevent data corruption
+          if (isImporting) {
+            console.log("[PERSISTENCE] beforeunload during import - skipping emergency save");
+            // Still show warning during import
+            e.preventDefault();
+            e.returnValue = "Import in progress. Changes may be lost.";
+            return;
+          }
           console.log("[PERSISTENCE] beforeunload - emergency save triggered");
           // Synchronous save - must complete before page closes
           try {
@@ -2378,7 +2478,7 @@
             e.preventDefault();
             e.returnValue = "You have unsaved changes.";
           }
-        }, [buildStateObject, hasUnsavedChanges]);
+        }, [buildStateObject, hasUnsavedChanges, isImporting]);
 
         useEffect(() => {
           window.addEventListener("beforeunload", handleBeforeUnload);
@@ -2388,6 +2488,11 @@
         // MOBILE: pagehide - for mobile Safari and bfcache
         const handlePageHide = useCallback((e) => {
           if (e.persisted) return; // Page is being cached, not closed
+          // CRITICAL: Skip save during import to prevent data corruption
+          if (isImporting) {
+            console.log("[PERSISTENCE] pagehide during import - skipping emergency save");
+            return;
+          }
           console.log("[PERSISTENCE] pagehide - emergency save triggered");
           try {
             const state = buildStateObject();
@@ -2395,7 +2500,7 @@
           } catch (err) {
             console.error("[PERSISTENCE] Emergency save on pagehide failed:", err);
           }
-        }, [buildStateObject]);
+        }, [buildStateObject, isImporting]);
 
         useEffect(() => {
           window.addEventListener("pagehide", handlePageHide);
@@ -16920,6 +17025,12 @@
       const root = ReactDOM.createRoot(document.getElementById("root"));
       console.log("  Root created:", root);
       console.log("  About to render EnhancedCalculator...");
-      root.render(React.createElement(EnhancedCalculator));
+      root.render(
+        React.createElement(
+          ErrorBoundary,
+          null,
+          React.createElement(EnhancedCalculator)
+        )
+      );
       console.log("✅ Render completed!");
     

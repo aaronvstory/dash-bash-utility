@@ -2,7 +2,7 @@
 
 A Progressive Web App (PWA) for delivery service drivers, featuring a target calculator, dasher management with countdown timers, and comprehensive address book.
 
-**[Use the App](https://aaronvstory.github.io/dash-bash-utility/)** | **Current Version: 1.9.7**
+**[Use the App](https://aaronvstory.github.io/dash-bash-utility/)** | **Current Version: 1.10.0**
 
 ---
 
