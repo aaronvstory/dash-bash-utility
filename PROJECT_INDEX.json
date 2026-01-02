@@ -1,0 +1,127 @@
+{
+  "project": {
+    "name": "Dash Bash Utility",
+    "version": "1.10.0",
+    "description": "PWA for delivery drivers - target calculator, dashers, address book",
+    "live_url": "https://aaronvstory.github.io/dash-bash-utility/",
+    "indexed_at": "2025-12-29"
+  },
+  "entry_points": {
+    "app": "index.html",
+    "source": "dash-bash-component.jsx",
+    "compiled": "dash-bash-compiled.js",
+    "dev_server": "serve-pwa.py"
+  },
+  "commands": {
+    "dev": "python serve-pwa.py",
+    "build": "npm run build",
+    "build:css": "npm run build:css",
+    "compile": "npm run compile",
+    "deploy": "npm run deploy",
+    "vendor:prepare": "npm run vendor:prepare"
+  },
+  "structure": {
+    "source": {
+      "dash-bash-component.jsx": "React source (797KB) - EDIT THIS",
+      "src/input.css": "Tailwind input"
+    },
+    "compiled": {
+      "dash-bash-compiled.js": "Babel output (363KB)",
+      "tailwind.css": "Generated CSS (31KB)"
+    },
+    "static": {
+      "index.html": "HTML shell (14KB)",
+      "styles.css": "Custom styles (64KB)",
+      "service-worker.js": "PWA offline support",
+      "manifest.json": "PWA manifest",
+      "favicon.svg": "App icon"
+    },
+    "vendor": {
+      "react.production.min.js": "React 18",
+      "react-dom.production.min.js": "ReactDOM 18",
+      "lucide.min.js": "Lucide icons",
+      "react-window.js": "List virtualization"
+    },
+    "docs": {
+      "README.md": "Overview",
+      "CLAUDE.md": "AI guidance",
+      "STYLE_GUIDE.md": "CSS conventions",
+      "VERSION_UPDATE_GUIDE.md": "Version checklist",
+      "docs/": "Wiki pages"
+    },
+    "archives": "Historical versions and tests"
+  },
+  "architecture": {
+    "framework": "React 18 (functional components, hooks)",
+    "styling": "Tailwind CSS 4 + custom CSS",
+    "icons": "Lucide (local vendor)",
+    "build": "Babel CLI (precompiled JSX)",
+    "pwa": "Service worker with network-first strategy",
+    "storage": {
+      "primary": "localStorage (dashBashState key)",
+      "backup": "IndexedDB",
+      "strategy": "dual-write with emergency handlers",
+      "schema_version": 5
+    }
+  },
+  "components": [
+    "EnhancedCalculator (main)",
+    "CalculatorSection",
+    "MessagesSection",
+    "AddressBookSection",
+    "NotesSection",
+    "DashersSection",
+    "StatisticsSection",
+    "DasherCard"
+  ],
+  "features": [
+    "Target calculator (dollar targets)",
+    "Quick messages (copy templates)",
+    "Address book (locations + hours)",
+    "Notes (categorized)",
+    "Dashers (24h countdown timers)",
+    "Statistics (real-time analytics)",
+    "Export/import (JSON v2.1)",
+    "Offline support (PWA)"
+  ],
+  "dependencies": {
+    "runtime": {
+      "react": "18",
+      "react-dom": "18",
+      "lucide": "0.545.0",
+      "react-window": "2.2.1"
+    },
+    "dev": {
+      "@babel/cli": "7.25.9",
+      "@babel/core": "7.26.0",
+      "@babel/preset-react": "7.25.9",
+      "tailwindcss": "4.1.14",
+      "jsdom": "24.1.0"
+    }
+  },
+  "version_locations": [
+    "service-worker.js (APP_VERSION)",
+    "index.html (app-version meta + APP_VERSION + data-style-version + ?v= query params)",
+    "manifest.json (app_version + icon src query)",
+    "package.json (version)",
+    "README.md (Current Version)",
+    "CLAUDE.md (Current Version)"
+  ],
+  "critical_rules": {
+    "css_cascade": "Never set text color on parent elements - children lose individual colors",
+    "high_contrast": "Use brightest variants: text-purple-200, text-blue-200, text-green-300",
+    "padding": "Input fields and display text both use px-2 py-0.5"
+  },
+  "testing": {
+    "persistence_test": "Make change → close tab → reopen → verify persisted",
+    "dev_url": "http://localhost:8443/index.html"
+  },
+  "file_sizes": {
+    "dash-bash-component.jsx": "797KB",
+    "dash-bash-compiled.js": "363KB",
+    "index.html": "14KB",
+    "styles.css": "64KB",
+    "tailwind.css": "31KB",
+    "vendor/": "1.8MB"
+  }
+}

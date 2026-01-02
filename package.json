@@ -10,6 +10,8 @@
     "compile": "babel dash-bash-component.jsx --out-file dash-bash-compiled.js --presets @babel/preset-react --compact --no-comments",
     "build:css": "npx tailwindcss -i ./src/input.css -o ./tailwind.css --minify",
     "build": "npm run build:css && npm run extract-jsx && npm run compile",
+    "version:update": "node scripts/update-version.js",
+    "release": "node scripts/release.js",
     "vendor:prepare": "mkdir -p vendor && curl -L https://unpkg.com/react@18/umd/react.production.min.js -o vendor/react.production.min.js && curl -L https://unpkg.com/react-dom@18/umd/react-dom.production.min.js -o vendor/react-dom.production.min.js && curl -L https://unpkg.com/lucide@0.545.0/dist/umd/lucide.min.js -o vendor/lucide.min.js",
     "deploy": "npm run build && git add index.html dash-bash-compiled.js tailwind.css && git commit -m 'build: precompiled JSX + local vendor files' && git push origin main && git checkout gh-pages && git merge main --no-edit && git push origin gh-pages && git checkout main"
   },

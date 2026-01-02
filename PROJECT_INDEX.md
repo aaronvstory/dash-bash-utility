@@ -1,0 +1,173 @@
+# Project Index: Dash Bash Utility
+
+Generated: 2025-12-29 | Version: 1.10.0
+
+## 📁 Project Structure
+
+```text
+dash-bash/
+├── dash-bash-component.jsx    # Source (797KB) - EDIT THIS
+├── dash-bash-compiled.js      # Compiled (363KB) - DO NOT EDIT
+├── index.html                 # Shell (14KB) - loads compiled JS
+├── service-worker.js          # PWA offline support
+├── manifest.json              # PWA manifest
+├── styles.css                 # Main stylesheet (64KB)
+├── tailwind.css               # Generated Tailwind (31KB)
+├── vendor/                    # Local React, ReactDOM, Lucide (no CDN)
+├── src/input.css              # Tailwind input
+├── docs/                      # Wiki documentation
+├── tasks/                     # Active development tasks
+├── archives/                  # Historical versions & tests
+└── exports/                   # Sample export files
+```
+
+## 🚀 Entry Points
+
+| Entry | Path | Purpose |
+|-------|------|---------|
+| **App** | `index.html` | HTML shell, loads compiled JS |
+| **Source** | `dash-bash-component.jsx` | React source (~3000 lines) |
+| **Compiled** | `dash-bash-compiled.js` | Babel output |
+| **Dev Server** | `serve-pwa.py` | Local HTTPS server (port 8443) |
+
+## 📦 Core Architecture
+
+### Build Pipeline
+```text
+dash-bash-component.jsx → npm run build → dash-bash-compiled.js
+```
+
+### Key Commands
+```bash
+python serve-pwa.py          # Start dev server → http://localhost:8443
+npm run build                # Build CSS + compile JSX (REQUIRED before deploy)
+npm run deploy               # Build + commit + push to gh-pages
+```
+
+### State Architecture
+- **Single localStorage key**: `dashBashState`
+- **Schema version**: 5
+- **Dual-write**: localStorage (fast) + IndexedDB (reliable backup)
+- **Emergency handlers**: visibilitychange, beforeunload, pagehide
+- **Auto-save**: 500ms debounced
+
+### Component Structure
+Single `EnhancedCalculator` component with sections:
+- Calculator (target calculations)
+- Messages (quick copy templates)
+- Address Book (locations with hours)
+- Notes (categorized notes)
+- Dashers (24h countdown timers)
+- Statistics (real-time analytics)
+
+## 🔧 Configuration Files
+
+| File | Purpose |
+|------|---------|
+| `package.json` | npm scripts, dependencies |
+| `tailwind.config.js` | Tailwind configuration |
+| `manifest.json` | PWA manifest |
+| `.mcp.json` | Claude Code MCP settings |
+| `.gitignore` | Git ignore patterns |
+
+## 📚 Documentation
+
+| File | Topic |
+|------|-------|
+| `README.md` | Overview, features, installation |
+| `CLAUDE.md` | AI assistant guidance |
+| `STYLE_GUIDE.md` | CSS architecture, theming |
+| `VERSION_UPDATE_GUIDE.md` | Version update checklist |
+| `GITHUB_PAGES_DEPLOYMENT.md` | Deployment guide |
+| `CHANGELOG.md` | Version history |
+| `docs/Architecture.md` | Technical architecture |
+| `docs/Persistence.md` | Data persistence system |
+| `docs/Features.md` | Feature documentation |
+
+## 🔗 Key Dependencies
+
+| Dependency | Version | Purpose |
+|------------|---------|---------|
+| React | 18 | UI framework (local vendor) |
+| ReactDOM | 18 | DOM rendering (local vendor) |
+| Lucide | 0.545.0 | Icons (local vendor) |
+| Tailwind CSS | 4.1.14 | Styling |
+| Babel CLI | 7.25.9 | JSX compilation |
+
+## 📝 Quick Start
+
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Start dev server
+python serve-pwa.py
+
+# 3. Open in browser
+http://localhost:8443/index.html
+
+# 4. Make changes to dash-bash-component.jsx
+
+# 5. Build before commit
+npm run build
+```
+
+## ⚠️ Critical Rules
+
+### Version Updates (scripted)
+Preferred: `npm run version:update -- X.Y.Z` to sync version fields in:
+- `package.json`
+- `service-worker.js`
+- `index.html` (meta + APP_VERSION + cache-busting params)
+- `manifest.json`
+- `README.md` and `CLAUDE.md`
+
+Then update release notes in `CHANGELOG.md` and `docs/Changelog.md`.
+
+### CSS Bug Prevention
+```javascript
+// ❌ WRONG: Parent color overrides children
+<h5 className="text-purple-300">{title}</h5>
+
+// ✅ CORRECT: Children define colors
+<h5 className="font-medium">{title}</h5>
+```
+
+### High Contrast Colors
+Use brightest variants: `text-purple-200`, `text-blue-200`, `text-green-300`, `text-red-400`
+
+## 🧪 Testing
+
+```bash
+# Manual persistence test:
+# 1. Start server
+python serve-pwa.py
+
+# 2. Make a change
+# 3. Close tab immediately
+# 4. Reopen tab
+# 5. Verify change persisted
+```
+
+## 🌐 Deployment
+
+**Live URL**: <https://aaronvstory.github.io/dash-bash-utility/>
+
+```bash
+npm run deploy  # Build + commit + push to gh-pages
+```
+
+## 📊 File Sizes (Production)
+
+| File | Size | Notes |
+|------|------|-------|
+| `dash-bash-component.jsx` | 797KB | Source |
+| `dash-bash-compiled.js` | 363KB | Minified output |
+| `index.html` | 14KB | Shell only |
+| `styles.css` | 64KB | Custom styles |
+| `tailwind.css` | 31KB | Tailwind output |
+| `vendor/` | 1.8MB | React + Lucide |
+
+---
+
+*Index generated by /sc:index-repo. Read this instead of scanning the entire codebase.*

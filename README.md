@@ -98,6 +98,13 @@ npm run vendor:prepare # Download/update vendor files
 npm run deploy         # Build + commit + deploy to gh-pages
 ```
 
+### Versioning
+```bash
+npm run version:update -- X.Y.Z  # Sync version across app + docs
+npm run release -- X.Y.Z         # Sync version + build
+```
+Then update release notes in `CHANGELOG.md` and `docs/Changelog.md`.
+
 ### Architecture
 - **Source**: `dash-bash-component.jsx` (React component, edit this)
 - **Compiled**: `dash-bash-compiled.js` (optimized output, committed)
