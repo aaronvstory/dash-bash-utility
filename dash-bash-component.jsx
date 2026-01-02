@@ -30,8 +30,8 @@
               iconElement.setAttribute("height", size);
             }
             iconRef.current.appendChild(iconElement);
-            // Replace with actual SVG
-            window.lucide.createIcons();
+            // [PERF-FIX4] Only process THIS icon, not all 930+ icons in document
+            window.lucide.createIcons({ nodes: [iconRef.current] });
           }
         }, [name, size, className]);
 
@@ -457,6 +457,8 @@
           // Balance editing props
           editingBalanceValue,
           setEditingBalanceValue,
+          // [PERF-FIX2] Tab visibility for pausing timers in background
+          isTabVisible = true,
         }) => {
           // [PERF-STAGE7] Log render count for profiling
           useEffect(() => {
@@ -487,11 +489,12 @@
             });
           }, [dasher?.id]); // only when identity changes
 
+          // [PERF-FIX2] Timer pauses when collapsed OR when tab is in background
           useEffect(() => {
-            if (isCollapsed) return; // Don't tick when collapsed
+            if (isCollapsed || !isTabVisible) return; // Don't tick when collapsed or tab hidden
             const id = setInterval(() => setLocalTick(t => t + 1), 1000);
             return () => clearInterval(id);
-          }, [isCollapsed]);
+          }, [isCollapsed, isTabVisible]);
 
           const dasherTitle = getDasherTitle(dasher, localTick);
           const anchorIdentity = deriveDasherIdentity(dasher, identityFallback);
@@ -802,6 +805,16 @@
         const [prices, setPrices] = useState([]);
         const [currentPrice, setCurrentPrice] = useState("");
         const priceInputRef = useRef(null);
+
+        // [PERF-FIX2] Tab visibility state - pause timers in background tabs
+        const [isTabVisible, setIsTabVisible] = useState(!document.hidden);
+        useEffect(() => {
+          const handleVisibilityChange = () => {
+            setIsTabVisible(!document.hidden);
+          };
+          document.addEventListener('visibilitychange', handleVisibilityChange);
+          return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+        }, []);
 
         // Collapsible sections state
         const [isCalculatorOpen, setIsCalculatorOpen] = useState(false); // Collapsed by default
@@ -5527,7 +5540,10 @@
           [categoryDashersFlat, showNonZeroOnly, dasherSort, globalQuery],
         );
 
+        // [PERF-FIX3] Only compute stats metadata when Statistics section is open
         const dashersMeta = useMemo(() => {
+          if (!isStatisticsOpen) return []; // Early return when stats closed
+
           const meta = [];
 
           dasherCategories.forEach((category, catIndex) => {
@@ -5598,6 +5614,7 @@
 
           return meta;
         }, [
+          isStatisticsOpen, // [PERF-FIX3] Gate computation
           dasherCategories,
           readyDashers,
           currentlyUsingDashers,
@@ -13380,7 +13397,9 @@
                                         getDasherAnchorId: getDasherAnchorId,
                                         parseBalanceValue: parseBalanceValue,
                                         editingBalanceValue: editingBalanceValue,
-                                        setEditingBalanceValue: setEditingBalanceValue
+                                        setEditingBalanceValue: setEditingBalanceValue,
+                                        // [PERF-FIX2] Tab visibility for pausing timers
+                                        isTabVisible: isTabVisible
                               });
                             })
                           )}
