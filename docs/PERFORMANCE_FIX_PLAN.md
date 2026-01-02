@@ -67,7 +67,7 @@ Repeat × interactions = GB of RAM
 #### Fix #2: Pause Work in Background Tabs
 **Risk:** Very Low | **Effort:** Low | **Impact:** High
 
-**What:** Stop timers and heavy computation when tab is hidden
+**What:** Pause UI timer ticks when tab is hidden (elapsed time stays accurate)
 
 **Implementation:**
 ```javascript

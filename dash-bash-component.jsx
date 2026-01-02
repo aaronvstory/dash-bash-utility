@@ -468,7 +468,7 @@
             }
           });
 
-          // [PERF-STAGE1] Local timer - per card, pauses only when tab is hidden
+          // [PERF-STAGE1] Local timer - tick only when card is expanded and tab is visible
           const [localTick, setLocalTick] = useState(0);
 
           // [PERF-STAGE4] local draft copy of dasher fields that are editable
@@ -489,12 +489,13 @@
             });
           }, [dasher?.id]); // only when identity changes
 
-          // [PERF-FIX2] Timer pauses only when tab is in background
+          // [PERF-FIX2] Timer ticks only when card is expanded and tab is visible
+          // Elapsed time remains accurate because it is derived from lastUsed timestamp
           useEffect(() => {
-            if (!isTabVisible) return; // Don't tick when tab hidden
+            if (isCollapsed || !isTabVisible) return; // Skip ticks when collapsed or tab hidden
             const id = setInterval(() => setLocalTick(t => t + 1), 1000);
             return () => clearInterval(id);
-          }, [isTabVisible]);
+          }, [isCollapsed, isTabVisible]);
 
           const dasherTitle = getDasherTitle(dasher, localTick);
           const anchorIdentity = deriveDasherIdentity(dasher, identityFallback);

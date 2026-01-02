@@ -67,7 +67,7 @@ The 17K-line monolithic component triggers massive re-renders on any state chang
 - Add `visibilitychange` listener
 - Pass `isTabVisible` to DasherCard
 - Update timer useEffect at line ~492 to check `!isTabVisible`
-- **IMPORTANT:** Timers should KEEP running when collapsed, only pause when TAB IS HIDDEN
+- **IMPORTANT:** Timers must remain accurate; UI ticks can pause when collapsed or tab is hidden
 
 ### Fix #3: Gate Statistics
 - Lines 5530-5650 have stats useMemos

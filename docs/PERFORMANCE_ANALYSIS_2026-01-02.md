@@ -83,7 +83,7 @@ App became extremely slow with ~20-30 dashers, notes, and store info:
 
 ## Important Notes
 
-- **Timer behavior:** Timers should KEEP running when cards are collapsed (countdown must continue)
+- **Timer behavior:** Timers stay accurate via timestamps; UI ticks can pause when cards are collapsed or tab is hidden
 - **File size concern:** 17K line file requires careful changes
 - **Modular refactor:** Explicitly out of scope for now
 
