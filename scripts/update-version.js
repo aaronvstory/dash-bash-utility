@@ -42,6 +42,10 @@ const filesToUpdate = [
 let updatedCount = 0;
 for (const relativePath of filesToUpdate) {
   const filePath = path.join(root, relativePath);
+  if (!fs.existsSync(filePath)) {
+    console.warn(`[warn] ${relativePath}: file not found, skipping`);
+    continue;
+  }
   const content = fs.readFileSync(filePath, "utf8");
   if (!content.includes(oldVersion)) {
     console.warn(`[warn] ${relativePath}: ${oldVersion} not found`);

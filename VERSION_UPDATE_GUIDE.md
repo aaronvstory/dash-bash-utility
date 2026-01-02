@@ -2,11 +2,11 @@
 
 ## Quick Update Checklist
 
-Preferred: run `npm run version:update -- X.Y.Z` to sync mechanical version fields.
+Preferred: run `npm run version:update -- X.Y.Z` to sync mechanical version fields (implemented in `scripts/update-version.js`).
 Optional: `npm run release -- X.Y.Z` to sync + build in one step.
 Then update release notes manually (see below).
 
-When releasing a new version, update the version string in these files:
+When releasing a new version, the script updates these files automatically:
 
 ### 1. `service-worker.js`
 ```javascript
@@ -42,7 +42,7 @@ Example snippets:
 ```
 
 ## Release Notes (recommended)
-- `README.md`: update the Current Version line
+- `README.md` and `CLAUDE.md` are auto-updated by the script (Current Version line).
 - `CHANGELOG.md`: source of truth for release notes
 - `docs/Changelog.md`: mirror `CHANGELOG.md` to keep docs in sync
 

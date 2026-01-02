@@ -15,7 +15,7 @@ if (!/^\d+\.\d+\.\d+$/.test(versionArg)) {
 }
 
 const update = spawnSync(
-  "node",
+  process.execPath,
   ["scripts/update-version.js", versionArg],
   { stdio: "inherit" },
 );

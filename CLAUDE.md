@@ -68,14 +68,15 @@ Preferred: run `npm run version:update -- X.Y.Z` to sync mechanical version fiel
 Optional: `npm run release -- X.Y.Z` to sync + build in one step.
 Then update release notes manually (README + changelogs).
 
-Update the version string in these places before release:
-
+Automated by `npm run version:update -- X.Y.Z`:
 1. `service-worker.js`: `const APP_VERSION = "X.Y.Z"`
 2. `index.html`: `app-version` meta, `APP_VERSION` constant, `data-style-version`, console log string, and all `?v=X.Y.Z` cache-busting query params
 3. `manifest.json`: `app_version` and the icon `src` query param
 4. `package.json`: `version`
+5. `README.md` (Current Version line)
+6. `CLAUDE.md` (Current Version line)
 
-Also update `README.md` and `CHANGELOG.md` / `docs/Changelog.md` when publishing release notes.
+Manual release notes: update `CHANGELOG.md` and `docs/Changelog.md`.
 
 ## Key Patterns
 
