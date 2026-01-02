@@ -90,14 +90,14 @@ App became extremely slow with ~20-30 dashers, notes, and store info:
 ## Diagnostic Measurements (Live from GitHub Pages)
 
 ### Data Size
-```
+```text
 dashBashState size: 49.28 KB
 JSON.parse time:    0.20 ms
 JSON.stringify time: 0.50 ms
 ```
 
 ### Item Counts
-```
+```text
 Messages:           31
 Store Categories:   12
 Stores:             34
@@ -116,10 +116,12 @@ History Entries:    44 (cash-out + earnings)
 ```
 
 ### DOM/Memory Impact
+
 | State | DOM Nodes | Inputs | JS Heap |
 |-------|-----------|--------|---------|
 | Collapsed | 3,878 | 539 | 63 MB |
 | Expanded | 7,457 | 1,068 | 124 MB |
+
 
 ### Key Finding: Render Cascade During State Changes
 

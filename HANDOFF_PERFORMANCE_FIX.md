@@ -9,7 +9,9 @@
 ## Quick Start for New Session
 
 ```bash
-cd F:\claude\dash-bash
+cd /path/to/dash-bash
+# Windows example:
+# cd C:\claude\dash-bash
 git checkout fix/performance-optimizations
 ```
 
@@ -31,7 +33,7 @@ The Dash Bash Utility app (a React PWA for delivery drivers) became extremely sl
 
 ## Root Cause (Confirmed)
 
-**React re-render cascade during state changes**
+### React re-render cascade during state changes
 
 | Metric | Value |
 |--------|-------|
@@ -75,7 +77,7 @@ The 17K-line monolithic component triggers massive re-renders on any state chang
 ### Fix #4: Lucide Icons
 - Line 17-39: Icon component calls `lucide.createIcons()` on every render
 - This processes ALL 930 icons in the document
-- Fix: Use `{ nodes: [iconRef.current] }` to only process the specific icon
+- Fix: Use `{ root: iconRef.current }` to only process the specific icon
 
 ---
 
@@ -83,7 +85,7 @@ The 17K-line monolithic component triggers massive re-renders on any state chang
 
 Via Chrome automation on live GitHub Pages:
 
-```
+```text
 localStorage: 49.28 KB
 JSON.parse: 0.20 ms
 JSON.stringify: 0.50 ms

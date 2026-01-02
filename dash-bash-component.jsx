@@ -31,7 +31,7 @@
             }
             iconRef.current.appendChild(iconElement);
             // [PERF-FIX4] Only process THIS icon, not all 930+ icons in document
-            window.lucide.createIcons({ nodes: [iconRef.current] });
+            window.lucide.createIcons({ root: iconRef.current });
           }
         }, [name, size, className]);
 
@@ -468,7 +468,7 @@
             }
           });
 
-          // [PERF-STAGE1] Local timer - only ticks when card is expanded
+          // [PERF-STAGE1] Local timer - per card, pauses only when tab is hidden
           const [localTick, setLocalTick] = useState(0);
 
           // [PERF-STAGE4] local draft copy of dasher fields that are editable
@@ -489,12 +489,12 @@
             });
           }, [dasher?.id]); // only when identity changes
 
-          // [PERF-FIX2] Timer pauses when collapsed OR when tab is in background
+          // [PERF-FIX2] Timer pauses only when tab is in background
           useEffect(() => {
-            if (isCollapsed || !isTabVisible) return; // Don't tick when collapsed or tab hidden
+            if (!isTabVisible) return; // Don't tick when tab hidden
             const id = setInterval(() => setLocalTick(t => t + 1), 1000);
             return () => clearInterval(id);
-          }, [isCollapsed, isTabVisible]);
+          }, [isTabVisible]);
 
           const dasherTitle = getDasherTitle(dasher, localTick);
           const anchorIdentity = deriveDasherIdentity(dasher, identityFallback);
@@ -808,13 +808,6 @@
 
         // [PERF-FIX2] Tab visibility state - pause timers in background tabs
         const [isTabVisible, setIsTabVisible] = useState(!document.hidden);
-        useEffect(() => {
-          const handleVisibilityChange = () => {
-            setIsTabVisible(!document.hidden);
-          };
-          document.addEventListener('visibilitychange', handleVisibilityChange);
-          return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-        }, []);
 
         // Collapsible sections state
         const [isCalculatorOpen, setIsCalculatorOpen] = useState(false); // Collapsed by default
@@ -2465,6 +2458,7 @@
 
         // PRIMARY: visibilitychange - most reliable for tab switches and closes
         const handleVisibilityChange = useCallback(() => {
+          setIsTabVisible(!document.hidden);
           if (document.visibilityState === "hidden") {
             // CRITICAL: Skip save during import to prevent data corruption
             if (isImporting) {
@@ -2481,7 +2475,7 @@
               console.error("[PERSISTENCE] Emergency save on visibility change failed:", err);
             }
           }
-        }, [buildStateObject, isImporting]);
+        }, [buildStateObject, isImporting, setIsTabVisible]);
 
         useEffect(() => {
           document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -13399,7 +13393,7 @@
                                         editingBalanceValue: editingBalanceValue,
                                         setEditingBalanceValue: setEditingBalanceValue,
                                         // [PERF-FIX2] Tab visibility for pausing timers
-                                        isTabVisible: isTabVisible
+                                        isTabVisible
                               });
                             })
                           )}

@@ -32,7 +32,7 @@ App became extremely slow with ~20-30 dashers, notes, and store info:
 
 ### The Core Problem
 
-```
+```text
 User action (expand/search/type)
     ↓
 setState() called
@@ -188,7 +188,7 @@ const Icon = ({ name, size = 20, className = "" }) => {
 **Problem:** `createIcons()` scans entire document, processes all icons
 
 **Solution options:**
-1. Pass `{ nodes: [iconRef.current] }` to only process this icon
+1. Pass `{ root: iconRef.current }` to only process this icon
 2. Use Lucide React components directly (if available)
 3. Memoize icons more aggressively
 
@@ -208,7 +208,7 @@ const Icon = ({ name, size = 20, className = "" }) => {
       }
       iconRef.current.appendChild(iconElement);
       // Only process THIS icon, not all 930
-      window.lucide.createIcons({ nodes: [iconRef.current] });
+      window.lucide.createIcons({ root: iconRef.current });
     }
   }, [name, size, className]);
   return React.createElement("span", { ref: iconRef });
