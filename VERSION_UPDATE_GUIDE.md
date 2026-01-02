@@ -2,70 +2,70 @@
 
 ## Quick Update Checklist
 
-When releasing a new version, update the version number in these 3 places:
+Preferred: run `npm run version:update -- X.Y.Z` to sync mechanical version fields.
+Optional: `npm run release -- X.Y.Z` to sync + build in one step.
+Then update release notes manually (see below).
 
-### 1. **service-worker.js** (Line 3)
+When releasing a new version, update the version string in these files:
+
+### 1. `service-worker.js`
 ```javascript
-const VERSION = '1.2.0'; // Update this version number
+const APP_VERSION = "X.Y.Z";
 ```
 
-### 2. **index.html** - Two locations:
+### 2. `index.html` (multiple spots)
+- `<meta name="app-version" content="X.Y.Z" />`
+- `<body ... data-style-version="X.Y.Z">`
+- `const APP_VERSION = "X.Y.Z";`
+- Console log string that prints the version
+- All cache-busting query params `?v=X.Y.Z` (favicon, manifest, CSS, compiled JS)
 
-#### Meta tag (Line 9)
+Example snippets:
 ```html
-<meta name="app-version" content="1.2.0">
+<meta name="app-version" content="X.Y.Z" />
+<link rel="icon" href="favicon.svg?v=X.Y.Z" />
+<link rel="manifest" href="manifest.json?v=X.Y.Z" />
+<link rel="stylesheet" href="tailwind.css?v=X.Y.Z" />
+<link rel="stylesheet" href="styles.css?v=X.Y.Z" />
+<script src="dash-bash-compiled.js?v=X.Y.Z"></script>
 ```
 
-#### JavaScript constant (Line 72)
-```javascript
-const APP_VERSION = '1.2.0'; // Update this with each release
+### 3. `manifest.json`
+```json
+"app_version": "X.Y.Z",
+"src": "favicon.svg?v=X.Y.Z"
 ```
 
-#### App title display (Line 1744)
-```html
-<span className="text-lg text-gray-400">v1.2.0</span>
+### 4. `package.json`
+```json
+"version": "X.Y.Z"
 ```
+
+## Release Notes (recommended)
+- `README.md`: update the Current Version line
+- `CHANGELOG.md` and `docs/Changelog.md`: add the new release entry
 
 ## Cache Busting Implementation
-
-The application now implements several cache-busting strategies:
-
-1. **Version-based cache names** - Service worker uses versioned cache names
-2. **Query parameters** - All resources loaded with `?v=1.2.0` parameter
-3. **Network-first for HTML** - Always fetches fresh HTML when online
-4. **Auto-update notifications** - Users see a banner when new version available
-5. **Cache control meta tags** - Prevents aggressive browser caching
-
-## How It Works
-
-1. When you update the version numbers and deploy:
-   - Service worker cache name changes
-   - Old caches are automatically deleted
-   - Resources are fetched with new version parameters
-   
-2. Users will:
-   - Get fresh content on next visit (network-first for HTML)
-   - See an update notification if app is already open
-   - Can click "Update Now" to reload with new version
-   - Or wait for auto-reload on next visit
+1. Version-based cache names (service worker uses versioned cache names)
+2. Query parameters on static assets (`?v=X.Y.Z`)
+3. Network-first for HTML
+4. Auto-update notifications when a new version is available
+5. Cache control meta tags in `index.html`
 
 ## Testing Version Updates
-
-1. Change version numbers in all 4 locations
-2. Deploy to GitHub Pages or test server
-3. Visit site - should load new version immediately
-4. Check DevTools > Application > Service Workers to verify new version
-5. Check Network tab to see resources loaded with new version parameters
+1. Update the version string in every location listed above
+2. Run `npm run build`
+3. Serve locally (`python serve-pwa.py`)
+4. Load the app and confirm the console shows the new version
+5. DevTools > Application > Service Workers shows the new version
+6. Network tab shows assets loaded with the new `?v=X.Y.Z`
 
 ## Troubleshooting
-
-If users still see old version:
-- They may need to close all tabs and reopen
-- Clear browser cache manually (last resort)
-- Check if service worker is properly registered in DevTools
+If users still see the old version:
+- Close all tabs and reopen
+- Clear cache manually (last resort)
+- Verify service worker registration in DevTools
 
 ## Notes
-
 - Version numbers should follow semantic versioning (MAJOR.MINOR.PATCH)
 - Always test locally before deploying
-- Consider adding release notes for users

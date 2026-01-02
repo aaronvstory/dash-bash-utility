@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Dash Bash Utility is a React-based PWA for delivery service drivers. Uses **precompiled JSX** with Babel CLI.
 
-**Current Version**: 1.9.7 | **Live**: https://aaronvstory.github.io/dash-bash-utility/
+**Current Version**: 1.10.0 | **Live**: https://aaronvstory.github.io/dash-bash-utility/
 
 **Core Features**: Target Calculator, Quick Messages, Address Book with hours tracking, Notes, Dashers with 24h countdown timers, Statistics.
 
@@ -48,7 +48,7 @@ Single `dashBashState` localStorage key containing all app data:
 - UI state: `collapsed*` objects for all collapsible sections
 - Metadata: `timestamp`, `schemaVersion` (currently 5)
 
-**Persistence System** (v1.9.7):
+**Persistence System** (v1.9.7+):
 - **Dual-write**: localStorage (fast) + IndexedDB (reliable backup)
 - **Emergency handlers**: `visibilitychange` (primary), `beforeunload`, `pagehide`
 - **Auto-save**: 500ms debounced, watches all critical state
@@ -64,13 +64,18 @@ Single `EnhancedCalculator` component with:
 
 ## Version Update Process
 
-Update version in **3 locations** before release:
+Preferred: run `npm run version:update -- X.Y.Z` to sync mechanical version fields.
+Optional: `npm run release -- X.Y.Z` to sync + build in one step.
+Then update release notes manually (README + changelogs).
 
-1. `service-worker.js` line 2: `const APP_VERSION = "X.Y.Z"`
-2. `index.html` meta tag: `<meta name="app-version" content="X.Y.Z">`
-3. `index.html` JS constant: `const APP_VERSION = 'X.Y.Z'`
+Update the version string in these places before release:
 
-Also update `?v=X.Y.Z` query params on resource URLs in index.html.
+1. `service-worker.js`: `const APP_VERSION = "X.Y.Z"`
+2. `index.html`: `app-version` meta, `APP_VERSION` constant, `data-style-version`, console log string, and all `?v=X.Y.Z` cache-busting query params
+3. `manifest.json`: `app_version` and the icon `src` query param
+4. `package.json`: `version`
+
+Also update `README.md` and `CHANGELOG.md` / `docs/Changelog.md` when publishing release notes.
 
 ## Key Patterns
 
