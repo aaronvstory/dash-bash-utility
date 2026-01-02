@@ -1,13 +1,7 @@
 name: Codex PR Code Review
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-    # Exclude draft PRs to save API costs
-    branches:
-      - main
-      - master
-      - develop
+  workflow_dispatch:
 
 permissions:
   contents: read
