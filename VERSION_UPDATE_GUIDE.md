@@ -43,7 +43,8 @@ Example snippets:
 
 ## Release Notes (recommended)
 - `README.md`: update the Current Version line
-- `CHANGELOG.md` and `docs/Changelog.md`: add the new release entry
+- `CHANGELOG.md`: source of truth for release notes
+- `docs/Changelog.md`: mirror `CHANGELOG.md` to keep docs in sync
 
 ## Cache Busting Implementation
 1. Version-based cache names (service worker uses versioned cache names)

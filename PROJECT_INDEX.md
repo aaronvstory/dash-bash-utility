@@ -4,7 +4,7 @@ Generated: 2025-12-29 | Version: 1.10.0
 
 ## 📁 Project Structure
 
-```
+```text
 dash-bash/
 ├── dash-bash-component.jsx    # Source (797KB) - EDIT THIS
 ├── dash-bash-compiled.js      # Compiled (363KB) - DO NOT EDIT
@@ -33,7 +33,7 @@ dash-bash/
 ## 📦 Core Architecture
 
 ### Build Pipeline
-```
+```text
 dash-bash-component.jsx → npm run build → dash-bash-compiled.js
 ```
 
@@ -151,7 +151,7 @@ python serve-pwa.py
 
 ## 🌐 Deployment
 
-**Live URL**: https://aaronvstory.github.io/dash-bash-utility/
+**Live URL**: <https://aaronvstory.github.io/dash-bash-utility/>
 
 ```bash
 npm run deploy  # Build + commit + push to gh-pages
