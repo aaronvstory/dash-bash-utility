@@ -18,17 +18,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check if OPENAI_API_KEY exists
+      - name: Check if OPENROUTER_API_KEY/OPENAI_API_KEY exists
         id: check-key
         continue-on-error: true
         run: |
-          # Try to access the secret
-          if [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then
-            echo "key_exists=false" >> $GITHUB_OUTPUT
-            echo "⚠️ OPENAI_API_KEY secret is missing!"
-          else
+          if [ -n "${{ secrets.OPENROUTER_API_KEY }}" ]; then
             echo "key_exists=true" >> $GITHUB_OUTPUT
+            echo "key_name=OPENROUTER_API_KEY" >> $GITHUB_OUTPUT
+            echo "✅ OPENROUTER_API_KEY secret exists"
+          elif [ -n "${{ secrets.OPENAI_API_KEY }}" ]; then
+            echo "key_exists=true" >> $GITHUB_OUTPUT
+            echo "key_name=OPENAI_API_KEY" >> $GITHUB_OUTPUT
             echo "✅ OPENAI_API_KEY secret exists"
+          else
+            echo "key_exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Missing OPENROUTER_API_KEY (preferred) or OPENAI_API_KEY"
           fi
 
       - name: Comment on PR if key is missing
@@ -36,33 +40,30 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const comment = `## ⚠️ Missing OPENAI_API_KEY Secret
+            const comment = `## ⚠️ Missing API Key Secret
 
-            This repository is missing the \`OPENAI_API_KEY\` secret required for Codex workflows.
+            This repository is missing the API key secret required for Codex workflows.
 
-            **To add it:**
-
+            **Preferred (OpenRouter):**
             1. **Via GitHub CLI** (easiest):
                \`\`\`bash
-               echo "YOUR_API_KEY" | gh secret set OPENAI_API_KEY --repo ${{ github.repository }}
+               echo "YOUR_OPENROUTER_API_KEY" | gh secret set OPENROUTER_API_KEY --repo ${{ github.repository }}
                \`\`\`
 
             2. **Via GitHub UI**:
                - Go to [Settings → Secrets → Actions](https://github.com/${{ github.repository }}/settings/secrets/actions)
                - Click "New repository secret"
-               - Name: \`OPENAI_API_KEY\`
-               - Value: Your OpenAI API key (starts with \`sk-proj-\`)
+               - Name: \`OPENROUTER_API_KEY\`
+               - Value: Your OpenRouter API key
                - Click "Add secret"
 
-            3. **Using the bulk script** (for multiple repos):
-               \`\`\`bash
-               ./add-secret-to-all-repos.sh
-               \`\`\`
+            **Fallback (OpenAI):**
+            - You can also set \`OPENAI_API_KEY\` if you want to use OpenAI directly.
 
             Once added, Codex will automatically review PRs and create autofix PRs for CI failures.
 
             ---
-            <sub>🤖 Automated check by [Auto-Add OpenAI Key workflow](https://github.com/${{ github.repository }}/actions)</sub>
+            <sub>🤖 Automated check by [Auto-Add Key workflow](https://github.com/${{ github.repository }}/actions)</sub>
             `;
 
             await github.rest.issues.createComment({
@@ -80,12 +81,18 @@ jobs:
             const issue = await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: '⚠️ Missing OPENAI_API_KEY secret',
+              title: '⚠️ Missing API key secret',
               body: `## Setup Required
 
-            This repository needs the \`OPENAI_API_KEY\` secret to enable Codex workflows.
+            This repository needs an API key secret to enable Codex workflows.
 
-            **Quick setup:**
+            **Preferred (OpenRouter):**
+
+            \`\`\`bash
+            echo "YOUR_OPENROUTER_API_KEY" | gh secret set OPENROUTER_API_KEY --repo ${{ github.repository }}
+            \`\`\`
+
+            **Fallback (OpenAI):**
 
             \`\`\`bash
             echo "YOUR_OPENAI_API_KEY" | gh secret set OPENAI_API_KEY --repo ${{ github.repository }}
