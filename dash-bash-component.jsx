@@ -16809,7 +16809,7 @@ const EnhancedCalculator = () => {
                 <span className="text-lg font-medium">
                   State Management{" "}
                   <span className="text-sm text-gray-400 ml-2">
-                    v1.9.7
+                    v{window.APP_VERSION || "1.11.1"}
                   </span>
                   {/* [PERSISTENCE-FIX] Last saved indicator */}
                   {lastSavedAt && (
