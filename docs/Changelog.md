@@ -1,6 +1,12 @@
 # Changelog
 
-## v1.10.0 (Current)
+## v1.11.0 (Unreleased)
+- **Performance Optimizations**: Search pre-caching (30-50% faster), background tab timer pause, statistics gating, Lucide icon optimization.
+- **Custom Confirm Modal**: Replaced native browser confirm with accessible custom modal (WCAG compliant, Escape key support, backdrop dismiss).
+- **Robustness**: Error handling in modal callbacks, IndexedDB failure handling, proper data persistence.
+- **Bug Fixes**: Modal handler stale closures, requestPersist() in deleteDasherCategory.
+
+## v1.10.0 (December 2025)
 - Performance and stability improvements.
 - Enhanced wiki documentation.
 

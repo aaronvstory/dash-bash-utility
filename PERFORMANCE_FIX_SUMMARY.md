@@ -177,12 +177,16 @@ grep "showConfirm\|categoriesWithSearchText" dash-bash-compiled.js
 
 ## Notes
 
-### Why Modal UI Deferred
-The confirm modal component uses JSX syntax (`<div className={...}>`) which conflicts with the file's React.createElement structure. Rather than refactor the 17K-line component during this commit, the **infrastructure is complete** (`showConfirm`, `confirmModal` state, handlers) and the modal UI can be added in a follow-up using proper React.createElement syntax.
+### Custom Confirm Modal Implementation
+**Status:** Fully implemented and production-ready with dark theme styling, WCAG accessibility (alertdialog role, aria labels, keyboard navigation), and backdrop dismiss.
 
-**Current Behavior:** Custom confirm modal is fully implemented with dark theme styling, accessibility support (alertdialog role, aria labels), and backdrop dismiss.
+**Components:**
+- Infrastructure: `showConfirm()`, `confirmModal` state, stable action handlers
+- UI: Modal rendering with JSX syntax (matching other UI components in the file)
+- Accessibility: Escape key handler, error handling in callbacks, proper ARIA attributes
+- Error Resilience: Try/catch wrappers to prevent UI lock on callback errors
 
-**Next Step:** Add proper modal rendering using `React.createElement` without breaking JSX/createElement parity.
+**Note:** The file uses mixed React.createElement (for icon components) and JSX (for UI rendering), which is a common pattern in large React applications.
 
 ### Key Insights from Analysis
 1. **Raw JS operations:** <1ms - NOT the bottleneck

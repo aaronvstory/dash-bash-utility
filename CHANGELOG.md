@@ -5,6 +5,31 @@ All notable changes to Dash Bash Utility will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Performance
+- **Search optimization** - Pre-compute `_searchText` when categories change instead of rebuilding on every keystroke (30-50% faster search response)
+- **Background tab efficiency** - Timer ticks pause when tabs are collapsed or app is backgrounded
+- **Statistics gating** - Expensive stat computations only run when Statistics section is open
+- **Lucide icon optimization** - Direct icon rendering without wrapper overhead
+
+### Added
+- **Custom confirm modal** - Replaced native browser `confirm()` with accessible custom modal infrastructure
+  - Full WCAG compliance (alertdialog role, aria labels, keyboard navigation)
+  - Escape key support for dismissal
+  - Backdrop click to cancel
+  - Customizable title, message, and button text
+- **Error resilience** - Modal callbacks wrapped in try/catch to prevent UI lock on errors
+- **IndexedDB failure handling** - Added onerror/onblocked handlers for edge cases
+
+### Fixed
+- **Modal handler stale closures** - Use functional state updates to prevent stale captures
+- **Data persistence** - Added `requestPersist()` to `deleteDasherCategory` for immediate save
+- **IndexedDB cleanup** - `clearAllData()` now properly deletes IndexedDB to prevent rehydration
+
+### Changed
+- Removed unused `closeConfirmModal` function (dead code cleanup)
+
 ## [1.10.0] - 2025-12-28
 
 ### Fixed

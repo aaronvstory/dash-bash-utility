@@ -190,14 +190,15 @@ npm run build           # Babel compilation
 
 ## 📝 Notes for Reviewers
 
-### Why Modal UI Deferred
-The confirm modal component uses JSX syntax (`<div className={...}>`) which differs from the 17K-line component's React.createElement style. To avoid style inconsistency:
+### Implementation Details
+**Status:** Custom confirm modal is fully implemented and displayed instead of native browser dialogs.
 
-1. **This commit:** Infrastructure only (`showConfirm`, `confirmModal` state, handlers)
-2. **Next commit:** Modal UI using proper `React.createElement` syntax
-3. **Result:** Clean separation of concerns + consistent code style
+**Components:**
+- Infrastructure: `showConfirm()` function, `confirmModal` state, action handlers
+- UI: Modal rendering with dark theme styling, WCAG accessibility (alertdialog role, aria labels)
+- Interactions: Escape key dismissal, backdrop click to cancel, error handling
 
-**Current Behavior:** Custom confirm modal is fully implemented and displayed instead of native browser dialogs.
+**Note:** The modal uses JSX syntax matching the rest of the UI components in the file (which contains mixed React.createElement for icons and JSX for UI elements).
 
 ### Root Cause Analysis
 Per [PERFORMANCE_ANALYSIS_2026-01-02.md](./docs/PERFORMANCE_ANALYSIS_2026-01-02.md):
