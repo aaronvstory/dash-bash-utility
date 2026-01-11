@@ -1047,6 +1047,29 @@ const EnhancedCalculator = () => {
     [categories],
   );
 
+  // Address Book helper function - extract city and state from address
+  const extractCityState = (address) => {
+    if (!address) return "";
+
+    // Split by comma and trim spaces
+    const parts = address.split(",").map((part) => part.trim());
+
+    if (parts.length >= 3) {
+      // Format: "Street, City, State ZIP"
+      const city = parts[1];
+      const stateZip = parts[2];
+      // Extract state (first word before ZIP)
+      const state = stateZip.split(" ")[0];
+      return `${city}, ${state}`;
+    } else if (parts.length === 2) {
+      // Format: "Street, City State"
+      const cityState = parts[1];
+      return cityState;
+    }
+
+    return "";
+  };
+
   const buildStoreSearchText = useCallback((category, store) => {
     const segments = [];
     const visit = (value) => {
@@ -2155,27 +2178,7 @@ const EnhancedCalculator = () => {
   };
 
   // Address Book functions
-  const extractCityState = (address) => {
-    if (!address) return "";
-
-    // Split by comma and trim spaces
-    const parts = address.split(",").map((part) => part.trim());
-
-    if (parts.length >= 3) {
-      // Format: "Street, City, State ZIP"
-      const city = parts[1];
-      const stateZip = parts[2];
-      // Extract state (first word before ZIP)
-      const state = stateZip.split(" ")[0];
-      return `${city}, ${state}`;
-    } else if (parts.length === 2) {
-      // Format: "Street, City State"
-      const cityState = parts[1];
-      return cityState;
-    }
-
-    return "";
-  };
+  // (extractCityState moved earlier to avoid hoisting issues)
 
   // Utility: simple debounce keyed by string to allow per-entry coalescing
   const debounceMap = new Map();
