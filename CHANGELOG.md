@@ -5,6 +5,11 @@ All notable changes to Dash Bash Utility will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.1] - 2026-01-11
+
+### Fixed
+- **Balance editing in all categories** - Fixed bug where balance edits only persisted in DASHERS category. Changed `toggleEditDasher` to use `updateDasherEverywhere()` which updates both `dasherCategories` and all bucket arrays (Ready, USING, APPEALED, Reverif, Locked, Applied/Pending, Deactivated, Archived). Balance edits now persist correctly in all categories.
+
 ## [1.11.0] - 2026-01-11
 
 ### Performance

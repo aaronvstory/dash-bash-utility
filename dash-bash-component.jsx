@@ -7216,7 +7216,7 @@ const EnhancedCalculator = () => {
     ) {
       // Exiting edit mode - save the balance value
       if (editingBalanceValue !== "") {
-        updateDasher(categoryId, dasherId, "balance", editingBalanceValue);
+        updateDasherEverywhere(dasherId, { balance: editingBalanceValue });
       }
       setEditingDasher({ categoryId: "", dasherId: "" });
       setEditingBalanceValue(""); // Clear when exiting edit mode
