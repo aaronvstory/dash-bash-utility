@@ -5,7 +5,7 @@ All notable changes to Dash Bash Utility will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.11.0] - 2026-01-11
 
 ### Performance
 - **Search optimization** - Pre-compute `_searchText` when categories change instead of rebuilding on every keystroke (30-50% faster search response)

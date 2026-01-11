@@ -1,7 +1,7 @@
 {
   "name": "dash-bash-utility",
   "private": true,
-  "version": "1.10.0",
+  "version": "1.11.0",
   "description": "Progressive Web App for DoorDash delivery drivers with target calculator, dashers management, and address book",
   "license": "UNLICENSED",
   "scripts": {
