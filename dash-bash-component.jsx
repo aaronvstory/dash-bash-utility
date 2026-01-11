@@ -7754,12 +7754,8 @@ const EnhancedCalculator = () => {
       const isBalance = field === "balance";
       const nowIso = new Date().toISOString();
       if (!isBalance) {
-        setList((prev) =>
-          prev.map((d) =>
-            d.id === dasher.id ? { ...d, [field]: value } : d,
-          ),
-        );
-        requestPersist();
+        // Use updateDasherEverywhere to sync across all state representations
+        updateDasherEverywhere(dasher.id, { [field]: value });
         return;
       }
 
