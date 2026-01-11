@@ -7269,7 +7269,7 @@ const EnhancedCalculator = () => {
 
   const startDasherTimer = (categoryId, dasherId) => {
     const now = new Date().toISOString();
-    updateDasher(categoryId, dasherId, "lastUsed", now);
+    updateDasherEverywhere(dasherId, { lastUsed: now });
     // Auto-save after timer start
     setTimeout(() => {
       saveAllToLocalStorage();
@@ -7277,7 +7277,7 @@ const EnhancedCalculator = () => {
   };
 
   const resetDasherTimer = (categoryId, dasherId) => {
-    updateDasher(categoryId, dasherId, "lastUsed", null);
+    updateDasherEverywhere(dasherId, { lastUsed: null });
     // Auto-save after timer reset
     setTimeout(() => {
       saveAllToLocalStorage();
