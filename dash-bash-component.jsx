@@ -692,6 +692,7 @@ const DasherCard = React.memo(
   // v1.10.0: Simplified memo - uses object reference check for dasher instead of
   // individual property comparison. UI-state props checked explicitly.
   // Previous approach had brittle hardcoded property list that could miss new dasher fields.
+  // v1.11.2: Added editingBalanceValue check to fix balance input field UX bug
   (prevProps, nextProps) => {
     if (!prevProps || !nextProps) return false;
     // Same dasher object reference = no re-render needed
@@ -700,7 +701,8 @@ const DasherCard = React.memo(
       prevProps.isCollapsed === nextProps.isCollapsed &&
       prevProps.isEditing === nextProps.isEditing &&
       prevProps.isEditMode === nextProps.isEditMode &&
-      prevProps.cardRecentlyMoved === nextProps.cardRecentlyMoved) {
+      prevProps.cardRecentlyMoved === nextProps.cardRecentlyMoved &&
+      prevProps.editingBalanceValue === nextProps.editingBalanceValue) {
       return true;
     }
     return false; // Different props = re-render

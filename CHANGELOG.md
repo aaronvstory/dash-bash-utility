@@ -5,6 +5,11 @@ All notable changes to Dash Bash Utility will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.2] - 2026-01-11
+
+### Fixed
+- **Balance input field UX bug** - Fixed critical bug where balance input field was not writable in categories using DasherCard (Ready, USING, etc.). Users could only type one digit at a time and had to edit other fields first. Root cause: DasherCard memoization wasn't checking `editingBalanceValue` prop, preventing re-renders during typing. Added `editingBalanceValue` to memo comparison at line 705.
+
 ## [1.11.1] - 2026-01-11
 
 ### Fixed
