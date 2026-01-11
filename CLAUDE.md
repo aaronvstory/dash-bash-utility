@@ -70,11 +70,12 @@ Then update release notes manually (README + changelogs).
 
 Automated by `npm run version:update -- X.Y.Z`:
 1. `service-worker.js`: `const APP_VERSION = "X.Y.Z"`
-2. `index.html`: `app-version` meta, `APP_VERSION` constant, `data-style-version`, console log string, and all `?v=X.Y.Z` cache-busting query params
+2. `index.html`: `app-version` meta, `APP_VERSION` constant, `window.APP_VERSION`, console log string, and all `?v=X.Y.Z` cache-busting query params
 3. `manifest.json`: `app_version` and the icon `src` query param
 4. `package.json`: `version`
 5. `README.md` (Current Version line)
 6. `CLAUDE.md` (Current Version line)
+7. `dash-bash-component.jsx`: State Management section fallback version (`|| "X.Y.Z"}`)
 
 Manual release notes: update `CHANGELOG.md` and `docs/Changelog.md`.
 

@@ -800,6 +800,52 @@ async function loadFromIDB(key) {
 // =========================================================================
 
 const EnhancedCalculator = () => {
+  // ======================== UNDO SYSTEM CONSTANTS ========================
+  const UNDO_TYPES = {
+    // Dasher actions
+    DASHER_MOVE: 'DASHER_MOVE',
+    DASHER_DELETE: 'DASHER_DELETE',
+    DASHER_EDIT_FIELD: 'DASHER_EDIT_FIELD',
+    DASHER_EDIT_BALANCE: 'DASHER_EDIT_BALANCE',
+    DASHER_CASH_OUT: 'DASHER_CASH_OUT',
+    DASHER_TOGGLE_FLAG: 'DASHER_TOGGLE_FLAG',
+    DASHER_BULK_MOVE: 'DASHER_BULK_MOVE',
+
+    // Category actions (Dasher categories)
+    DASHER_CATEGORY_ADD: 'DASHER_CATEGORY_ADD',
+    DASHER_CATEGORY_DELETE: 'DASHER_CATEGORY_DELETE',
+    DASHER_CATEGORY_RENAME: 'DASHER_CATEGORY_RENAME',
+    DASHER_CATEGORY_REORDER: 'DASHER_CATEGORY_REORDER',
+
+    // Message actions
+    MESSAGE_ADD: 'MESSAGE_ADD',
+    MESSAGE_DELETE: 'MESSAGE_DELETE',
+    MESSAGE_EDIT: 'MESSAGE_EDIT',
+    MESSAGE_REORDER: 'MESSAGE_REORDER',
+
+    // Store Category actions
+    STORE_CATEGORY_ADD: 'STORE_CATEGORY_ADD',
+    STORE_CATEGORY_DELETE: 'STORE_CATEGORY_DELETE',
+    STORE_CATEGORY_RENAME: 'STORE_CATEGORY_RENAME',
+
+    // Store actions
+    STORE_ADD: 'STORE_ADD',
+    STORE_DELETE: 'STORE_DELETE',
+    STORE_EDIT_FIELD: 'STORE_EDIT_FIELD',
+    STORE_REORDER: 'STORE_REORDER',
+
+    // Note Category actions
+    NOTE_CATEGORY_ADD: 'NOTE_CATEGORY_ADD',
+    NOTE_CATEGORY_DELETE: 'NOTE_CATEGORY_DELETE',
+    NOTE_CATEGORY_RENAME: 'NOTE_CATEGORY_RENAME',
+
+    // Note actions
+    NOTE_ADD: 'NOTE_ADD',
+    NOTE_DELETE: 'NOTE_DELETE',
+    NOTE_EDIT: 'NOTE_EDIT',
+    NOTE_REORDER: 'NOTE_REORDER',
+  };
+
   // Import gate (v1.9.5): Prevents re-renders, localStorage writes, and timer updates during import
   const [isImporting, setIsImporting] = useState(false);
 
@@ -984,6 +1030,8 @@ const EnhancedCalculator = () => {
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [newMessageText, setNewMessageText] = useState("");
   const [copyNotification, setCopyNotification] = useState("");
+  // Undo notification state: { message: string, undoId: string } | null
+  const [undoNotification, setUndoNotification] = useState(null);
   const [messages, setMessages] = useState([
     "hi can u pls see if u can help get a dasher assigned quicker!? I'm in a rush to get to work asap! Thank you",
     "Ok someone got it! darn it i just noticed i put the tip so high by accident :( can u help change the tip to $0 pls?",
@@ -1513,8 +1561,8 @@ const EnhancedCalculator = () => {
   // Web Worker for async JSON parsing (v1.9.5)
   const importWorkerRef = useRef(null);
 
-  // Undo support for cash outs
-  const lastCashOutRef = React.useRef(null);
+  // Universal undo stack (max 10 entries, FIFO)
+  const undoStack = React.useRef([]);
   const saveDebouncedRef = React.useRef(null);
   const saveNotificationTimeoutRef = React.useRef(null);
   const moveToastActiveRef = React.useRef(false);
@@ -1535,6 +1583,408 @@ const EnhancedCalculator = () => {
   const [recentlyMoved, setRecentlyMoved] = useState(() => new Set());
   const recentlyMovedTimersRef = useRef(new Map());
   const [moveDebug, setMoveDebug] = useState(null);
+
+  // ======================== UNDO SYSTEM FUNCTIONS ========================
+
+  /**
+   * Helper: Find dasher by ID across all buckets and categories (undo system)
+   * @param {string} dasherId - The dasher ID to find
+   * @param {string} categoryKey - Optional bucket/category key to search in
+   * @returns {object|null} - The dasher object if found, null otherwise
+   */
+  const findDasherAcrossBuckets = (dasherId, categoryKey = null) => {
+    if (categoryKey === 'main') {
+      // Search in Main categories
+      for (const cat of dasherCategories) {
+        const dasher = cat.dashers?.find(d => d.id === dasherId);
+        if (dasher) return { dasher, categoryId: cat.id, categoryKey: 'main' };
+      }
+    } else if (categoryKey) {
+      // Search in specific bucket
+      const bucketMap = {
+        'ready': readyDashers,
+        'currently-using': currentlyUsingDashers,
+        'appealed': appealedDashers,
+        'applied-pending': appliedPendingDashers,
+        'reverif': reverifDashers,
+        'locked': lockedDashers,
+        'deactivated': deactivatedDashers,
+        'archived': archivedDashers,
+      };
+      const dashers = bucketMap[categoryKey] || [];
+      const dasher = dashers.find(d => d.id === dasherId);
+      if (dasher) return { dasher, categoryKey };
+    } else {
+      // Search everywhere
+      const result = findDasherAcrossBuckets(dasherId, 'main');
+      if (result) return result;
+      
+      const buckets = ['ready', 'currently-using', 'appealed', 'applied-pending', 
+                       'reverif', 'locked', 'deactivated', 'archived'];
+      for (const bucket of buckets) {
+        const result = findDasherAcrossBuckets(dasherId, bucket);
+        if (result) return result;
+      }
+    }
+    return null;
+  };
+
+  /**
+   * Record an undo action
+   * @param {string} type - Action type from UNDO_TYPES
+   * @param {object} beforeState - State needed to restore
+   * @param {string} description - Human-readable description
+   */
+  const recordUndo = (type, beforeState, description) => {
+    // Skip during imports
+    if (isImporting) return;
+
+    // Create undo entry
+    const entry = {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type,
+      timestamp: Date.now(),
+      description,
+      beforeState: JSON.parse(JSON.stringify(beforeState)), // Deep clone
+    };
+
+    // Add to stack (max 10, FIFO)
+    undoStack.current = [entry, ...undoStack.current].slice(0, 10);
+
+    // Show undo toast
+    setUndoNotification({
+      message: description,
+      undoId: entry.id,
+    });
+  };
+
+  /**
+   * Perform undo operation
+   * @param {string} undoId - ID of the undo entry to execute
+   */
+  const performUndo = (undoId) => {
+    // Find entry by ID
+    const entryIndex = undoStack.current.findIndex(e => e.id === undoId);
+    if (entryIndex === -1) {
+      console.warn('[UNDO] Entry not found:', undoId);
+      return;
+    }
+
+    const entry = undoStack.current[entryIndex];
+
+    // Execute restoration based on type
+    try {
+      switch (entry.type) {
+        case UNDO_TYPES.DASHER_MOVE:
+          restoreDasherMove(entry.beforeState);
+          break;
+        case UNDO_TYPES.DASHER_DELETE:
+          restoreDasherDelete(entry.beforeState);
+          break;
+        case UNDO_TYPES.DASHER_EDIT_BALANCE:
+          restoreDasherBalance(entry.beforeState);
+          break;
+        case UNDO_TYPES.DASHER_EDIT_FIELD:
+          restoreDasherField(entry.beforeState);
+          break;
+        case UNDO_TYPES.DASHER_CASH_OUT:
+          restoreDasherCashOut(entry.beforeState);
+          break;
+        case UNDO_TYPES.DASHER_TOGGLE_FLAG:
+          restoreDasherFlag(entry.beforeState);
+          break;
+        case UNDO_TYPES.MESSAGE_DELETE:
+          restoreMessageDelete(entry.beforeState);
+          break;
+        case UNDO_TYPES.MESSAGE_EDIT:
+          restoreMessageEdit(entry.beforeState);
+          break;
+        case UNDO_TYPES.MESSAGE_REORDER:
+          restoreMessageReorder(entry.beforeState);
+          break;
+        case UNDO_TYPES.STORE_DELETE:
+          restoreStoreDelete(entry.beforeState);
+          break;
+        case UNDO_TYPES.STORE_EDIT_FIELD:
+          restoreStoreField(entry.beforeState);
+          break;
+        case UNDO_TYPES.NOTE_DELETE:
+          restoreNoteDelete(entry.beforeState);
+          break;
+        case UNDO_TYPES.NOTE_EDIT:
+          restoreNoteEdit(entry.beforeState);
+          break;
+        case UNDO_TYPES.DASHER_CATEGORY_DELETE:
+          restoreDasherCategoryDelete(entry.beforeState);
+          break;
+        case UNDO_TYPES.DASHER_CATEGORY_RENAME:
+          restoreDasherCategoryRename(entry.beforeState);
+          break;
+        case UNDO_TYPES.STORE_CATEGORY_DELETE:
+          restoreStoreCategoryDelete(entry.beforeState);
+          break;
+        case UNDO_TYPES.STORE_CATEGORY_RENAME:
+          restoreStoreCategoryRename(entry.beforeState);
+          break;
+        case UNDO_TYPES.NOTE_CATEGORY_DELETE:
+          restoreNoteCategoryDelete(entry.beforeState);
+          break;
+        case UNDO_TYPES.NOTE_CATEGORY_RENAME:
+          restoreNoteCategoryRename(entry.beforeState);
+          break;
+        default:
+          console.warn('[UNDO] Unknown action type:', entry.type);
+          return;
+      }
+
+      // Remove from stack
+      undoStack.current.splice(entryIndex, 1);
+
+      // Hide toast and show confirmation
+      setUndoNotification(null);
+      setCopyNotification(`✓ Undone: ${entry.description}`);
+      setTimeout(() => setCopyNotification(''), 2000);
+    } catch (error) {
+      console.error('[UNDO] Error performing undo:', error);
+      setCopyNotification(`❌ Undo failed: ${error.message}`);
+      setTimeout(() => setCopyNotification(''), 3000);
+    }
+  };
+
+  /**
+   * Dismiss undo notification without performing undo
+   * @param {string} undoId - ID of the undo entry to dismiss
+   */
+  const dismissUndo = (undoId) => {
+    // Remove from stack
+    const entryIndex = undoStack.current.findIndex(e => e.id === undoId);
+    if (entryIndex !== -1) {
+      undoStack.current.splice(entryIndex, 1);
+    }
+
+    // Hide toast
+    setUndoNotification(null);
+  };
+
+  // ======================== UNDO RESTORATION FUNCTIONS ========================
+
+  const restoreDasherMove = (beforeState) => {
+    const { dasherId, fromKey, toKey } = beforeState;
+    // Move back to original location
+    moveDasher(toKey, fromKey, dasherId);
+  };
+
+  const restoreDasherDelete = (beforeState) => {
+    const { dasher, categoryKey, categoryId } = beforeState;
+
+    // Check for ID collision
+    const exists = findDasherAcrossBuckets(dasher.id, categoryKey);
+    if (exists) {
+      console.warn('[UNDO] Cannot restore deleted dasher: ID collision');
+      return;
+    }
+
+    // Restore to original location
+    if (categoryKey === 'main') {
+      setDasherCategories(cats =>
+        cats.map(cat =>
+          cat.id === categoryId
+            ? { ...cat, dashers: [...(cat.dashers || []), dasher] }
+            : cat
+        )
+      );
+    } else {
+      // Handle bucket restoration
+      const setterMap = {
+        'ready': setReadyDashers,
+        'currently-using': setCurrentlyUsingDashers,
+        'appealed': setAppealedDashers,
+        'applied-pending': setAppliedPendingDashers,
+        'reverif': setReverifDashers,
+        'locked': setLockedDashers,
+        'deactivated': setDeactivatedDashers,
+        'archived': setArchivedDashers,
+      };
+      const setter = setterMap[categoryKey];
+      if (setter) {
+        setter(dashers => [...dashers, dasher]);
+      }
+    }
+
+    requestPersist();
+  };
+
+  const restoreDasherBalance = (beforeState) => {
+    const { dasherId, oldBalance } = beforeState;
+    updateDasherEverywhere(dasherId, { balance: oldBalance });
+  };
+
+  const restoreDasherField = (beforeState) => {
+    const { dasherId, field, oldValue } = beforeState;
+    updateDasherEverywhere(dasherId, { [field]: oldValue });
+  };
+
+  const restoreDasherCashOut = (beforeState) => {
+    const { dasherId, sourceKey, amount } = beforeState;
+    
+    const found = findDasherAcrossBuckets(dasherId, sourceKey);
+    if (!found) {
+      console.warn('[UNDO] Dasher not found for cash out undo');
+      return;
+    }
+
+    // Restore balance and remove cash out entry
+    updateDasherEverywhere(dasherId, {
+      balance: parseFloat(found.dasher.balance || 0) + amount,
+      cashOutHistory: (found.dasher.cashOutHistory || []).slice(1), // Remove first entry
+    });
+  };
+
+  const restoreDasherFlag = (beforeState) => {
+    const { dasherId, flag, oldValue } = beforeState;
+    updateDasherEverywhere(dasherId, { [flag]: oldValue });
+  };
+
+  const restoreMessageDelete = (beforeState) => {
+    const { index, message } = beforeState;
+    setMessages(msgs => {
+      const newMsgs = [...msgs];
+      newMsgs.splice(index, 0, message);
+      return newMsgs;
+    });
+    requestPersist();
+  };
+
+  const restoreMessageEdit = (beforeState) => {
+    const { index, oldText } = beforeState;
+    setMessages(msgs => {
+      const newMsgs = [...msgs];
+      newMsgs[index] = oldText;
+      return newMsgs;
+    });
+    requestPersist();
+  };
+
+  const restoreMessageReorder = (beforeState) => {
+    const { oldOrder } = beforeState;
+    setMessages(oldOrder);
+    requestPersist();
+  };
+
+  const restoreStoreDelete = (beforeState) => {
+    const { categoryId, store } = beforeState;
+    setCategories(cats =>
+      cats.map(cat =>
+        cat.id === categoryId
+          ? { ...cat, stores: [...(cat.stores || []), store] }
+          : cat
+      )
+    );
+    requestPersist();
+  };
+
+  const restoreStoreField = (beforeState) => {
+    const { categoryId, storeId, field, oldValue } = beforeState;
+    setCategories(cats =>
+      cats.map(cat =>
+        cat.id === categoryId
+          ? {
+              ...cat,
+              stores: cat.stores.map(store =>
+                store.id === storeId
+                  ? { ...store, [field]: oldValue }
+                  : store
+              ),
+            }
+          : cat
+      )
+    );
+    requestPersist();
+  };
+
+  const restoreNoteDelete = (beforeState) => {
+    const { categoryId, noteIndex, noteText } = beforeState;
+    setNoteCategories(cats =>
+      cats.map(cat => {
+        if (cat.id === categoryId) {
+          const newNotes = [...(cat.notes || [])];
+          newNotes.splice(noteIndex, 0, noteText);
+          return { ...cat, notes: newNotes };
+        }
+        return cat;
+      })
+    );
+    requestPersist();
+  };
+
+  const restoreNoteEdit = (beforeState) => {
+    const { categoryId, noteIndex, oldText } = beforeState;
+    setNoteCategories(cats =>
+      cats.map(cat => {
+        if (cat.id === categoryId) {
+          const newNotes = [...(cat.notes || [])];
+          newNotes[noteIndex] = oldText;
+          return { ...cat, notes: newNotes };
+        }
+        return cat;
+      })
+    );
+    requestPersist();
+  };
+
+  const restoreDasherCategoryDelete = (beforeState) => {
+    const { category } = beforeState;
+    setDasherCategories(cats => [...cats, category]);
+    requestPersist();
+  };
+
+  const restoreDasherCategoryRename = (beforeState) => {
+    const { categoryId, oldName } = beforeState;
+    setDasherCategories(cats =>
+      cats.map(cat =>
+        cat.id === categoryId
+          ? { ...cat, name: oldName }
+          : cat
+      )
+    );
+    requestPersist();
+  };
+
+  const restoreStoreCategoryDelete = (beforeState) => {
+    const { category } = beforeState;
+    setCategories(cats => [...cats, category]);
+    requestPersist();
+  };
+
+  const restoreStoreCategoryRename = (beforeState) => {
+    const { categoryId, oldName } = beforeState;
+    setCategories(cats =>
+      cats.map(cat =>
+        cat.id === categoryId
+          ? { ...cat, name: oldName }
+          : cat
+      )
+    );
+    requestPersist();
+  };
+
+  const restoreNoteCategoryDelete = (beforeState) => {
+    const { category } = beforeState;
+    setNoteCategories(cats => [...cats, category]);
+    requestPersist();
+  };
+
+  const restoreNoteCategoryRename = (beforeState) => {
+    const { categoryId, oldName } = beforeState;
+    setNoteCategories(cats =>
+      cats.map(cat =>
+        cat.id === categoryId
+          ? { ...cat, name: oldName }
+          : cat
+      )
+    );
+    requestPersist();
+  };
 
   // Load from localStorage on component mount
   useEffect(() => {
@@ -5329,13 +5779,16 @@ const EnhancedCalculator = () => {
 
     const nowIso = new Date().toISOString();
 
-    lastCashOutRef.current = {
-      dasherId: targetId,
-      sourceKey: effectiveSourceKey,
-      amount: currentBalance,
-      method: normalizedMethod,
-      timestamp: nowIso,
-    };
+    // Record undo for cash out
+    recordUndo(
+      UNDO_TYPES.DASHER_CASH_OUT,
+      {
+        dasherId: targetId,
+        sourceKey: effectiveSourceKey,
+        amount: currentBalance,
+      },
+      `Cashed out $${currentBalance.toFixed(2)}`
+    );
 
     if (descriptors.length > 0) {
       descriptors.forEach((descriptor) => {
@@ -5490,82 +5943,7 @@ const EnhancedCalculator = () => {
     saveNotificationTimeoutRef, moveToastActiveRef
   ]); // [PERF-STAGE3]
 
-  // Undo last cash out - restores balance and removes history entry
-  const undoLastCashOut = () => {
-    const last = lastCashOutRef.current;
-    if (!last) return;
-
-    const { dasherId, sourceKey, amount } = last;
-
-    const commit = (mutator) => {
-      mutator();
-      requestPersist();
-    };
-
-    const restoreList = (list, setter) =>
-      commit(() => {
-        setter(
-          list.map((d) =>
-            idsEq(d.id, dasherId)
-              ? {
-                ...d,
-                balance: parseBalanceValue(d.balance) + amount,
-                cashOutHistory: (d.cashOutHistory || []).slice(1),
-              }
-              : d,
-          ),
-        );
-      });
-
-    if (sourceKey === "ready") restoreList(readyDashers, setReadyDashers);
-    else if (sourceKey === "currently-using")
-      restoreList(currentlyUsingDashers, setCurrentlyUsingDashers);
-    else if (sourceKey === "appealed")
-      restoreList(appealedDashers, setAppealedDashers);
-    else if (sourceKey === "locked")
-      restoreList(lockedDashers, setLockedDashers);
-    else if (sourceKey === "reverif")
-      restoreList(reverifDashers, setReverifDashers);
-    else if (sourceKey === "applied-pending")
-      restoreList(appliedPendingDashers, setAppliedPendingDashers);
-    else if (sourceKey === "deactivated")
-      restoreList(deactivatedDashers, setDeactivatedDashers);
-    else if (sourceKey === "archived")
-      restoreList(archivedDashers, setArchivedDashers);
-    else {
-      commit(() => {
-        setDasherCategories((prev) =>
-          prev.map((cat) => {
-            if (cat.id !== sourceKey) return cat;
-            return {
-              ...cat,
-              dashers: cat.dashers.map((d) =>
-                idsEq(d.id, dasherId)
-                  ? {
-                    ...d,
-                    balance: parseBalanceValue(d.balance) + amount,
-                    cashOutHistory: (d.cashOutHistory || []).slice(1),
-                  }
-                  : d,
-              ),
-            };
-          }),
-        );
-      });
-    }
-
-    // Keep consistent modern toast for undo as well
-    if (saveNotificationTimeoutRef.current) {
-      clearTimeout(saveNotificationTimeoutRef.current);
-      saveNotificationTimeoutRef.current = null;
-    }
-    setSaveNotification(`Undid cash out of $${amount.toFixed(2)}`);
-    saveNotificationTimeoutRef.current = setTimeout(() => {
-      setSaveNotification("");
-      saveNotificationTimeoutRef.current = null;
-    }, 2000);
-    lastCashOutRef.current = null;
-  };
+  // Old undoLastCashOut function removed - replaced by universal undo system
 
   // Sorting helper
   const sortDashers = (arr, sortCfg) => {
@@ -6975,6 +7353,23 @@ const EnhancedCalculator = () => {
   };
 
   const deleteDasher = (categoryId, dasherId) => {
+    // Find the dasher before deleting (for undo)
+    const category = dasherCategories.find(cat => cat.id === categoryId);
+    const dasher = category?.dashers?.find(d => d.id === dasherId);
+    
+    if (dasher) {
+      const dasherName = dasher.name || dasher.phone || dasher.id;
+      recordUndo(
+        UNDO_TYPES.DASHER_DELETE,
+        {
+          dasher: JSON.parse(JSON.stringify(dasher)), // Deep clone
+          categoryKey: 'main',
+          categoryId: categoryId,
+        },
+        `Deleted dasher "${dasherName}"`
+      );
+    }
+
     setDasherCategories(
       dasherCategories.map((cat) =>
         cat.id === categoryId
@@ -7228,6 +7623,24 @@ const EnhancedCalculator = () => {
     ) {
       // Exiting edit mode - save the balance value
       if (editingBalanceValue.trim() !== "") {
+        // Record undo for balance edit (find current balance first)
+        const dasher = findDasherById(categoryId, dasherId);
+        if (dasher) {
+          const oldBalance = dasher.balance || 0;
+          const newBalance = editingBalanceValue;
+          if (oldBalance !== newBalance) {
+            const dasherName = dasher.name || dasher.phone || dasher.id;
+            recordUndo(
+              UNDO_TYPES.DASHER_EDIT_BALANCE,
+              {
+                dasherId,
+                oldBalance,
+              },
+              `Changed "${dasherName}" balance from $${oldBalance} to $${newBalance}`
+            );
+          }
+        }
+        
         updateDasherEverywhere(dasherId, { balance: editingBalanceValue });
       }
       setEditingDasher({ categoryId: "", dasherId: "" });
@@ -9392,6 +9805,20 @@ const EnhancedCalculator = () => {
     const fromCategoryId =
       sourceKey === "main" ? categoryId : dasher.originalCategory || null;
 
+    // Record undo before move
+    const dasherName = dasher.name || dasher.phone || dasher.id;
+    const fromLabel = sourceKey === 'main' ? 'Main' : (sourceKey || 'Unknown');
+    const toLabel = toKey === 'main' ? 'Main' : (toKey || 'Unknown');
+    recordUndo(
+      UNDO_TYPES.DASHER_MOVE,
+      {
+        dasherId,
+        fromKey: sourceKey,
+        toKey,
+      },
+      `Moved "${dasherName}" from ${fromLabel} to ${toLabel}`
+    );
+
     removeDasherFromState(location);
     insertDasherIntoBucket(dasher, toKey, fromCategoryId);
 
@@ -10688,6 +11115,30 @@ const EnhancedCalculator = () => {
           aria-atomic="true"
         >
           {copyNotification}
+        </div>
+      )}
+
+      {/* Undo Notification Toast */}
+      {undoNotification && (
+        <div className="fixed top-4 right-4 z-50 bg-yellow-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 max-w-md">
+          <RotateCcw size={18} />
+          <span className="flex-1 text-sm font-medium">
+            {undoNotification.message}
+          </span>
+          <button
+            onClick={() => performUndo(undoNotification.undoId)}
+            className="bg-yellow-700 hover:bg-yellow-800 px-3 py-1 rounded text-sm font-semibold transition-colors"
+            title="Undo this action"
+          >
+            Undo
+          </button>
+          <button
+            onClick={() => dismissUndo(undoNotification.undoId)}
+            className="text-yellow-200 hover:text-white transition-colors"
+            title="Dismiss"
+          >
+            <X size={16} />
+          </button>
         </div>
       )}
 
@@ -16850,7 +17301,7 @@ const EnhancedCalculator = () => {
                 <span className="text-lg font-medium">
                   State Management{" "}
                   <span className="text-sm text-gray-400 ml-2">
-                    v{window.APP_VERSION || "1.11.1"}
+                    v{window.APP_VERSION || "1.11.6"}
                   </span>
                   {/* [PERSISTENCE-FIX] Last saved indicator */}
                   {lastSavedAt && (
@@ -16960,20 +17411,7 @@ const EnhancedCalculator = () => {
                     <span className="text-sm font-medium">Clear All</span>
                   </button>
 
-                  {/* Undo Last Cash Out */}
-                  {lastCashOutRef.current && (
-                    <button
-                      onClick={undoLastCashOut}
-                      className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-                      title={`Undo cash out of $${lastCashOutRef.current.amount?.toFixed(2) || "0.00"}`}
-                      aria-label={`Undo cash out of $${lastCashOutRef.current.amount?.toFixed(2) || "0.00"}`}
-                    >
-                      <RotateCcw size={18} />
-                      <span className="text-sm font-medium">
-                        Undo Cash Out
-                      </span>
-                    </button>
-                  )}
+                  {/* Old Undo Cash Out button removed - replaced by universal undo toast */}
 
                   {/* Edit Mode Toggle */}
                   <button

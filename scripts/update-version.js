@@ -37,6 +37,7 @@ const filesToUpdate = [
   "manifest.json",
   "README.md",
   "CLAUDE.md",
+  "dash-bash-component.jsx", // State Management section version
 ];
 
 let updatedCount = 0;
@@ -58,6 +59,23 @@ for (const relativePath of filesToUpdate) {
 
 pkg.version = newVersion;
 fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n", "utf8");
+
+// Special handling: JSX fallback pattern (safety net if fallback version drifts)
+// Matches: || "X.Y.Z"} used in State Management section
+const jsxPath = path.join(root, "dash-bash-component.jsx");
+if (fs.existsSync(jsxPath)) {
+  let jsxContent = fs.readFileSync(jsxPath, "utf8");
+  const fallbackPattern = /\|\| "(\d+\.\d+\.\d+)"\}/g;
+  const matches = jsxContent.match(fallbackPattern);
+  if (matches && matches.length > 0) {
+    const beforeContent = jsxContent;
+    jsxContent = jsxContent.replace(fallbackPattern, `|| "${newVersion}"}`);
+    if (jsxContent !== beforeContent) {
+      fs.writeFileSync(jsxPath, jsxContent, "utf8");
+      console.log(`[jsx] Updated ${matches.length} fallback version pattern(s) in dash-bash-component.jsx`);
+    }
+  }
+}
 
 console.log(
   `Updated version ${oldVersion} -> ${newVersion} across ${updatedCount} file(s) plus package.json`,
