@@ -7300,11 +7300,10 @@ const EnhancedCalculator = () => {
 
     // Helper to apply updates to a single dasher object
     const applyUpdates = (dasher) => {
-      return {
+      const baseUpdates = {
         ...dasher,
         ...(updates.name !== undefined && { name: updates.name }),
         ...(updates.email !== undefined && { email: updates.email }),
-        ...(updates.balance !== undefined && { balance: updates.balance }),
         ...(updates.notes !== undefined && {
           notes: Array.isArray(updates.notes)
             ? updates.notes
@@ -7317,6 +7316,35 @@ const EnhancedCalculator = () => {
         ...(updates.lastUsed !== undefined && { lastUsed: updates.lastUsed }),
         lastEditedAt: new Date().toISOString(),
       };
+
+      // Special handling for balance updates (same logic as updateDasher)
+      if (updates.balance !== undefined) {
+        const prevNum = parseBalanceValue(dasher.balance);
+        const nextNum = parseBalanceValue(updates.balance);
+        const delta = nextNum - prevNum;
+        const nowIso = new Date().toISOString();
+
+        if (delta > 0.000001) {
+          const eh = Array.isArray(dasher.earningsHistory)
+            ? dasher.earningsHistory
+            : [];
+          return {
+            ...baseUpdates,
+            balance: updates.balance,
+            earningsHistory: [
+              ...eh,
+              {
+                amount: delta,
+                at: nowIso,
+                source: "balance-edit",
+              },
+            ],
+          };
+        }
+        return { ...baseUpdates, balance: updates.balance };
+      }
+
+      return baseUpdates;
     };
 
     // Generic update function for bucket arrays
@@ -7366,7 +7394,8 @@ const EnhancedCalculator = () => {
     appliedPendingDashers, setAppliedPendingDashers,
     deactivatedDashers, setDeactivatedDashers,
     archivedDashers, setArchivedDashers,
-    requestPersist
+    requestPersist,
+    parseBalanceValue
   ]);
 
   // [PERF-STAGE4] commit edited fields from a card
