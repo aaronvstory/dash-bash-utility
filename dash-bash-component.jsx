@@ -841,7 +841,7 @@
             confirmModal.onConfirm();
           }
           closeConfirmModal();
-        }, [confirmModal, closeConfirmModal]);
+        }, [confirmModal.onConfirm, closeConfirmModal]);
 
         // [FIX-B] Handle cancel action
         const handleCancelAction = useCallback(() => {
@@ -849,7 +849,7 @@
             confirmModal.onCancel();
           }
           closeConfirmModal();
-        }, [confirmModal, closeConfirmModal]);
+        }, [confirmModal.onCancel, closeConfirmModal]);
 
         // Collapsible sections state
         const [isCalculatorOpen, setIsCalculatorOpen] = useState(false); // Collapsed by default
@@ -4246,6 +4246,8 @@
               ]);
               localStorage.removeItem("dashBashState");
               localStorage.removeItem("addressBookCategories");
+              // Also clear IndexedDB to prevent rehydration on reload
+              indexedDB.deleteDatabase("DashBashDB");
               setSaveNotification("✅ All data cleared");
               setTimeout(() => setSaveNotification(""), 3000);
             },
@@ -6722,8 +6724,9 @@
           showConfirm(
             `Delete this category and all its dashers?`,
             () => {
-              setDasherCategories(
-                dasherCategories.filter((cat) => cat.id !== categoryId),
+              // Use functional update to avoid stale state capture
+              setDasherCategories((prev) =>
+                prev.filter((cat) => cat.id !== categoryId),
               );
             },
             { title: "Delete Category", confirmText: "Delete", cancelText: "Cancel" },
