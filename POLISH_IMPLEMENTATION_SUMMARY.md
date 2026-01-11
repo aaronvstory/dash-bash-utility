@@ -96,7 +96,7 @@ Sync Status: Up to date
 ## 🚀 How to Review & Merge
 
 ### View the PR
-Visit: https://github.com/aaronvstory/dash-bash-utility/pull/new/feat/visual-polish-improvements
+Visit: https://github.com/aaronvstory/dash-bash-utility/pull/7
 
 ### Review Changes
 ```bash
@@ -230,9 +230,7 @@ Refer to `VISUAL_POLISH_PR.md` for:
 
 ### Revert if Needed
 ```bash
-git revert d21a9a8  # Revert polish commit
-# or
-git reset --hard abc123  # Reset to previous commit
+git revert d21a9a8  # Safely revert polish commit (creates new commit)
 ```
 
 ---

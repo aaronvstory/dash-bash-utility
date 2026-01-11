@@ -2341,13 +2341,15 @@
               console.error("[PERSISTENCE] Invalid state object, skipping save");
               return;
             }
-            // Validate array fields
-            const arrayFields = ['prices', 'messages', 'categories', 'noteCategories', 'dasherCategories', 
+            // Validate array fields - track corruption for user notification
+            let corruptedFields = [];
+            const arrayFields = ['prices', 'messages', 'categories', 'noteCategories', 'dasherCategories',
               'archivedDashers', 'deactivatedDashers', 'readyDashers', 'currentlyUsingDashers',
               'appealedDashers', 'reverifDashers', 'lockedDashers', 'appliedPendingDashers'];
             for (const field of arrayFields) {
               if (state[field] && !Array.isArray(state[field])) {
                 console.error(`[PERSISTENCE] Invalid ${field} - expected array, got ${typeof state[field]}`);
+                corruptedFields.push(field);
                 state[field] = [];
               }
             }
@@ -2356,8 +2358,14 @@
             for (const field of objectFields) {
               if (state[field] && typeof state[field] !== 'object') {
                 console.error(`[PERSISTENCE] Invalid ${field} - expected object, got ${typeof state[field]}`);
+                corruptedFields.push(field);
                 state[field] = {};
               }
+            }
+            // Notify user if data corruption was detected and recovered
+            if (corruptedFields.length > 0) {
+              setSaveNotification(`⚠️ Data issue detected in ${corruptedFields.length} field(s) - recovered`);
+              setTimeout(() => setSaveNotification(""), 5000);
             }
             
             const stateJson = JSON.stringify(state);
