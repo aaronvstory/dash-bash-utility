@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.11.2 (January 2026)
+- **Critical UX Fix**: Fixed balance input field not responding to keyboard input in Ready/USING categories. Users could only type one digit at a time. Root cause: DasherCard memoization wasn't checking `editingBalanceValue` prop.
+
+## v1.11.1 (January 2026)
+- **Bug Fix**: Balance editing now persists in all categories (Ready, USING, APPEALED, etc.), not just DASHERS. Fixed state synchronization issue.
+
 ## v1.11.0 (January 2026)
 - **Performance Optimizations**: Search pre-caching (30-50% faster), background tab timer pause, statistics gating, Lucide icon optimization.
 - **Custom Confirm Modal**: Replaced native browser confirm with accessible custom modal (WCAG compliant, Escape key support, backdrop dismiss).
