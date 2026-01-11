@@ -1780,7 +1780,7 @@ const EnhancedCalculator = () => {
   const restoreDasherMove = (beforeState) => {
     const { dasherId, fromKey, toKey } = beforeState;
     // Move back to original location
-    moveDasher(toKey, fromKey, dasherId);
+    moveDasher(toKey, fromKey, dasherId, { skipUndo: true });
   };
 
   const restoreDasherDelete = (beforeState) => {
@@ -1795,8 +1795,8 @@ const EnhancedCalculator = () => {
       return next;
     };
 
-    // Check for ID collision
-    const exists = findDasherAcrossBuckets(dasher.id, categoryKey);
+    // Check ALL buckets for ID collision (not just original category)
+    const exists = findDasherAcrossBuckets(dasher.id);
     if (exists) {
       console.warn('[UNDO] Cannot restore deleted dasher: ID collision');
       return;
@@ -10283,7 +10283,7 @@ const EnhancedCalculator = () => {
     }
   };
 
-  const moveDasher = (fromKey, toKey, dasherId) => {
+  const moveDasher = (fromKey, toKey, dasherId, options = {}) => {
     if (!dasherId || !toKey || fromKey === toKey) return;
 
     const beforeCounts = DEV ? getBucketCounts() : null;
@@ -10300,19 +10300,21 @@ const EnhancedCalculator = () => {
     const fromCategoryId =
       sourceKey === "main" ? categoryId : dasher.originalCategory || null;
 
-    // Record undo before move
-    const dasherName = dasher.name || dasher.phone || dasher.id;
-    const fromLabel = sourceKey === 'main' ? 'Main' : (sourceKey || 'Unknown');
-    const toLabel = toKey === 'main' ? 'Main' : (toKey || 'Unknown');
-    recordUndo(
-      UNDO_TYPES.DASHER_MOVE,
-      {
-        dasherId,
-        fromKey: sourceKey,
-        toKey,
-      },
-      `Moved "${dasherName}" from ${fromLabel} to ${toLabel}`
+    // Record undo before move (skip when restoring from undo)
+    if (!options.skipUndo) {
+      const dasherName = dasher.name || dasher.phone || dasher.id;
+      const fromLabel = sourceKey === 'main' ? 'Main' : (sourceKey || 'Unknown');
+      const toLabel = toKey === 'main' ? 'Main' : (toKey || 'Unknown');
+      recordUndo(
+        UNDO_TYPES.DASHER_MOVE,
+        {
+          dasherId,
+          fromKey: sourceKey,
+          toKey,
+        },
+        `Moved "${dasherName}" from ${fromLabel} to ${toLabel}`
     );
+    }
 
     removeDasherFromState(location);
     insertDasherIntoBucket(dasher, toKey, fromCategoryId);
