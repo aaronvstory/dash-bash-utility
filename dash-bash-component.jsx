@@ -1702,6 +1702,9 @@ const EnhancedCalculator = () => {
         case UNDO_TYPES.MESSAGE_REORDER:
           restoreMessageReorder(entry.beforeState);
           break;
+        case UNDO_TYPES.MESSAGE_ADD:
+          restoreMessageAdd(entry.beforeState);
+          break;
         case UNDO_TYPES.STORE_DELETE:
           restoreStoreDelete(entry.beforeState);
           break;
@@ -1868,6 +1871,12 @@ const EnhancedCalculator = () => {
   const restoreMessageReorder = (beforeState) => {
     const { oldOrder } = beforeState;
     setMessages(oldOrder);
+    requestPersist();
+  };
+
+  const restoreMessageAdd = (beforeState) => {
+    const { index } = beforeState;
+    setMessages(msgs => msgs.filter((_, i) => i !== index));
     requestPersist();
   };
 
@@ -2561,8 +2570,19 @@ const EnhancedCalculator = () => {
 
   const saveEdit = () => {
     if (editText.trim()) {
+      // Record undo before edit
+      const oldText = messages[editingIndex];
+      const newText = editText.trim();
+      if (oldText !== newText) {
+        recordUndo(
+          UNDO_TYPES.MESSAGE_EDIT,
+          { index: editingIndex, oldText },
+          `Edited message: "${oldText.substring(0, 20)}..." → "${newText.substring(0, 20)}..."`
+        );
+      }
+
       const newMessages = [...messages];
-      newMessages[editingIndex] = editText.trim();
+      newMessages[editingIndex] = newText;
       setMessages(newMessages);
 
       // Auto-save messages
@@ -2580,6 +2600,16 @@ const EnhancedCalculator = () => {
   };
 
   const deleteMessage = (index) => {
+    // Record undo before deletion
+    const message = messages[index];
+    if (message) {
+      recordUndo(
+        UNDO_TYPES.MESSAGE_DELETE,
+        { index, message },
+        `Deleted message: "${message.substring(0, 30)}..."`
+      );
+    }
+
     const newMessages = messages.filter((_, i) => i !== index);
     setMessages(newMessages);
     if (editingIndex === index) {
@@ -2607,6 +2637,13 @@ const EnhancedCalculator = () => {
     e.preventDefault();
     if (draggedIndex === -1 || draggedIndex === dropIndex) return;
 
+    // Record undo before reordering
+    recordUndo(
+      UNDO_TYPES.MESSAGE_REORDER,
+      { oldOrder: [...messages] },
+      `Reordered message from position ${draggedIndex + 1} to ${dropIndex + 1}`
+    );
+
     const newMessages = [...messages];
     const draggedMessage = newMessages[draggedIndex];
     newMessages.splice(draggedIndex, 1);
@@ -2622,7 +2659,16 @@ const EnhancedCalculator = () => {
 
   const addNewMessage = () => {
     if (newMessageText.trim()) {
-      const newMessages = [...messages, newMessageText.trim()];
+      const newText = newMessageText.trim();
+
+      // Record undo before adding
+      recordUndo(
+        UNDO_TYPES.MESSAGE_ADD,
+        { index: messages.length, message: newText },
+        `Added message: "${newText.substring(0, 30)}..."`
+      );
+
+      const newMessages = [...messages, newText];
       setMessages(newMessages);
       setNewMessageText("");
       setIsAddingNew(false);
@@ -5940,7 +5986,7 @@ const EnhancedCalculator = () => {
     setDasherCategories, setReadyDashers, setCurrentlyUsingDashers, setAppealedDashers,
     setReverifDashers, setLockedDashers, setAppliedPendingDashers, setArchivedDashers,
     deriveDasherIdentity, parseBalanceValue, requestPersist, setSaveNotification,
-    saveNotificationTimeoutRef, moveToastActiveRef
+    saveNotificationTimeoutRef, moveToastActiveRef, recordUndo
   ]); // [PERF-STAGE3]
 
   // Old undoLastCashOut function removed - replaced by universal undo system
@@ -6702,6 +6748,16 @@ const EnhancedCalculator = () => {
   };
 
   const updateCategory = (categoryId, newName) => {
+    // Find old name before updating (for undo)
+    const category = categories.find(cat => cat.id === categoryId);
+    if (category && category.name !== newName) {
+      recordUndo(
+        UNDO_TYPES.STORE_CATEGORY_RENAME,
+        { categoryId, oldName: category.name },
+        `Renamed store category: "${category.name}" → "${newName}"`
+      );
+    }
+
     setCategories(
       categories.map((cat) =>
         cat.id === categoryId ? { ...cat, name: newName } : cat,
@@ -6715,6 +6771,16 @@ const EnhancedCalculator = () => {
   };
 
   const deleteCategory = (categoryId) => {
+    // Find category before deleting (for undo)
+    const category = categories.find(cat => cat.id === categoryId);
+    if (category) {
+      recordUndo(
+        UNDO_TYPES.STORE_CATEGORY_DELETE,
+        { category: JSON.parse(JSON.stringify(category)) },
+        `Deleted store category "${category.name}"`
+      );
+    }
+
     setCategories(categories.filter((cat) => cat.id !== categoryId));
 
     // Auto-save
@@ -6746,6 +6812,25 @@ const EnhancedCalculator = () => {
   };
 
   const updateStore = (categoryId, storeId, field, value) => {
+    // Find the store and get old value before updating (for undo)
+    const category = categories.find(cat => cat.id === categoryId);
+    const store = category?.stores?.find(s => s.id === storeId);
+
+    if (store && store[field] !== value) {
+      const oldValue = store[field];
+      const storeName = store.name || store.id;
+      recordUndo(
+        UNDO_TYPES.STORE_EDIT_FIELD,
+        {
+          categoryId,
+          storeId,
+          field,
+          oldValue,
+        },
+        `Edited store "${storeName}" ${field}: "${oldValue}" → "${value}"`
+      );
+    }
+
     setCategories(
       categories.map((cat) =>
         cat.id === categoryId
@@ -6768,6 +6853,22 @@ const EnhancedCalculator = () => {
   };
 
   const deleteStore = (categoryId, storeId) => {
+    // Find the store before deleting (for undo)
+    const category = categories.find(cat => cat.id === categoryId);
+    const store = category?.stores?.find(s => s.id === storeId);
+
+    if (store) {
+      const storeName = store.name || store.id;
+      recordUndo(
+        UNDO_TYPES.STORE_DELETE,
+        {
+          categoryId,
+          store: JSON.parse(JSON.stringify(store)), // Deep clone
+        },
+        `Deleted store "${storeName}"`
+      );
+    }
+
     setCategories(
       categories.map((cat) =>
         cat.id === categoryId
@@ -6922,6 +7023,16 @@ const EnhancedCalculator = () => {
   };
 
   const updateNoteCategory = (categoryId, newName) => {
+    // Find old name before updating (for undo)
+    const category = noteCategories.find(cat => cat.id === categoryId);
+    if (category && category.name !== newName) {
+      recordUndo(
+        UNDO_TYPES.NOTE_CATEGORY_RENAME,
+        { categoryId, oldName: category.name },
+        `Renamed note category: "${category.name}" → "${newName}"`
+      );
+    }
+
     setNoteCategories(
       noteCategories.map((cat) =>
         cat.id === categoryId ? { ...cat, name: newName } : cat,
@@ -6940,6 +7051,16 @@ const EnhancedCalculator = () => {
       announceFailure("Cannot delete the last note category");
       setTimeout(() => setSaveNotification(""), 3000);
       return;
+    }
+
+    // Find category before deleting (for undo)
+    const category = noteCategories.find(cat => cat.id === categoryId);
+    if (category) {
+      recordUndo(
+        UNDO_TYPES.NOTE_CATEGORY_DELETE,
+        { category: JSON.parse(JSON.stringify(category)) },
+        `Deleted note category "${category.name}"`
+      );
     }
 
     setNoteCategories(
@@ -6978,6 +7099,23 @@ const EnhancedCalculator = () => {
   };
 
   const updateNote = (categoryId, noteIndex, newText) => {
+    // Find the old note text before updating (for undo)
+    const category = noteCategories.find(cat => cat.id === categoryId);
+    const oldText = category?.notes?.[noteIndex];
+
+    if (oldText && oldText !== newText) {
+      const categoryName = category.name || 'Unknown';
+      recordUndo(
+        UNDO_TYPES.NOTE_EDIT,
+        {
+          categoryId,
+          noteIndex,
+          oldText,
+        },
+        `Edited note in "${categoryName}": "${oldText.substring(0, 20)}..." → "${newText.substring(0, 20)}..."`
+      );
+    }
+
     setNoteCategories(
       noteCategories.map((cat) =>
         cat.id === categoryId
@@ -6998,6 +7136,23 @@ const EnhancedCalculator = () => {
   };
 
   const deleteNote = (categoryId, noteIndex) => {
+    // Find the note before deleting (for undo)
+    const category = noteCategories.find(cat => cat.id === categoryId);
+    const note = category?.notes?.[noteIndex];
+
+    if (note) {
+      const categoryName = category.name || 'Unknown';
+      recordUndo(
+        UNDO_TYPES.NOTE_DELETE,
+        {
+          categoryId,
+          noteIndex,
+          note,
+        },
+        `Deleted note from "${categoryName}": "${note.substring(0, 30)}..."`
+      );
+    }
+
     setNoteCategories(
       noteCategories.map((cat) =>
         cat.id === categoryId
@@ -7129,6 +7284,16 @@ const EnhancedCalculator = () => {
   };
 
   const updateDasherCategory = (categoryId, newName) => {
+    // Find old name before updating (for undo)
+    const category = dasherCategories.find(cat => cat.id === categoryId);
+    if (category && category.name !== newName) {
+      recordUndo(
+        UNDO_TYPES.DASHER_CATEGORY_RENAME,
+        { categoryId, oldName: category.name },
+        `Renamed dasher category: "${category.name}" → "${newName}"`
+      );
+    }
+
     setDasherCategories(
       dasherCategories.map((cat) =>
         cat.id === categoryId ? { ...cat, name: newName } : cat,
@@ -7146,10 +7311,18 @@ const EnhancedCalculator = () => {
     showConfirm(
       `Delete this category and all its dashers?`,
       () => {
-        // Use functional update to avoid stale state capture
-        setDasherCategories((prev) =>
-          prev.filter((cat) => cat.id !== categoryId),
-        );
+        // Find category before deleting (for undo)
+        setDasherCategories((prev) => {
+          const category = prev.find(cat => cat.id === categoryId);
+          if (category) {
+            recordUndo(
+              UNDO_TYPES.DASHER_CATEGORY_DELETE,
+              { category: JSON.parse(JSON.stringify(category)) },
+              `Deleted dasher category "${category.name}"`
+            );
+          }
+          return prev.filter((cat) => cat.id !== categoryId);
+        });
         requestPersist();
       },
       { title: "Delete Category", confirmText: "Delete", cancelText: "Cancel" },
@@ -7831,6 +8004,31 @@ const EnhancedCalculator = () => {
   const onDraftCommit = useCallback((dasherId, draft) => {
     if (!dasherId) return;
 
+    // Find the dasher to get old values (for undo)
+    const result = findDasherAcrossBuckets(dasherId);
+    if (result?.dasher) {
+      const dasher = result.dasher;
+      const dasherName = dasher.name || dasher.phone || dasher.id;
+
+      // Record undo for each changed field
+      if (draft.name !== dasher.name && draft.name !== undefined) {
+        recordUndo(
+          UNDO_TYPES.DASHER_EDIT_FIELD,
+          { dasherId, field: 'name', oldValue: dasher.name },
+          `Edited "${dasherName}" name: "${dasher.name}" → "${draft.name}"`
+        );
+      }
+      if (draft.email !== dasher.email && draft.email !== undefined) {
+        recordUndo(
+          UNDO_TYPES.DASHER_EDIT_FIELD,
+          { dasherId, field: 'email', oldValue: dasher.email },
+          `Edited "${dasherName}" email: "${dasher.email}" → "${draft.email}"`
+        );
+      }
+      // Note: balance editing undo is handled separately in toggleEditDasher
+      // Note: notes editing undo handled separately if needed
+    }
+
     // Use centralized update helper
     updateDasherEverywhere(dasherId, {
       name: draft.name,
@@ -7838,7 +8036,7 @@ const EnhancedCalculator = () => {
       balance: draft.balance,
       notes: draft.notes
     });
-  }, [updateDasherEverywhere]);
+  }, [updateDasherEverywhere, findDasherAcrossBuckets, recordUndo]);
 
   // [PERSISTENCE-FIX v1.9.8] Toggle must handle ?? true default
   // undefined/null → collapsed by default, so toggle to false (expand)
