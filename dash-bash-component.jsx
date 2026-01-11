@@ -835,21 +835,38 @@
           setConfirmModal((prev) => ({ ...prev, isOpen: false }));
         }, []);
 
-        // [FIX-B] Handle confirm action
+        // [FIX-B] Handle confirm action - use functional update to avoid stale closure
         const handleConfirmAction = useCallback(() => {
-          if (confirmModal.onConfirm) {
-            confirmModal.onConfirm();
-          }
-          closeConfirmModal();
-        }, [confirmModal.onConfirm, closeConfirmModal]);
+          setConfirmModal((prev) => {
+            if (prev.onConfirm) {
+              prev.onConfirm();
+            }
+            return { ...prev, isOpen: false };
+          });
+        }, []); // Empty deps - never recreates
 
-        // [FIX-B] Handle cancel action
+        // [FIX-B] Handle cancel action - use functional update to avoid stale closure
         const handleCancelAction = useCallback(() => {
-          if (confirmModal.onCancel) {
-            confirmModal.onCancel();
+          setConfirmModal((prev) => {
+            if (prev.onCancel) {
+              prev.onCancel();
+            }
+            return { ...prev, isOpen: false };
+          });
+        }, []); // Empty deps - never recreates
+
+        // [FIX-B] Escape key handler for modal accessibility (WCAG compliance)
+        useEffect(() => {
+          const handleEscape = (e) => {
+            if (e.key === 'Escape' && confirmModal.isOpen) {
+              handleCancelAction();
+            }
+          };
+          if (confirmModal.isOpen) {
+            window.addEventListener('keydown', handleEscape);
+            return () => window.removeEventListener('keydown', handleEscape);
           }
-          closeConfirmModal();
-        }, [confirmModal.onCancel, closeConfirmModal]);
+        }, [confirmModal.isOpen, handleCancelAction]);
 
         // Collapsible sections state
         const [isCalculatorOpen, setIsCalculatorOpen] = useState(false); // Collapsed by default
