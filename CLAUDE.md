@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Dash Bash Utility is a React-based PWA for delivery service drivers. Uses **precompiled JSX** with Babel CLI.
 
-**Current Version**: 1.11.1 | **Live**: <https://aaronvstory.github.io/dash-bash-utility/>
+**Current Version**: 1.11.6 | **Live**: <https://aaronvstory.github.io/dash-bash-utility/>
 
 **Core Features**: Target Calculator, Quick Messages, Address Book with hours tracking, Notes, Dashers with 24h countdown timers, Statistics.
 
@@ -134,8 +134,11 @@ python serve-pwa.py  # Start server
 
 Key verifications: inline editing works, timers update every second, drag-and-drop functions, export/import preserves all data.
 
+**For detailed UI navigation and testing procedures**, see `docs/UI_NAVIGATION_TESTING_GUIDE.md`.
+
 ## Related Documentation
 
+- **`docs/UI_NAVIGATION_TESTING_GUIDE.md`** - **Complete UI navigation & testing guide** (categories, dashers, editing flows, balance bug documentation)
 - `STYLE_GUIDE.md` - CSS architecture, component classes, theming
 - `GITHUB_PAGES_DEPLOYMENT.md` - Full deployment guide
 - `VERSION_UPDATE_GUIDE.md` - Detailed version update instructions

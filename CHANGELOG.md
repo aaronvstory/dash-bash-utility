@@ -5,6 +5,40 @@ All notable changes to Dash Bash Utility will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.6] - 2026-01-11
+
+### Changed
+- **Version bump** - Version metadata update after successful v1.11.5 verification via dual-check (Gemini 2.5 Flash confirmed all fixes correct). No code changes.
+
+## [1.11.5] - 2026-01-11
+
+### Fixed
+- **CRITICAL: Missing field whitelist** - Fixed critical data loss bug discovered by Codex during dual-check analysis. The `applyUpdates` helper was missing 5 fields from its whitelist (phone, emailPw, dasherPw, crimsonInfo, fastPayInfo), causing these field edits to be silently dropped in all bucket categories. Added all missing fields to preserve data integrity.
+- **Falsy dasherId guard** - Changed dasherId guard from `if (!dasherId)` to `if (dasherId == null)` to only block undefined/null, not falsy values like 0 or empty string.
+
+## [1.11.4] - 2026-01-11
+
+### Fixed
+- **All field edits in all categories** - Extended v1.11.1 fix to ALL non-balance fields (name, email, phone, notes, etc.). Changed `updateListField` to route all edits through `updateDasherEverywhere()` for complete state synchronization across both dasherCategories and bucket arrays.
+
+### Known Issues
+- Introduced CRITICAL bug: applyUpdates whitelist incomplete (fixed in v1.11.5)
+
+## [1.11.3] - 2026-01-11
+
+### Fixed
+- **Timer functions in all categories** - Fixed timer initialization to work correctly in all categories, not just DASHERS. Ensured countdown timers update properly across all bucket categories.
+
+## [1.11.2] - 2026-01-11
+
+### Fixed
+- **Balance input field UX bug** - Fixed critical bug where balance input field was not writable in categories using DasherCard (Ready, USING, etc.). Users could only type one digit at a time and had to edit other fields first. Root cause: DasherCard memoization wasn't checking `editingBalanceValue` prop, preventing re-renders during typing. Added `editingBalanceValue` to memo comparison at line 705.
+
+## [1.11.1] - 2026-01-11
+
+### Fixed
+- **Balance editing in all categories** - Fixed bug where balance edits only persisted in DASHERS category. Changed `toggleEditDasher` to use `updateDasherEverywhere()` which updates both `dasherCategories` and all bucket arrays (Ready, USING, APPEALED, Reverif, Locked, Applied/Pending, Deactivated, Archived). Balance edits now persist correctly in all categories.
+
 ## [1.11.0] - 2026-01-11
 
 ### Performance

@@ -112,6 +112,16 @@ const ShieldCheck = (props) =>
   React.createElement(Icon, { ...props, name: "shield-check" });
 
 // =========================================================================
+// Constants
+// =========================================================================
+// Balance validation limits (prevents extreme values)
+const MAX_BALANCE = 1_000_000;
+const MIN_BALANCE = -1_000_000;
+
+// Floating-point comparison threshold for earnings delta
+const POSITIVE_DELTA_THRESHOLD = 1e-6;
+
+// =========================================================================
 // Error Boundary - Prevents white screen crashes
 // =========================================================================
 class ErrorBoundary extends React.Component {
@@ -692,6 +702,7 @@ const DasherCard = React.memo(
   // v1.10.0: Simplified memo - uses object reference check for dasher instead of
   // individual property comparison. UI-state props checked explicitly.
   // Previous approach had brittle hardcoded property list that could miss new dasher fields.
+  // v1.11.2: Added editingBalanceValue check to fix balance input field UX bug
   (prevProps, nextProps) => {
     if (!prevProps || !nextProps) return false;
     // Same dasher object reference = no re-render needed
@@ -700,7 +711,8 @@ const DasherCard = React.memo(
       prevProps.isCollapsed === nextProps.isCollapsed &&
       prevProps.isEditing === nextProps.isEditing &&
       prevProps.isEditMode === nextProps.isEditMode &&
-      prevProps.cardRecentlyMoved === nextProps.cardRecentlyMoved) {
+      prevProps.cardRecentlyMoved === nextProps.cardRecentlyMoved &&
+      prevProps.editingBalanceValue === nextProps.editingBalanceValue) {
       return true;
     }
     return false; // Different props = re-render
@@ -4291,13 +4303,13 @@ const EnhancedCalculator = () => {
   function parseBalanceValue(raw) {
     if (raw === null || raw === undefined) return 0;
     if (typeof raw === "number") {
-      // Clamp to reasonable range: -1,000,000 to 1,000,000
-      return Math.max(-1000000, Math.min(1000000, raw));
+      // Clamp to reasonable range using defined constants
+      return Math.max(MIN_BALANCE, Math.min(MAX_BALANCE, raw));
     }
     const n = parseFloat(String(raw).replace(/[^0-9.\-]/g, ""));
     if (isNaN(n)) return 0;
     // Clamp parsed value to prevent extreme balances
-    return Math.max(-1000000, Math.min(1000000, n));
+    return Math.max(MIN_BALANCE, Math.min(MAX_BALANCE, n));
   }
 
   function safeFieldSegment(value) {
@@ -7215,8 +7227,8 @@ const EnhancedCalculator = () => {
       editingDasher.dasherId === dasherId
     ) {
       // Exiting edit mode - save the balance value
-      if (editingBalanceValue !== "") {
-        updateDasher(categoryId, dasherId, "balance", editingBalanceValue);
+      if (editingBalanceValue.trim() !== "") {
+        updateDasherEverywhere(dasherId, { balance: editingBalanceValue });
       }
       setEditingDasher({ categoryId: "", dasherId: "" });
       setEditingBalanceValue(""); // Clear when exiting edit mode
@@ -7257,7 +7269,7 @@ const EnhancedCalculator = () => {
 
   const startDasherTimer = (categoryId, dasherId) => {
     const now = new Date().toISOString();
-    updateDasher(categoryId, dasherId, "lastUsed", now);
+    updateDasherEverywhere(dasherId, { lastUsed: now });
     // Auto-save after timer start
     setTimeout(() => {
       saveAllToLocalStorage();
@@ -7265,7 +7277,7 @@ const EnhancedCalculator = () => {
   };
 
   const resetDasherTimer = (categoryId, dasherId) => {
-    updateDasher(categoryId, dasherId, "lastUsed", null);
+    updateDasherEverywhere(dasherId, { lastUsed: null });
     // Auto-save after timer reset
     setTimeout(() => {
       saveAllToLocalStorage();
@@ -7296,22 +7308,55 @@ const EnhancedCalculator = () => {
 
   // [CENTRALIZED UPDATE] Update a dasher everywhere (dasherCategories + all bucket arrays)
   const updateDasherEverywhere = useCallback((dasherId, updates) => {
-    if (!dasherId) return;
+    if (dasherId == null) return;
 
     // Helper to apply updates to a single dasher object
     const applyUpdates = (dasher) => {
+      // Handle balance specially with delta calculation and history tracking
+      let finalBalance = dasher.balance;
+      let finalHistory = dasher.earningsHistory || [];
+      
+      if (updates.balance !== undefined) {
+        const rawInput = updates.balance;
+
+        // Use shared parseBalanceValue function
+        const prevNum = parseBalanceValue(dasher.balance);
+        const nextNum = parseBalanceValue(rawInput);
+        const delta = nextNum - prevNum;
+
+        finalBalance = rawInput; // Keep raw input for typing experience
+
+        // Add to earningsHistory if positive delta
+        if (delta > POSITIVE_DELTA_THRESHOLD) {
+          const historyEntry = {
+            amount: Number(delta.toFixed(2)),
+            at: new Date().toISOString(),
+            source: "balance-edit"
+          };
+          finalHistory = [...finalHistory, historyEntry];
+        }
+      }
+      
       return {
         ...dasher,
         ...(updates.name !== undefined && { name: updates.name }),
         ...(updates.email !== undefined && { email: updates.email }),
-        ...(updates.balance !== undefined && { balance: updates.balance }),
+        ...(updates.phone !== undefined && { phone: updates.phone }),
+        ...(updates.emailPw !== undefined && { emailPw: updates.emailPw }),
+        ...(updates.dasherPw !== undefined && { dasherPw: updates.dasherPw }),
+        ...(updates.balance !== undefined && { 
+          balance: finalBalance,
+          earningsHistory: finalHistory
+        }),
         ...(updates.notes !== undefined && {
           notes: Array.isArray(updates.notes)
             ? updates.notes
             : (typeof updates.notes === "string" ? updates.notes.split("\n").filter(Boolean) : dasher.notes)
         }),
         ...(updates.crimson !== undefined && { crimson: updates.crimson }),
+        ...(updates.crimsonInfo !== undefined && { crimsonInfo: updates.crimsonInfo }),
         ...(updates.fastPay !== undefined && { fastPay: updates.fastPay }),
+        ...(updates.fastPayInfo !== undefined && { fastPayInfo: updates.fastPayInfo }),
         ...(updates.redCard !== undefined && { redCard: updates.redCard }),
         ...(updates.appealed !== undefined && { appealed: updates.appealed }),
         ...(updates.lastUsed !== undefined && { lastUsed: updates.lastUsed }),
@@ -7714,12 +7759,8 @@ const EnhancedCalculator = () => {
       const isBalance = field === "balance";
       const nowIso = new Date().toISOString();
       if (!isBalance) {
-        setList((prev) =>
-          prev.map((d) =>
-            d.id === dasher.id ? { ...d, [field]: value } : d,
-          ),
-        );
-        requestPersist();
+        // Use updateDasherEverywhere to sync across all state representations
+        updateDasherEverywhere(dasher.id, { [field]: value });
         return;
       }
 
