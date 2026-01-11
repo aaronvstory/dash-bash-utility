@@ -830,16 +830,16 @@
           });
         }, []);
 
-        // [FIX-B] Close confirm dialog
-        const closeConfirmModal = useCallback(() => {
-          setConfirmModal((prev) => ({ ...prev, isOpen: false }));
-        }, []);
-
         // [FIX-B] Handle confirm action - use functional update to avoid stale closure
         const handleConfirmAction = useCallback(() => {
           setConfirmModal((prev) => {
             if (prev.onConfirm) {
-              prev.onConfirm();
+              try {
+                prev.onConfirm();
+              } catch (error) {
+                console.error('[MODAL] Confirm callback error:', error);
+                // Modal still closes to prevent UI lock
+              }
             }
             return { ...prev, isOpen: false };
           });
@@ -849,7 +849,12 @@
         const handleCancelAction = useCallback(() => {
           setConfirmModal((prev) => {
             if (prev.onCancel) {
-              prev.onCancel();
+              try {
+                prev.onCancel();
+              } catch (error) {
+                console.error('[MODAL] Cancel callback error:', error);
+                // Modal still closes to prevent UI lock
+              }
             }
             return { ...prev, isOpen: false };
           });
@@ -4264,7 +4269,13 @@
               localStorage.removeItem("dashBashState");
               localStorage.removeItem("addressBookCategories");
               // Also clear IndexedDB to prevent rehydration on reload
-              indexedDB.deleteDatabase("DashBashDB");
+              try {
+                const deleteRequest = indexedDB.deleteDatabase("DashBashDB");
+                deleteRequest.onerror = () => console.warn('[CLEAR] IndexedDB delete failed/blocked - data may persist');
+                deleteRequest.onblocked = () => console.warn('[CLEAR] IndexedDB delete blocked - close other tabs');
+              } catch (error) {
+                console.error('[CLEAR] IndexedDB delete error:', error);
+              }
               setSaveNotification("✅ All data cleared");
               setTimeout(() => setSaveNotification(""), 3000);
             },
@@ -6745,6 +6756,7 @@
               setDasherCategories((prev) =>
                 prev.filter((cat) => cat.id !== categoryId),
               );
+              requestPersist();
             },
             { title: "Delete Category", confirmText: "Delete", cancelText: "Cancel" },
           );
