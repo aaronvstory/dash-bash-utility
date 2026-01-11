@@ -10614,6 +10614,44 @@
               </div>
             )}
 
+            {/* [FIX-B] Custom Confirm Modal */}
+            {confirmModal.isOpen && (
+              <div
+                className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+                onClick={(e) => e.target === e.currentTarget && handleCancelAction()}
+              >
+                <div
+                  className="bg-gray-800 border border-gray-600 rounded-xl p-6 shadow-2xl max-w-md w-full mx-4"
+                  role="alertdialog"
+                  aria-modal="true"
+                  aria-labelledby="confirm-title"
+                  aria-describedby="confirm-message"
+                >
+                  <h3 id="confirm-title" className="text-lg font-semibold text-white mb-3">
+                    {confirmModal.title}
+                  </h3>
+                  <p id="confirm-message" className="text-gray-300 mb-6">
+                    {confirmModal.message}
+                  </p>
+                  <div className="flex justify-end gap-3">
+                    <button
+                      onClick={handleCancelAction}
+                      className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-200 transition-colors"
+                    >
+                      {confirmModal.cancelText}
+                    </button>
+                    <button
+                      onClick={handleConfirmAction}
+                      className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium transition-colors"
+                      autoFocus
+                    >
+                      {confirmModal.confirmText}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Save Notification - Beautiful Toast (supports subtle warning variant) */}
             {saveNotification && (
               <div
