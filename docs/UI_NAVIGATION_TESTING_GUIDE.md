@@ -19,7 +19,7 @@
 
 ### Top-Level Categories
 
-Top-level categories include: DASHERS, APPEALED, USING, APPLIED PENDING, REVERIF, LOCKED, DEACTIVATED, ARCHIVED, Ready, and custom categories. "DASHERS" behaves DIFFERENTLY from the others. DASHERS HAS SUBCATEGORIES WHICH ARE DRAGGABLE FROM ONE SUB-CATEGORY TO ANOTHER (the actual dashers within each subcategory can be dragged from one subcategory to another by drag and dropping - NOT possible in other categories). Also, DASHERS, is the only category where we can add custom new  subcategories.  AND CURRENTLY , EDITING DASHER INFO LIKE "BALANCE" ONLY WORKS WHEN THE DASHER IS IN "DASHERS"... WHEN WE EDIT THE DASHER IN ANY OTHER MAIN CATEGORY, IT IS BROKEN.
+Top-level categories include: DASHERS, APPEALED, USING, APPLIED PENDING, REVERIF, LOCKED, DEACTIVATED, ARCHIVED, Ready, and custom categories. "DASHERS" behaves DIFFERENTLY from the others. DASHERS HAS SUBCATEGORIES WHICH ARE DRAGGABLE FROM ONE SUB-CATEGORY TO ANOTHER (the actual dashers within each subcategory can be dragged from one subcategory to another by drag and dropping - NOT possible in other categories). Also, DASHERS is the only category where we can add custom new subcategories. **✅ As of v1.11.2, balance editing works correctly in ALL categories.**
 
 **To Expand/Collapse a Top-Level Category:**
 
@@ -336,9 +336,9 @@ Result:
 
 ## Resolved Issues
 
-### ✅ Balance Editing Bug (Non-DASHERS Categories) - FIXED in v1.11.1
+### ✅ Balance Editing Bug #1: Persistence (Non-DASHERS Categories) - FIXED in v1.11.1
 
-**Issue**: Balance edits did NOT save in categories other than DASHERS (e.g., APPEALED, USING, Ready, custom categories)
+**Issue**: Balance edits did NOT save in categories other than DASHERS (e.g., APPEALED, USING, Ready, custom categories). Changes would revert after clicking Save.
 
 **Root Cause**: `toggleEditDasher` called `updateDasher()` which only updated `dasherCategories` state. Non-DASHERS categories render from separate bucket arrays (`appealedDashers`, `readyDashers`, etc.) which were never updated.
 
@@ -346,12 +346,32 @@ Result:
 
 **Status**: ✅ **FIXED** (v1.11.1, 2026-01-11)
 
+---
+
+### ✅ Balance Editing Bug #2: Input Field UX - FIXED in v1.11.2
+
+**Issue**: Balance input field appeared "not writable" in categories using DasherCard (Ready, USING, etc.). Users could only type one digit at a time and had to edit other fields first as a workaround.
+
+**Symptoms**:
+- Typing in balance field produced no visible change
+- Only one character appeared per edit cycle
+- Must edit phone number first to "unlock" balance field
+- Input field appeared broken/unresponsive
+
+**Root Cause**: `DasherCard` memoization function (lines 695-709) wasn't checking `editingBalanceValue` prop. When user typed, parent re-rendered with new value, but DasherCard's memo function returned "don't re-render" because it only checked other props (dasher, isSelected, isCollapsed, etc.). Input field never received the updated value.
+
+**Fix**: Added `editingBalanceValue` to memo comparison at line 705. Now DasherCard re-renders when balance value changes during typing.
+
+**Status**: ✅ **FIXED** (v1.11.2, 2026-01-11)
+
+---
+
 **All Categories Now Working**:
 - ✅ DASHERS (was working)
-- ✅ APPEALED (now fixed)
-- ✅ USING (now fixed)
-- ✅ Ready (now fixed)
-- ✅ All other categories (now fixed)
+- ✅ APPEALED (v1.11.1 fix)
+- ✅ USING (v1.11.1 + v1.11.2 fixes)
+- ✅ Ready (v1.11.1 + v1.11.2 fixes)
+- ✅ All other DasherCard categories (v1.11.1 + v1.11.2 fixes)
 
 ---
 

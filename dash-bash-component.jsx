@@ -112,6 +112,16 @@ const ShieldCheck = (props) =>
   React.createElement(Icon, { ...props, name: "shield-check" });
 
 // =========================================================================
+// Constants
+// =========================================================================
+// Balance validation limits (prevents extreme values)
+const MAX_BALANCE = 1_000_000;
+const MIN_BALANCE = -1_000_000;
+
+// Floating-point comparison threshold for earnings delta
+const POSITIVE_DELTA_THRESHOLD = 1e-6;
+
+// =========================================================================
 // Error Boundary - Prevents white screen crashes
 // =========================================================================
 class ErrorBoundary extends React.Component {
@@ -4293,13 +4303,13 @@ const EnhancedCalculator = () => {
   function parseBalanceValue(raw) {
     if (raw === null || raw === undefined) return 0;
     if (typeof raw === "number") {
-      // Clamp to reasonable range: -1,000,000 to 1,000,000
-      return Math.max(-1000000, Math.min(1000000, raw));
+      // Clamp to reasonable range using defined constants
+      return Math.max(MIN_BALANCE, Math.min(MAX_BALANCE, raw));
     }
     const n = parseFloat(String(raw).replace(/[^0-9.\-]/g, ""));
     if (isNaN(n)) return 0;
     // Clamp parsed value to prevent extreme balances
-    return Math.max(-1000000, Math.min(1000000, n));
+    return Math.max(MIN_BALANCE, Math.min(MAX_BALANCE, n));
   }
 
   function safeFieldSegment(value) {
@@ -7308,24 +7318,16 @@ const EnhancedCalculator = () => {
       
       if (updates.balance !== undefined) {
         const rawInput = updates.balance;
-        
-        // Inline balance parsing (avoid adding parseBalanceValue to dependencies)
-        const parseBalance = (raw) => {
-          if (raw === null || raw === undefined) return 0;
-          if (typeof raw === "number") return Math.max(-1000000, Math.min(1000000, raw));
-          const n = parseFloat(String(raw).replace(/[^0-9.\-]/g, ""));
-          if (isNaN(n)) return 0;
-          return Math.max(-1000000, Math.min(1000000, n));
-        };
-        
-        const prevNum = parseBalance(dasher.balance);
-        const nextNum = parseBalance(rawInput);
+
+        // Use shared parseBalanceValue function
+        const prevNum = parseBalanceValue(dasher.balance);
+        const nextNum = parseBalanceValue(rawInput);
         const delta = nextNum - prevNum;
-        
+
         finalBalance = rawInput; // Keep raw input for typing experience
-        
+
         // Add to earningsHistory if positive delta
-        if (delta > 0.000001) {
+        if (delta > POSITIVE_DELTA_THRESHOLD) {
           const historyEntry = {
             amount: Number(delta.toFixed(2)),
             at: new Date().toISOString(),
@@ -7405,7 +7407,7 @@ const EnhancedCalculator = () => {
     deactivatedDashers, setDeactivatedDashers,
     archivedDashers, setArchivedDashers,
     requestPersist
-  ]);;
+  ]);
 
   // [PERF-STAGE4] commit edited fields from a card
   const onDraftCommit = useCallback((dasherId, draft) => {
