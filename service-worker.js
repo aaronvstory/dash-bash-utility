@@ -9,6 +9,27 @@ const PRECACHE_URLS = [
   // Intentionally exclude index.html & styles.css from precache to force network-first each load
 ];
 
+// Message handler for client communication (version checks, skip waiting)
+self.addEventListener("message", (event) => {
+  const { type, expected, reason } = event.data || {};
+
+  if (type === "SKIP_WAITING") {
+    self.skipWaiting();
+    return;
+  }
+
+  if (type === "VERSION_CHECK") {
+    const versionMatch = APP_VERSION === expected;
+    event.source?.postMessage({
+      type: "VERSION_INFO",
+      version: APP_VERSION,
+      expected,
+      match: versionMatch,
+      reason,
+    });
+  }
+});
+
 // Install event - cache resources
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -61,8 +82,11 @@ self.addEventListener("fetch", (event) => {
         } catch (e) {
           const cache = await caches.open(CORE_CACHE);
           const cached = await cache.match("./");
-          if (cached) return cached;
-          throw e;
+          // Always return a response - never throw or return undefined
+          return cached || new Response("Offline - Please check your connection", {
+            status: 503,
+            headers: { "Content-Type": "text/html" },
+          });
         }
       })()
     );
@@ -75,14 +99,23 @@ self.addEventListener("fetch", (event) => {
       const cache = await caches.open(RUNTIME_CACHE);
       const cached = await cache.match(req);
       const fetchPromise = fetch(req)
-        .then((resp) => {
+        .then(async (resp) => {
           if (resp && resp.status === 200 && resp.type === "basic") {
-            cache.put(req, resp.clone());
+            try {
+              await cache.put(req, resp.clone());
+            } catch (err) {
+              // Handle quota exceeded - log but don't break the response
+              if (err.name === "QuotaExceededError") {
+                console.warn("[SW] Cache quota exceeded, clearing runtime cache");
+                await caches.delete(RUNTIME_CACHE);
+              }
+            }
           }
           return resp;
         })
-        .catch(() => cached);
-      return cached || fetchPromise;
+        .catch(() => cached || null);
+      // Ensure we always return a valid response or null (never undefined)
+      return cached || (await fetchPromise) || new Response("Offline", { status: 503 });
     })()
   );
 });

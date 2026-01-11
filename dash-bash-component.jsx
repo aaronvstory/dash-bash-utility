@@ -1,14 +1,10 @@
 
-      console.log("🚀 SCRIPT LOADING - Top of dash-bash-component.jsx");
-
       // Build stamp for version tracking
       window.__DBU_BUILD__ = "2025-10-19T17:22:00Z-centralized-updateDasherEverywhere";
-      console.log("📦 Build:", window.__DBU_BUILD__);
 
       const { useState, useEffect, useRef, useCallback, useMemo, useTransition } = React;
       // [PERF-STAGE2] Phase 2 memo helper
       const memo = React.memo;
-      console.log("✅ React hooks destructured successfully");
       // [PERF-STAGE6] react-window for virtualization
       // Use getter function instead of destructuring to avoid timing issues with adapter
       const getVirtualList = () => window.ReactWindow?.FixedSizeList || window.ReactWindow?.List;
@@ -1570,7 +1566,6 @@
               const idbTime = new Date(idbData.timestamp || 0);
 
               if (idbTime > localTime) {
-                console.log("[PERSISTENCE] IndexedDB has newer data - restoring");
                 // IndexedDB has newer data - apply it
                 if (idbData.target) setTarget(idbData.target);
                 if (idbData.targetPreset) setTargetPreset(idbData.targetPreset);
@@ -1742,19 +1737,15 @@
 
         // Toggle helpers that expose a spinner frame before heavy render
         const toggleOpenWithSpinner = (isOpen, setOpen, setReady) => {
-          console.log('[DEBUG] toggleOpenWithSpinner called:', { isOpen });
           if (isOpen) {
-            console.log('[DEBUG] Closing section');
             setOpen(false);
             setReady(false);
             requestPersist();
           } else {
-            console.log('[DEBUG] Opening section');
             setOpen(true);
             setReady(false);
             // Give the browser a frame to paint the spinner
             setTimeout(() => {
-              console.log('[DEBUG] Setting renderReady to true');
               setReady(true);
             }, 60);
             requestPersist();
@@ -2344,6 +2335,31 @@
 
           try {
             const state = buildStateObject();
+            
+            // [QUALITY-FIX] Pre-save validation - ensure critical fields are valid
+            if (!state || typeof state !== 'object') {
+              console.error("[PERSISTENCE] Invalid state object, skipping save");
+              return;
+            }
+            // Validate array fields
+            const arrayFields = ['prices', 'messages', 'categories', 'noteCategories', 'dasherCategories', 
+              'archivedDashers', 'deactivatedDashers', 'readyDashers', 'currentlyUsingDashers',
+              'appealedDashers', 'reverifDashers', 'lockedDashers', 'appliedPendingDashers'];
+            for (const field of arrayFields) {
+              if (state[field] && !Array.isArray(state[field])) {
+                console.error(`[PERSISTENCE] Invalid ${field} - expected array, got ${typeof state[field]}`);
+                state[field] = [];
+              }
+            }
+            // Validate object fields (collapsed maps)
+            const objectFields = ['collapsedCategories', 'collapsedStores', 'collapsedDashers'];
+            for (const field of objectFields) {
+              if (state[field] && typeof state[field] !== 'object') {
+                console.error(`[PERSISTENCE] Invalid ${field} - expected object, got ${typeof state[field]}`);
+                state[field] = {};
+              }
+            }
+            
             const stateJson = JSON.stringify(state);
 
             // Primary: localStorage (synchronous, fast) - unless disabled due to quota
@@ -2463,14 +2479,14 @@
           if (document.visibilityState === "hidden") {
             // CRITICAL: Skip save during import to prevent data corruption
             if (isImporting) {
-              console.log("[PERSISTENCE] Tab hidden during import - skipping emergency save");
               return;
             }
-            console.log("[PERSISTENCE] Tab hidden - emergency save triggered");
             // Synchronous save - must complete before tab is suspended
             try {
               const state = buildStateObject();
               localStorage.setItem("dashBashState", JSON.stringify(state));
+              // Fire-and-forget IndexedDB backup (may not complete, but better than skipping)
+              saveToIDB("dashBashState", state).catch(() => {});
               setHasUnsavedChanges(false);
             } catch (err) {
               console.error("[PERSISTENCE] Emergency save on visibility change failed:", err);
@@ -2487,17 +2503,17 @@
         const handleBeforeUnload = useCallback((e) => {
           // CRITICAL: Skip save during import to prevent data corruption
           if (isImporting) {
-            console.log("[PERSISTENCE] beforeunload during import - skipping emergency save");
             // Still show warning during import
             e.preventDefault();
             e.returnValue = "Import in progress. Changes may be lost.";
             return;
           }
-          console.log("[PERSISTENCE] beforeunload - emergency save triggered");
           // Synchronous save - must complete before page closes
           try {
             const state = buildStateObject();
             localStorage.setItem("dashBashState", JSON.stringify(state));
+            // Fire-and-forget IndexedDB backup (may not complete, but better than skipping)
+            saveToIDB("dashBashState", state).catch(() => {});
           } catch (err) {
             console.error("[PERSISTENCE] Emergency save on beforeunload failed:", err);
           }
@@ -2519,13 +2535,13 @@
           if (e.persisted) return; // Page is being cached, not closed
           // CRITICAL: Skip save during import to prevent data corruption
           if (isImporting) {
-            console.log("[PERSISTENCE] pagehide during import - skipping emergency save");
             return;
           }
-          console.log("[PERSISTENCE] pagehide - emergency save triggered");
           try {
             const state = buildStateObject();
             localStorage.setItem("dashBashState", JSON.stringify(state));
+            // Fire-and-forget IndexedDB backup (may not complete, but better than skipping)
+            saveToIDB("dashBashState", state).catch(() => {});
           } catch (err) {
             console.error("[PERSISTENCE] Emergency save on pagehide failed:", err);
           }
@@ -2557,7 +2573,6 @@
           if (!hasUnsavedChanges) return; // Nothing to save
 
           const timeoutId = setTimeout(() => {
-            console.log("[PERSISTENCE] Auto-save triggered after state change");
             coordinatedSave();
           }, 500);
 
@@ -2578,7 +2593,6 @@
 
                 if (newTime > currentTime) {
                   // Another tab has newer data
-                  console.log("[PERSISTENCE] Another tab has updated data");
                   setSaveNotification("Data updated from another tab");
                   setTimeout(() => setSaveNotification(""), 5000);
                   // Note: Auto-reload is too disruptive; user can manually reload
@@ -2596,7 +2610,6 @@
         // Legacy auto-save (kept for backward compatibility during transition)
         // Auto-save when collapsedDashers changes
         useEffect(() => {
-          console.log('[AUTO-SAVE] collapsedDashers changed, requesting persist');
           requestPersist();
         }, [collapsedDashers, requestPersist]);
 
@@ -2704,7 +2717,6 @@
                 // Migrate from v1/v2 to v3
                 // Add any new required fields with defaults
                 if (!state.schemaVersion) {
-                  console.log("Migrating from legacy schema to v3");
                 }
               }
 
@@ -2768,7 +2780,6 @@
                   }
                   state.schemaVersion = 4;
                   localStorage.setItem("dashBashState", JSON.stringify(state));
-                  console.log("[Migration] Upgraded to schema v4");
                 } catch (err) {
                   console.warn("Schema v4 migration failed", err);
                 }
@@ -2800,7 +2811,6 @@
 
                   state.schemaVersion = 5;
                   localStorage.setItem("dashBashState", JSON.stringify(state));
-                  console.log("[Migration] Upgraded to schema v5");
                 } catch (err) {
                   console.warn("Schema v5 migration failed", err);
                 }
@@ -6943,10 +6953,10 @@
          */
         // REMOVED: updateDasherBalance (replaced with updateDasher)
         const updateDasherBalance_REMOVED = (categoryId, dasherId, newBalance) => {
-          console.log('[updateDasherBalance] START', { categoryId, dasherId, newBalance });
+
           // Find the dasher first
           const dasher = findDasherById(categoryId, dasherId);
-          console.log('[updateDasherBalance] Found dasher:', dasher);
+
           if (!dasher) {
             console.warn('[updateDasherBalance] Dasher not found', { categoryId, dasherId });
             return false;
@@ -6981,7 +6991,7 @@
             fallbackHint: `${categoryId ?? "bucket"}-${dasher?.id ?? dasher?.email ?? dasher?.phone ?? "dash"}`,
           });
 
-          console.log('[updateDasherBalance] Descriptors:', primaryDescriptors);
+
           if (!primaryDescriptors || primaryDescriptors.length === 0) {
             console.warn('[updateDasherBalance] No descriptors found - cannot update');
             return false;
@@ -6998,14 +7008,14 @@
           const historyUpdatesByIdentity = shouldSyncPeers ? new Map() : null;
 
           // Update all descriptors using mutateDasherByMeta
-          console.log('[updateDasherBalance] Updating', primaryDescriptors.length, 'descriptors');
+
           primaryDescriptors.forEach((descriptor) => {
             const descriptorIdentity =
               identityForMeta(descriptor.meta) || `ref::${descriptor.index}`;
             
-            console.log('[updateDasherBalance] Mutating descriptor:', descriptor.meta);
+
             mutateDasherByMeta(descriptor, (existing) => {
-              console.log('[updateDasherBalance] Mutator called with existing:', existing?.id, existing?.balance);
+
               if (!existing) return existing;
 
               const existingPrev = parseBalanceValue(existing.balance);
@@ -7013,14 +7023,14 @@
 
               // Skip updating other dashers when not syncing peers
               if (!shouldSyncPeers && existing.id !== dasher.id) {
-                console.log('[updateDasherBalance] Skipping peer dasher:', existing.id);
+
                 return existing;
               }
 
               let nextBalanceValue;
               // Check if this is the dasher being edited
               const isCurrentDasher = existing.id === dasher.id;
-              console.log('[updateDasherBalance] Is current dasher?', isCurrentDasher, 'rawInput:', rawInput);
+
               if (isCurrentDasher) {
                 // Keep raw input for the dasher being edited - no formatting
                 nextBalanceValue = rawInput;
@@ -7071,7 +7081,7 @@
                   historyUpdatesByIdentity.get(descriptorIdentity);
               }
 
-              console.log('[updateDasherBalance] Returning updated dasher:', { id: existing.id, oldBalance: existing.balance, newBalance: nextBalanceValue });
+
               return {
                 ...existing,
                 balance: nextBalanceValue,
@@ -7082,13 +7092,13 @@
 
           // Trigger save only for valid finite values (not during typing)
           if (hasFiniteValue && !isInterimValue) {
-            console.log('[updateDasherBalance] Triggering persist');
+
             requestPersist();
           } else {
-            console.log('[updateDasherBalance] Skipping persist - interim value');
+
           }
 
-          console.log('[updateDasherBalance] COMPLETE');
+
           return true;
         };
 
@@ -8901,11 +8911,6 @@
               if (DEV) {
                 try {
                   const removed = prev[index]?.id;
-                  console.debug("[DashBash] removeDasherFromState", {
-                    sourceKey,
-                    index,
-                    removed,
-                  });
                 } catch {}
               }
               return prev.filter((_, i) => i !== index);
@@ -8937,11 +8942,6 @@
                 if (DEV) {
                   try {
                     const removed = cat.dashers[index]?.id;
-                    console.debug("[DashBash] removeDasherFromState (main)", {
-                      categoryId,
-                      index,
-                      removed,
-                    });
                   } catch {}
                 }
                 const nextDashers = cat.dashers.filter((_, i) => i !== index);
@@ -9875,38 +9875,26 @@
 
         // Expand/Collapse all dashers in a specific category
         const expandAllDashersInCategory = (categoryId) => {
-          console.log('[EXPAND ALL] Called for category:', categoryId);
           const category = dasherCategories.find((c) => c.id === categoryId);
-          console.log('[EXPAND ALL] Category found:', category?.name, 'Dashers count:', category?.dashers?.length);
           if (category) {
             const updatedCollapsed = { ...collapsedDashers };
-            console.log('[EXPAND ALL] Before update:', Object.keys(updatedCollapsed).filter(k => k.startsWith(categoryId)).length, 'keys');
             category.dashers.forEach((dasher) => {
               const key = `${categoryId}-${dasher.id}`;
               updatedCollapsed[key] = false;
-              console.log('[EXPAND ALL] Set key:', key, '= false');
             });
-            console.log('[EXPAND ALL] After update:', Object.keys(updatedCollapsed).filter(k => k.startsWith(categoryId)).length, 'keys');
-            console.log('[EXPAND ALL] Sample values:', Object.entries(updatedCollapsed).filter(([k]) => k.startsWith(categoryId)).slice(0, 3));
             setCollapsedDashers(updatedCollapsed);
             // Auto-save handled by useEffect
           }
         };
 
         const collapseAllDashersInCategory = (categoryId) => {
-          console.log('[COLLAPSE ALL] Called for category:', categoryId);
           const category = dasherCategories.find((c) => c.id === categoryId);
-          console.log('[COLLAPSE ALL] Category found:', category?.name, 'Dashers count:', category?.dashers?.length);
           if (category) {
             const updatedCollapsed = { ...collapsedDashers };
-            console.log('[COLLAPSE ALL] Before update:', Object.keys(updatedCollapsed).filter(k => k.startsWith(categoryId)).length, 'keys');
             category.dashers.forEach((dasher) => {
               const key = `${categoryId}-${dasher.id}`;
               updatedCollapsed[key] = true;
-              console.log('[COLLAPSE ALL] Set key:', key, '= true');
             });
-            console.log('[COLLAPSE ALL] After update:', Object.keys(updatedCollapsed).filter(k => k.startsWith(categoryId)).length, 'keys');
-            console.log('[COLLAPSE ALL] Sample values:', Object.entries(updatedCollapsed).filter(([k]) => k.startsWith(categoryId)).slice(0, 3));
             setCollapsedDashers(updatedCollapsed);
             // Auto-save handled by useEffect
           }
@@ -13330,13 +13318,7 @@
                   </div>
                   {isReadyDashersOpen &&
                     (readyRenderReady ? (
-                      console.log('[DEBUG] Rendering Ready dashers:', {
-                        readyDashersCount: readyDashers.length,
-                        filteredCount: filteredReadyDashers.length,
-                        firstDasher: filteredReadyDashers[0],
-                        collapsedReadyDashers: Object.keys(collapsedReadyDashers).length,
-                        bucketTimerHandlers: !!bucketTimerHandlers
-                      }),
+                      
                       <div id="bucket-ready" className="mt-2">
                         <div
                           className="dasher-grid"
@@ -17015,66 +16997,14 @@
         );
       };
 
-      // Expose components globally for debugging and external access
-      window.EnhancedCalculator = EnhancedCalculator;
-      window.DasherCard = DasherCard;
-      window.Icon = Icon;
-      window.Trash2 = Trash2;
-      window.Plus = Plus;
-      window.Copy = Copy;
-      window.ChevronDown = ChevronDown;
-      window.ChevronUp = ChevronUp;
-      window.ChevronsDown = ChevronsDown;
-      window.ChevronsUp = ChevronsUp;
-      window.Edit2 = Edit2;
-      window.Check = Check;
-      window.Save = Save;
-      window.X = X;
-      window.GripVertical = GripVertical;
-      window.Clock = Clock;
-      window.MapPin = MapPin;
-      window.Calculator = Calculator;
-      window.MessageSquare = MessageSquare;
-      window.Building2 = Building2;
-      window.Settings = Settings;
-      window.Download = Download;
-      window.Upload = Upload;
-      window.RefreshCw = RefreshCw;
-      window.CheckSquare = CheckSquare;
-      window.FolderOpen = FolderOpen;
-      window.FileText = FileText;
-      window.Timer = Timer;
-      window.Users = Users;
-      window.TimerOff = TimerOff;
-      window.BarChart3 = BarChart3;
-      window.Archive = Archive;
-      window.ArchiveRestore = ArchiveRestore;
-      window.UserX = UserX;
-      window.UserCheck = UserCheck;
-      window.CircleCheck = CircleCheck;
-      window.Activity = Activity;
-      window.Banknote = Banknote;
-      window.Lock = Lock;
-      window.RotateCcw = RotateCcw;
-      window.ShieldCheck = ShieldCheck;
-      window.Spinner = Spinner;
-      window.CalculatorSection = CalculatorSection;
-      window.MessagesSection = MessagesSection;
-      window.AddressBookSection = AddressBookSection;
-      window.NotesSection = NotesSection;
-      window.StatisticsSection = StatisticsSection;
-      console.log("✅ All components exposed to window (total:", Object.keys(window).filter(k => k.match(/^[A-Z]/) && typeof window[k] === 'function').length, ")");
+      // Expose components globally ONLY in development (prevents window pollution in production)
+      if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') {
+        window.EnhancedCalculator = EnhancedCalculator;
+        window.DasherCard = DasherCard;
+      }
 
       // Render the React component
-      console.log("🔍 Pre-render check:");
-      console.log("  EnhancedCalculator:", typeof EnhancedCalculator, EnhancedCalculator);
-      console.log("  React:", typeof React);
-      console.log("  ReactDOM:", typeof ReactDOM);
-      console.log("  document.getElementById('root'):", document.getElementById("root"));
-
       const root = ReactDOM.createRoot(document.getElementById("root"));
-      console.log("  Root created:", root);
-      console.log("  About to render EnhancedCalculator...");
       root.render(
         React.createElement(
           ErrorBoundary,
@@ -17082,5 +17012,5 @@
           React.createElement(EnhancedCalculator)
         )
       );
-      console.log("✅ Render completed!");
+
     
