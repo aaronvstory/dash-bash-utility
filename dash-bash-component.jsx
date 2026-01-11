@@ -806,6 +806,73 @@
         // [PERF-FIX2] Tab visibility state - pause timers in background tabs
         const [isTabVisible, setIsTabVisible] = useState(!document.hidden);
 
+        // [FIX-B] Confirm Modal state
+        const [confirmModal, setConfirmModal] = useState({
+          isOpen: false,
+          message: "",
+          title: "Confirm",
+          onConfirm: null,
+          onCancel: null,
+          confirmText: "Confirm",
+          cancelText: "Cancel",
+        });
+
+        // [FIX-B] Show confirm dialog with custom callback
+        const showConfirm = useCallback((message, onConfirm, options = {}) => {
+          setConfirmModal({
+            isOpen: true,
+            message,
+            title: options.title || "Confirm",
+            onConfirm,
+            onCancel: options.onCancel || null,
+            confirmText: options.confirmText || "Confirm",
+            cancelText: options.cancelText || "Cancel",
+          });
+        }, []);
+
+        // [FIX-B] Handle confirm action - use functional update to avoid stale closure
+        const handleConfirmAction = useCallback(() => {
+          setConfirmModal((prev) => {
+            if (prev.onConfirm) {
+              try {
+                prev.onConfirm();
+              } catch (error) {
+                console.error('[MODAL] Confirm callback error:', error);
+                // Modal still closes to prevent UI lock
+              }
+            }
+            return { ...prev, isOpen: false };
+          });
+        }, []); // Empty deps - never recreates
+
+        // [FIX-B] Handle cancel action - use functional update to avoid stale closure
+        const handleCancelAction = useCallback(() => {
+          setConfirmModal((prev) => {
+            if (prev.onCancel) {
+              try {
+                prev.onCancel();
+              } catch (error) {
+                console.error('[MODAL] Cancel callback error:', error);
+                // Modal still closes to prevent UI lock
+              }
+            }
+            return { ...prev, isOpen: false };
+          });
+        }, []); // Empty deps - never recreates
+
+        // [FIX-B] Escape key handler for modal accessibility (WCAG compliance)
+        useEffect(() => {
+          const handleEscape = (e) => {
+            if (e.key === 'Escape' && confirmModal.isOpen) {
+              handleCancelAction();
+            }
+          };
+          if (confirmModal.isOpen) {
+            window.addEventListener('keydown', handleEscape);
+            return () => window.removeEventListener('keydown', handleEscape);
+          }
+        }, [confirmModal.isOpen, handleCancelAction]);
+
         // Collapsible sections state
         const [isCalculatorOpen, setIsCalculatorOpen] = useState(false); // Collapsed by default
         const [isMessagesOpen, setIsMessagesOpen] = useState(false);
@@ -1009,23 +1076,33 @@
           return segments.join(" ").toLowerCase();
         }, []);
 
+        // [FIX-A] Pre-compute search text for all stores when categories change
+        const categoriesWithSearchText = useMemo(() => {
+          return categories.map((category) => ({
+            ...category,
+            stores: ensureArray(category?.stores).map((store) => ({
+              ...store,
+              _searchText: buildStoreSearchText(category, store),
+            })),
+          }));
+        }, [categories, buildStoreSearchText]);
+
+        // [FIX-A] Filter using pre-computed search text (faster than rebuilding on each keystroke)
         const filteredStoreCategories = useMemo(() => {
-          if (!storeSearchActive) return categories;
-          return categories
+          if (!storeSearchActive) return categoriesWithSearchText;
+          return categoriesWithSearchText
             .map((category) => {
-              const stores = ensureArray(category?.stores).filter((store) => {
-                const haystack = buildStoreSearchText(category, store);
-                return haystack.includes(storeQueryDebounced);
-              });
+              const stores = category.stores.filter((store) =>
+                store._searchText.includes(storeQueryDebounced),
+              );
               if (stores.length === 0) return null;
               return { ...category, stores };
             })
             .filter(Boolean);
         }, [
-          categories,
+          categoriesWithSearchText,
           storeSearchActive,
           storeQueryDebounced,
-          buildStoreSearchText,
         ]);
         const visibleStoreCategories = storeSearchActive
           ? filteredStoreCategories
@@ -4159,43 +4236,51 @@
 
 
         const clearAllData = () => {
-          if (
-            confirm(
-              "Are you sure you want to clear all data? This cannot be undone.",
-            )
-          ) {
-            setTarget("99");
-            setTargetPreset("99");
-            setCustomTarget("");
-            setIsEditingTarget(false);
-            setPrices([]);
-            setMessages([
-              "Ok someone got it! darn it i just noticed i put the tip so high by accident :( can u help change the tip to $0 pls?",
-              "Thanks, have a great day! <3",
-              "Yes",
-              "AGENT",
-              "hi can u pls see if u can help get a dasher assigned quicker!? I'm in a rush to get to work asap! Thank you",
-              "unassign this driver, we have had issues in the past, restraining order, stole my order last time, ASAP PLEASE, Thank you!",
-              "Adjust dasher tip to $0 for the current order",
-              "customer asked for refund if out of stock",
-            ]);
-            setCategories([]);
-            setNoteCategories([
-              { id: Date.now().toString(), name: "General", notes: [] },
-            ]);
-            setDasherCategories([
-              { id: "main", name: "Main", dashers: [] },
-              { id: "currently-using", name: "Currently using", dashers: [] },
-              { id: "deactivated", name: "Deactivated", dashers: [] },
-              { id: "locked", name: "Locked", dashers: [] },
-              { id: "reverif", name: "Reverif", dashers: [] },
-              { id: "ready", name: "Ready", dashers: [] },
-            ]);
-            localStorage.removeItem("dashBashState");
-            localStorage.removeItem("addressBookCategories");
-            setSaveNotification("✅ All data cleared");
-            setTimeout(() => setSaveNotification(""), 3000);
-          }
+          showConfirm(
+            "Are you sure you want to clear all data? This cannot be undone.",
+            () => {
+              setTarget("99");
+              setTargetPreset("99");
+              setCustomTarget("");
+              setIsEditingTarget(false);
+              setPrices([]);
+              setMessages([
+                "Ok someone got it! darn it i just noticed i put the tip so high by accident :( can u help change the tip to $0 pls?",
+                "Thanks, have a great day! <3",
+                "Yes",
+                "AGENT",
+                "hi can u pls see if u can help get a dasher assigned quicker!? I'm in a rush to get to work asap! Thank you",
+                "unassign this driver, we have had issues in the past, restraining order, stole my order last time, ASAP PLEASE, Thank you!",
+                "Adjust dasher tip to $0 for the current order",
+                "customer asked for refund if out of stock",
+              ]);
+              setCategories([]);
+              setNoteCategories([
+                { id: Date.now().toString(), name: "General", notes: [] },
+              ]);
+              setDasherCategories([
+                { id: "main", name: "Main", dashers: [] },
+                { id: "currently-using", name: "Currently using", dashers: [] },
+                { id: "deactivated", name: "Deactivated", dashers: [] },
+                { id: "locked", name: "Locked", dashers: [] },
+                { id: "reverif", name: "Reverif", dashers: [] },
+                { id: "ready", name: "Ready", dashers: [] },
+              ]);
+              localStorage.removeItem("dashBashState");
+              localStorage.removeItem("addressBookCategories");
+              // Also clear IndexedDB to prevent rehydration on reload
+              try {
+                const deleteRequest = indexedDB.deleteDatabase("DashBashDB");
+                deleteRequest.onerror = () => console.warn('[CLEAR] IndexedDB delete failed/blocked - data may persist');
+                deleteRequest.onblocked = () => console.warn('[CLEAR] IndexedDB delete blocked - close other tabs');
+              } catch (error) {
+                console.error('[CLEAR] IndexedDB delete error:', error);
+              }
+              setSaveNotification("✅ All data cleared");
+              setTimeout(() => setSaveNotification(""), 3000);
+            },
+            { title: "Clear All Data", confirmText: "Clear All", cancelText: "Cancel" },
+          );
         };
 
         // Balance parsing helper with validation and clamping
@@ -6664,11 +6749,17 @@
             return;
           }
 
-          if (confirm(`Delete this category and all its dashers?`)) {
-            setDasherCategories(
-              dasherCategories.filter((cat) => cat.id !== categoryId),
-            );
-          }
+          showConfirm(
+            `Delete this category and all its dashers?`,
+            () => {
+              // Use functional update to avoid stale state capture
+              setDasherCategories((prev) =>
+                prev.filter((cat) => cat.id !== categoryId),
+              );
+              requestPersist();
+            },
+            { title: "Delete Category", confirmText: "Delete", cancelText: "Cancel" },
+          );
         };
 
         // Dasher Category Drag and Drop
@@ -9576,11 +9667,15 @@
         }, []);
 
         const handleDeleteReady = useCallback((dasherId) => {
-          if (confirm("Delete this dasher?")) {
-            setReadyDashers((prev) => prev.filter((d) => d.id !== dasherId));
-            requestPersist();
-          }
-        }, [setReadyDashers, requestPersist]);
+          showConfirm(
+            "Delete this dasher?",
+            () => {
+              setReadyDashers((prev) => prev.filter((d) => d.id !== dasherId));
+              requestPersist();
+            },
+            { title: "Delete Dasher", confirmText: "Delete", cancelText: "Cancel" },
+          );
+        }, [setReadyDashers, requestPersist, showConfirm]);
 
         // Expand/Collapse all for Address Book
         // [PR-FIX] Must set explicit false (not {}) since ?? true is default
@@ -10548,6 +10643,44 @@
                 aria-atomic="true"
               >
                 {copyNotification}
+              </div>
+            )}
+
+            {/* [FIX-B] Custom Confirm Modal */}
+            {confirmModal.isOpen && (
+              <div
+                className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+                onClick={(e) => e.target === e.currentTarget && handleCancelAction()}
+              >
+                <div
+                  className="bg-gray-800 border border-gray-600 rounded-xl p-6 shadow-2xl max-w-md w-full mx-4"
+                  role="alertdialog"
+                  aria-modal="true"
+                  aria-labelledby="confirm-title"
+                  aria-describedby="confirm-message"
+                >
+                  <h3 id="confirm-title" className="text-lg font-semibold text-white mb-3">
+                    {confirmModal.title}
+                  </h3>
+                  <p id="confirm-message" className="text-gray-300 mb-6">
+                    {confirmModal.message}
+                  </p>
+                  <div className="flex justify-end gap-3">
+                    <button
+                      onClick={handleCancelAction}
+                      className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-200 transition-colors"
+                    >
+                      {confirmModal.cancelText}
+                    </button>
+                    <button
+                      onClick={handleConfirmAction}
+                      className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium transition-colors"
+                      autoFocus
+                    >
+                      {confirmModal.confirmText}
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -13705,24 +13838,26 @@
                                           )}
                                           <button
                                             onClick={() => {
-                                              if (
-                                                confirm("Delete this dasher?")
-                                              ) {
-                                                setCurrentlyUsingDashers(
-                                                  (prev) =>
-                                                    prev.filter(
-                                                      (d) => d.id !== dasher.id,
-                                                    ),
-                                                );
-                                                requestPersist();
-                                              }
+                                              showConfirm(
+                                                "Delete this dasher?",
+                                                () => {
+                                                  setCurrentlyUsingDashers(
+                                                    (prev) =>
+                                                      prev.filter(
+                                                        (d) => d.id !== dasher.id,
+                                                      ),
+                                                  );
+                                                  requestPersist();
+                                                },
+                                                { title: "Delete Dasher", confirmText: "Delete", cancelText: "Cancel" },
+                                              );
                                             }}
-                                            className="icon-btn text-red-400 hover:text-red-300"
-                                            title="Delete"
-                                            aria-label="Delete dasher"
-                                          >
-                                            <Trash2 size={14} />
-                                          </button>
+                                          className="icon-btn text-red-400 hover:text-red-300"
+                                          title="Delete"
+                                          aria-label="Delete dasher"
+                                        >
+                                          <Trash2 size={14} />
+                                        </button>
                                         </div>
                                       </div>
                                     </div>
@@ -14050,18 +14185,20 @@
                                           </button>
                                         )}
                                         <button
-                                          onClick={() => {
-                                            if (
-                                              confirm("Delete this dasher?")
-                                            ) {
-                                              setAppealedDashers((prev) =>
-                                                prev.filter(
-                                                  (d) => d.id !== dasher.id,
-                                                ),
+                                            onClick={() => {
+                                              showConfirm(
+                                                "Delete this dasher?",
+                                                () => {
+                                                  setAppealedDashers((prev) =>
+                                                    prev.filter(
+                                                      (d) => d.id !== dasher.id,
+                                                    ),
+                                                  );
+                                                  requestPersist();
+                                                },
+                                                { title: "Delete Dasher", confirmText: "Delete", cancelText: "Cancel" },
                                               );
-                                              requestPersist();
-                                            }
-                                          }}
+                                            }}
                                           className="icon-btn text-red-400 hover:text-red-300"
                                           title="Delete"
                                           aria-label="Delete dasher"
@@ -14384,24 +14521,26 @@
                                           )}
                                           <button
                                             onClick={() => {
-                                              if (
-                                                confirm("Delete this dasher?")
-                                              ) {
-                                                setAppliedPendingDashers(
-                                                  (prev) =>
-                                                    prev.filter(
-                                                      (d) => d.id !== dasher.id,
-                                                    ),
-                                                );
-                                                requestPersist();
-                                              }
+                                              showConfirm(
+                                                "Delete this dasher?",
+                                                () => {
+                                                  setAppliedPendingDashers(
+                                                    (prev) =>
+                                                      prev.filter(
+                                                        (d) => d.id !== dasher.id,
+                                                      ),
+                                                  );
+                                                  requestPersist();
+                                                },
+                                                { title: "Delete Dasher", confirmText: "Delete", cancelText: "Cancel" },
+                                              );
                                             }}
-                                            className="icon-btn text-red-400 hover:text-red-300"
-                                            title="Delete"
-                                            aria-label="Delete dasher"
-                                          >
-                                            <Trash2 size={14} />
-                                          </button>
+                                          className="icon-btn text-red-400 hover:text-red-300"
+                                          title="Delete"
+                                          aria-label="Delete dasher"
+                                        >
+                                          <Trash2 size={14} />
+                                        </button>
                                         </div>
                                       </div>
                                     </div>
@@ -14709,18 +14848,20 @@
                                           </button>
                                         )}
                                         <button
-                                          onClick={() => {
-                                            if (
-                                              confirm("Delete this dasher?")
-                                            ) {
-                                              setReverifDashers((prev) =>
-                                                prev.filter(
-                                                  (d) => d.id !== dasher.id,
-                                                ),
+                                            onClick={() => {
+                                              showConfirm(
+                                                "Delete this dasher?",
+                                                () => {
+                                                  setReverifDashers((prev) =>
+                                                    prev.filter(
+                                                      (d) => d.id !== dasher.id,
+                                                    ),
+                                                  );
+                                                  requestPersist();
+                                                },
+                                                { title: "Delete Dasher", confirmText: "Delete", cancelText: "Cancel" },
                                               );
-                                              requestPersist();
-                                            }
-                                          }}
+                                            }}
                                           className="icon-btn text-red-400 hover:text-red-300"
                                           title="Delete"
                                           aria-label="Delete dasher"
@@ -15029,18 +15170,20 @@
                                           </button>
                                         )}
                                         <button
-                                          onClick={() => {
-                                            if (
-                                              confirm("Delete this dasher?")
-                                            ) {
-                                              setLockedDashers((prev) =>
-                                                prev.filter(
-                                                  (d) => d.id !== dasher.id,
-                                                ),
+                                            onClick={() => {
+                                              showConfirm(
+                                                "Delete this dasher?",
+                                                () => {
+                                                  setLockedDashers((prev) =>
+                                                    prev.filter(
+                                                      (d) => d.id !== dasher.id,
+                                                    ),
+                                                  );
+                                                  requestPersist();
+                                                },
+                                                { title: "Delete Dasher", confirmText: "Delete", cancelText: "Cancel" },
                                               );
-                                              requestPersist();
-                                            }
-                                          }}
+                                            }}
                                           className="icon-btn text-red-400 hover:text-red-300"
                                           title="Delete"
                                           aria-label="Delete dasher"
