@@ -81,6 +81,7 @@
         "background:#222;color:#f39ac5;padding:4px 8px;border-radius:4px",
       );
       const APP_VERSION = "1.11.6"; // Critical fixes + performance improvements
+      window.APP_VERSION = APP_VERSION; // Expose to components (State Management section)
       const versionState = {
         registration: null,
         banner: null,
