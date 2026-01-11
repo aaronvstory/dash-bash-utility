@@ -7308,7 +7308,7 @@ const EnhancedCalculator = () => {
 
   // [CENTRALIZED UPDATE] Update a dasher everywhere (dasherCategories + all bucket arrays)
   const updateDasherEverywhere = useCallback((dasherId, updates) => {
-    if (!dasherId) return;
+    if (dasherId == null) return;
 
     // Helper to apply updates to a single dasher object
     const applyUpdates = (dasher) => {
@@ -7341,6 +7341,9 @@ const EnhancedCalculator = () => {
         ...dasher,
         ...(updates.name !== undefined && { name: updates.name }),
         ...(updates.email !== undefined && { email: updates.email }),
+        ...(updates.phone !== undefined && { phone: updates.phone }),
+        ...(updates.emailPw !== undefined && { emailPw: updates.emailPw }),
+        ...(updates.dasherPw !== undefined && { dasherPw: updates.dasherPw }),
         ...(updates.balance !== undefined && { 
           balance: finalBalance,
           earningsHistory: finalHistory
@@ -7351,7 +7354,9 @@ const EnhancedCalculator = () => {
             : (typeof updates.notes === "string" ? updates.notes.split("\n").filter(Boolean) : dasher.notes)
         }),
         ...(updates.crimson !== undefined && { crimson: updates.crimson }),
+        ...(updates.crimsonInfo !== undefined && { crimsonInfo: updates.crimsonInfo }),
         ...(updates.fastPay !== undefined && { fastPay: updates.fastPay }),
+        ...(updates.fastPayInfo !== undefined && { fastPayInfo: updates.fastPayInfo }),
         ...(updates.redCard !== undefined && { redCard: updates.redCard }),
         ...(updates.appealed !== undefined && { appealed: updates.appealed }),
         ...(updates.lastUsed !== undefined && { lastUsed: updates.lastUsed }),
