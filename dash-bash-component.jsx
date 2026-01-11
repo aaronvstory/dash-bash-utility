@@ -7300,11 +7300,47 @@ const EnhancedCalculator = () => {
 
     // Helper to apply updates to a single dasher object
     const applyUpdates = (dasher) => {
+      // Handle balance specially with delta calculation and history tracking
+      let finalBalance = dasher.balance;
+      let finalHistory = dasher.earningsHistory || [];
+      
+      if (updates.balance !== undefined) {
+        const rawInput = updates.balance;
+        
+        // Inline balance parsing (avoid adding parseBalanceValue to dependencies)
+        const parseBalance = (raw) => {
+          if (raw === null || raw === undefined) return 0;
+          if (typeof raw === "number") return Math.max(-1000000, Math.min(1000000, raw));
+          const n = parseFloat(String(raw).replace(/[^0-9.\-]/g, ""));
+          if (isNaN(n)) return 0;
+          return Math.max(-1000000, Math.min(1000000, n));
+        };
+        
+        const prevNum = parseBalance(dasher.balance);
+        const nextNum = parseBalance(rawInput);
+        const delta = nextNum - prevNum;
+        
+        finalBalance = rawInput; // Keep raw input for typing experience
+        
+        // Add to earningsHistory if positive delta
+        if (delta > 0.000001) {
+          const historyEntry = {
+            amount: Number(delta.toFixed(2)),
+            at: new Date().toISOString(),
+            source: "balance-edit"
+          };
+          finalHistory = [...finalHistory, historyEntry];
+        }
+      }
+      
       return {
         ...dasher,
         ...(updates.name !== undefined && { name: updates.name }),
         ...(updates.email !== undefined && { email: updates.email }),
-        ...(updates.balance !== undefined && { balance: updates.balance }),
+        ...(updates.balance !== undefined && { 
+          balance: finalBalance,
+          earningsHistory: finalHistory
+        }),
         ...(updates.notes !== undefined && {
           notes: Array.isArray(updates.notes)
             ? updates.notes
@@ -7367,7 +7403,7 @@ const EnhancedCalculator = () => {
     deactivatedDashers, setDeactivatedDashers,
     archivedDashers, setArchivedDashers,
     requestPersist
-  ]);
+  ]);;
 
   // [PERF-STAGE4] commit edited fields from a card
   const onDraftCommit = useCallback((dasherId, draft) => {
