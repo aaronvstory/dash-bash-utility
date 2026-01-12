@@ -1894,7 +1894,7 @@ const EnhancedCalculator = () => {
       nextHistory = history.slice(1);
     }
     updateDasherEverywhere(dasherId, {
-      balance: parseFloat(found.dasher.balance || 0) + amount,
+      balance: Number((parseBalanceValue(found.dasher.balance) + Number(amount)).toFixed(2)),
       cashOutHistory: nextHistory,
     });
   };
@@ -5979,25 +5979,15 @@ const EnhancedCalculator = () => {
       : bucketNote.trim() || undefined;
 
     const nowIso = new Date().toISOString();
-    const historyEntryId =
-      typeof crypto !== "undefined" && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `co-${Date.now()}`;
-
-    // Record undo for cash out
-    recordUndo(
-      UNDO_TYPES.DASHER_CASH_OUT,
-      {
-        dasherId: targetId,
-        sourceKey: effectiveSourceKey,
-        amount: currentBalance,
-        cashOutEntryId: historyEntryId,
-      },
-      `Cashed out $${currentBalance.toFixed(2)}`
-    );
 
     if (descriptors.length > 0) {
       descriptors.forEach((descriptor) => {
+        // Generate unique ID for each dasher's cash-out
+        const historyEntryId =
+          typeof crypto !== "undefined" && crypto.randomUUID
+            ? crypto.randomUUID()
+            : `co-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        
         mutateDasherByMeta(descriptor, (existing) => {
           if (!existing) return existing;
           const existingBalance = parseBalanceValue(existing.balance);
@@ -6008,6 +5998,19 @@ const EnhancedCalculator = () => {
                 : currentBalance
             ).toFixed(2),
           );
+          
+          // Record undo for THIS specific dasher
+          recordUndo(
+            UNDO_TYPES.DASHER_CASH_OUT,
+            {
+              dasherId: existing.id,
+              sourceKey: effectiveSourceKey,
+              amount: entryAmount,
+              cashOutEntryId: historyEntryId,
+            },
+            `Cashed out $${entryAmount.toFixed(2)} from ${existing.name || existing.id}`
+          );
+          
           const history = ensureArray(existing.cashOutHistory);
           const historyEntry = {
             id: historyEntryId,
@@ -6027,6 +6030,23 @@ const EnhancedCalculator = () => {
       showSuccessToast(currentBalance);
       return;
     }
+
+    // Single-dasher path: generate unique ID and record undo
+    const historyEntryId =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `co-${Date.now()}`;
+    
+    recordUndo(
+      UNDO_TYPES.DASHER_CASH_OUT,
+      {
+        dasherId: targetId,
+        sourceKey: effectiveSourceKey,
+        amount: currentBalance,
+        cashOutEntryId: historyEntryId,
+      },
+      `Cashed out $${currentBalance.toFixed(2)}`
+    );
 
     const historyEntry = {
       id: historyEntryId,
@@ -11615,28 +11635,15 @@ const EnhancedCalculator = () => {
         </div>
       )}
 
-      {/* Undo Notification Toast */}
+      {/* Undo Notification Toast - Compact */}
       {undoNotification && (
-        <div className="fixed top-4 right-4 z-50 bg-yellow-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 max-w-md">
-          <RotateCcw size={18} />
-          <span className="flex-1 text-sm font-medium">
-            {undoNotification.message}
-          </span>
-          <button
-            onClick={() => performUndo(undoNotification.undoId)}
-            className="bg-yellow-700 hover:bg-yellow-800 px-3 py-1 rounded text-sm font-semibold transition-colors"
-            title="Undo this action"
-          >
-            Undo
-          </button>
-          <button
-            onClick={() => dismissUndo(undoNotification.undoId)}
-            className="text-yellow-200 hover:text-white transition-colors"
-            title="Dismiss"
-          >
-            <X size={16} />
-          </button>
-        </div>
+        <button
+          onClick={() => performUndo(undoNotification.undoId)}
+          className="fixed top-3 right-3 z-50 bg-slate-800/90 border border-slate-600/40 p-2 rounded-lg shadow-md backdrop-blur-sm hover:bg-slate-700/90 transition-colors group"
+          title={`Undo: ${undoNotification.message}`}
+        >
+          <RotateCcw size={16} className="text-amber-400/80 group-hover:text-amber-300" />
+        </button>
       )}
 
       {/* [FIX-B] Custom Confirm Modal */}
