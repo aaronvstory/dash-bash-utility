@@ -14,8 +14,14 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 PORT = 8443
 HOSTNAME = 'localhost'
 
-# Create a simple HTTP request handler
-handler = http.server.SimpleHTTPRequestHandler
+# Create a simple HTTP request handler with no-cache headers
+class NoCacheHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
+    def end_headers(self):
+        self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
+        self.send_header('Expires', '0')
+        super().end_headers()
+
+handler = NoCacheHTTPRequestHandler
 
 # Set MIME types for PWA files
 handler.extensions_map['.json'] = 'application/json'
