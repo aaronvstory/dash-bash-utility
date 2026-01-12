@@ -12746,7 +12746,7 @@ const EnhancedCalculator = () => {
                                       ) : (
                                         <div className="flex items-start gap-2 flex-1 mt-1">
                                           <div
-                                            className={`flex-1 text-xs text-gray-200 ${isStoreNotesCollapsed(category.id, store.id) ? "truncate max-w-[48ch]" : "whitespace-pre-wrap"}`}
+                                            className="flex-1 text-xs text-gray-200 whitespace-pre-wrap"
                                           >
                                             {store.notes || (
                                               <span className="italic text-gray-500">
@@ -12754,30 +12754,18 @@ const EnhancedCalculator = () => {
                                               </span>
                                             )}
                                           </div>
-                                          <button
-                                            onClick={() =>
-                                              toggleStoreNotesCollapsed(
-                                                category.id,
-                                                store.id,
-                                              )
-                                            }
-                                            className="text-blue-300 hover:text-blue-200 p-1 self-start"
-                                            title={
-                                              isStoreNotesCollapsed(
-                                                category.id,
-                                                store.id,
-                                              )
-                                                ? "Show full notes"
-                                                : "Collapse notes"
-                                            }
-                                          >
-                                            {isStoreNotesCollapsed(
-                                              category.id,
-                                              store.id,
-                                            )
-                                              ? React.createElement(ChevronDown, { size: 14 })
-                                              : React.createElement(ChevronUp, { size: 14 })}
-                                          </button>
+                                          {store.notes && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                copyToClipboard(store.notes);
+                                              }}
+                                              className="text-blue-400 hover:text-blue-300 p-1 self-start"
+                                              title="Copy notes"
+                                            >
+                                              <Copy size={12} />
+                                            </button>
+                                          )}
                                         </div>
                                       )}
                                     </div>
