@@ -6252,10 +6252,8 @@ const EnhancedCalculator = () => {
     [categoryDashersFlat, showNonZeroOnly, dasherSort, globalQuery],
   );
 
-  // [PERF-FIX3] Only compute stats metadata when Statistics section is open
+  // Dasher metadata for identity tracking and descriptor resolution
   const dashersMeta = useMemo(() => {
-    if (!isStatisticsOpen) return []; // Early return when stats closed
-
     const meta = [];
 
     dasherCategories.forEach((category, catIndex) => {
@@ -6326,7 +6324,6 @@ const EnhancedCalculator = () => {
 
     return meta;
   }, [
-    isStatisticsOpen, // [PERF-FIX3] Gate computation
     dasherCategories,
     readyDashers,
     currentlyUsingDashers,
@@ -9326,6 +9323,7 @@ const EnhancedCalculator = () => {
                       const applyBalance = inlineApplyBalance;
                       const nowIso = new Date().toISOString();
                       const targets = gatherDescriptorsForDasher();
+                      console.log('[DEBUG] gatherDescriptorsForDasher result:', { targets, dasher, categoryId, identityKey: deriveDasherIdentity(dasher, `${categoryId ?? "bucket"}-${dasher?.id ?? dasher?.email ?? dasher?.phone ?? "dash"}`) });
 
                       if (!targets || targets.length === 0) {
                         const errMsg =
