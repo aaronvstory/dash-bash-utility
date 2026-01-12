@@ -78,8 +78,37 @@ self.addEventListener("fetch", (event) => {
       (async () => {
         try {
           const netResp = await fetch(req, { cache: "no-store" });
+          if (isStyle || isCompiledJS) {
+            const cache = await caches.open(RUNTIME_CACHE);
+            try {
+              await cache.put(req, netResp.clone());
+            } catch (err) {
+              if (err.name === "QuotaExceededError") {
+                console.warn("[SW] Cache quota exceeded, clearing runtime cache");
+                await caches.delete(RUNTIME_CACHE);
+              }
+            }
+          }
           return netResp;
         } catch (e) {
+          if (isStyle || isCompiledJS) {
+            const cache = await caches.open(RUNTIME_CACHE);
+            const cached = await cache.match(req);
+            if (cached) return cached;
+            return new Response(
+              isCompiledJS
+                ? "/* Offline: dash-bash-compiled.js unavailable */"
+                : "/* Offline: styles.css unavailable */",
+              {
+                status: 503,
+                headers: {
+                  "Content-Type": isCompiledJS
+                    ? "application/javascript"
+                    : "text/css",
+                },
+              }
+            );
+          }
           const cache = await caches.open(CORE_CACHE);
           const cached = await cache.match("./");
           // Always return a response - never throw or return undefined

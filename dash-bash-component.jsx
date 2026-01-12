@@ -800,6 +800,52 @@ async function loadFromIDB(key) {
 // =========================================================================
 
 const EnhancedCalculator = () => {
+  // ======================== UNDO SYSTEM CONSTANTS ========================
+  const UNDO_TYPES = {
+    // Dasher actions
+    DASHER_MOVE: 'DASHER_MOVE',
+    DASHER_DELETE: 'DASHER_DELETE',
+    DASHER_EDIT_FIELD: 'DASHER_EDIT_FIELD',
+    DASHER_EDIT_BALANCE: 'DASHER_EDIT_BALANCE',
+    DASHER_CASH_OUT: 'DASHER_CASH_OUT',
+    DASHER_TOGGLE_FLAG: 'DASHER_TOGGLE_FLAG',
+    DASHER_BULK_MOVE: 'DASHER_BULK_MOVE',
+
+    // Category actions (Dasher categories)
+    DASHER_CATEGORY_ADD: 'DASHER_CATEGORY_ADD',
+    DASHER_CATEGORY_DELETE: 'DASHER_CATEGORY_DELETE',
+    DASHER_CATEGORY_RENAME: 'DASHER_CATEGORY_RENAME',
+    DASHER_CATEGORY_REORDER: 'DASHER_CATEGORY_REORDER',
+
+    // Message actions
+    MESSAGE_ADD: 'MESSAGE_ADD',
+    MESSAGE_DELETE: 'MESSAGE_DELETE',
+    MESSAGE_EDIT: 'MESSAGE_EDIT',
+    MESSAGE_REORDER: 'MESSAGE_REORDER',
+
+    // Store Category actions
+    STORE_CATEGORY_ADD: 'STORE_CATEGORY_ADD',
+    STORE_CATEGORY_DELETE: 'STORE_CATEGORY_DELETE',
+    STORE_CATEGORY_RENAME: 'STORE_CATEGORY_RENAME',
+
+    // Store actions
+    STORE_ADD: 'STORE_ADD',
+    STORE_DELETE: 'STORE_DELETE',
+    STORE_EDIT_FIELD: 'STORE_EDIT_FIELD',
+    STORE_REORDER: 'STORE_REORDER',
+
+    // Note Category actions
+    NOTE_CATEGORY_ADD: 'NOTE_CATEGORY_ADD',
+    NOTE_CATEGORY_DELETE: 'NOTE_CATEGORY_DELETE',
+    NOTE_CATEGORY_RENAME: 'NOTE_CATEGORY_RENAME',
+
+    // Note actions
+    NOTE_ADD: 'NOTE_ADD',
+    NOTE_DELETE: 'NOTE_DELETE',
+    NOTE_EDIT: 'NOTE_EDIT',
+    NOTE_REORDER: 'NOTE_REORDER',
+  };
+
   // Import gate (v1.9.5): Prevents re-renders, localStorage writes, and timer updates during import
   const [isImporting, setIsImporting] = useState(false);
 
@@ -984,6 +1030,8 @@ const EnhancedCalculator = () => {
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [newMessageText, setNewMessageText] = useState("");
   const [copyNotification, setCopyNotification] = useState("");
+  // Undo notification state: { message: string, undoId: string } | null
+  const [undoNotification, setUndoNotification] = useState(null);
   const [messages, setMessages] = useState([
     "hi can u pls see if u can help get a dasher assigned quicker!? I'm in a rush to get to work asap! Thank you",
     "Ok someone got it! darn it i just noticed i put the tip so high by accident :( can u help change the tip to $0 pls?",
@@ -1040,6 +1088,11 @@ const EnhancedCalculator = () => {
     categoryId: -1,
     storeId: -1,
   });
+  const storeEditOriginalRef = useRef(null);
+  const categoryEditOriginalRef = useRef(null);
+  const noteCategoryEditOriginalRef = useRef(null);
+  const dasherCategoryEditOriginalRef = useRef(null);
+  const noteEditOriginalRef = useRef(null);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [draggedCategory, setDraggedCategory] = useState(-1);
@@ -1513,8 +1566,9 @@ const EnhancedCalculator = () => {
   // Web Worker for async JSON parsing (v1.9.5)
   const importWorkerRef = useRef(null);
 
-  // Undo support for cash outs
-  const lastCashOutRef = React.useRef(null);
+  // Universal undo stack (max 10 entries, FIFO)
+  const undoStack = React.useRef([]);
+  // TODO: Add tests/manual checklist for undo flows (messages, notes, stores, dashers).
   const saveDebouncedRef = React.useRef(null);
   const saveNotificationTimeoutRef = React.useRef(null);
   const moveToastActiveRef = React.useRef(false);
@@ -1535,6 +1589,564 @@ const EnhancedCalculator = () => {
   const [recentlyMoved, setRecentlyMoved] = useState(() => new Set());
   const recentlyMovedTimersRef = useRef(new Map());
   const [moveDebug, setMoveDebug] = useState(null);
+
+  // ======================== UNDO SYSTEM FUNCTIONS ========================
+
+  /**
+   * Helper: Find dasher by ID across all buckets and categories (undo system)
+   * @param {string} dasherId - The dasher ID to find
+   * @param {string} categoryKey - Optional bucket/category key to search in
+   * @returns {object|null} - The dasher object if found, null otherwise
+   */
+  const findDasherAcrossBuckets = (dasherId, categoryKey = null) => {
+    if (categoryKey === 'main') {
+      // Search in Main categories
+      for (const cat of dasherCategories) {
+        const dasher = cat.dashers?.find(d => d.id === dasherId);
+        if (dasher) return { dasher, categoryId: cat.id, categoryKey: 'main' };
+      }
+    } else if (categoryKey) {
+      // Search in specific bucket
+      const bucketMap = {
+        'ready': readyDashers,
+        'currently-using': currentlyUsingDashers,
+        'appealed': appealedDashers,
+        'applied-pending': appliedPendingDashers,
+        'reverif': reverifDashers,
+        'locked': lockedDashers,
+        'deactivated': deactivatedDashers,
+        'archived': archivedDashers,
+      };
+      const dashers = bucketMap[categoryKey] || [];
+      const dasher = dashers.find(d => d.id === dasherId);
+      if (dasher) return { dasher, categoryKey };
+    } else {
+      // Search everywhere
+      const result = findDasherAcrossBuckets(dasherId, 'main');
+      if (result) return result;
+      
+      const buckets = ['ready', 'currently-using', 'appealed', 'applied-pending', 
+                       'reverif', 'locked', 'deactivated', 'archived'];
+      for (const bucket of buckets) {
+        const result = findDasherAcrossBuckets(dasherId, bucket);
+        if (result) return result;
+      }
+    }
+    return null;
+  };
+
+  /**
+   * Record an undo action
+   * @param {string} type - Action type from UNDO_TYPES
+   * @param {object} beforeState - State needed to restore
+   * @param {string} description - Human-readable description
+   */
+  const recordUndo = (type, beforeState, description) => {
+    // Skip during imports
+    if (isImporting) return;
+
+    // Create undo entry
+    const entry = {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type,
+      timestamp: Date.now(),
+      description,
+      beforeState: JSON.parse(JSON.stringify(beforeState)), // Deep clone
+    };
+
+    // Add to stack (max 10, FIFO)
+    undoStack.current = [entry, ...undoStack.current].slice(0, 10);
+
+    // Show undo toast
+    setUndoNotification({
+      message: description,
+      undoId: entry.id,
+    });
+  };
+
+  /**
+   * Perform undo operation
+   * @param {string} undoId - ID of the undo entry to execute
+   */
+  const performUndo = (undoId) => {
+    // Find entry by ID
+    const entryIndex = undoStack.current.findIndex(e => e.id === undoId);
+    if (entryIndex === -1) {
+      console.warn('[UNDO] Entry not found:', undoId);
+      return;
+    }
+
+    const entry = undoStack.current[entryIndex];
+
+    // Execute restoration based on type
+    try {
+      switch (entry.type) {
+        case UNDO_TYPES.DASHER_MOVE:
+          restoreDasherMove(entry.beforeState);
+          break;
+        case UNDO_TYPES.DASHER_DELETE:
+          restoreDasherDelete(entry.beforeState);
+          break;
+        case UNDO_TYPES.DASHER_EDIT_BALANCE:
+          restoreDasherBalance(entry.beforeState);
+          break;
+        case UNDO_TYPES.DASHER_EDIT_FIELD:
+          restoreDasherField(entry.beforeState);
+          break;
+        case UNDO_TYPES.DASHER_CASH_OUT:
+          restoreDasherCashOut(entry.beforeState);
+          break;
+        case UNDO_TYPES.DASHER_TOGGLE_FLAG:
+          restoreDasherFlag(entry.beforeState);
+          break;
+        case UNDO_TYPES.MESSAGE_DELETE:
+          restoreMessageDelete(entry.beforeState);
+          break;
+        case UNDO_TYPES.MESSAGE_EDIT:
+          restoreMessageEdit(entry.beforeState);
+          break;
+        case UNDO_TYPES.MESSAGE_REORDER:
+          restoreMessageReorder(entry.beforeState);
+          break;
+        case UNDO_TYPES.MESSAGE_ADD:
+          restoreMessageAdd(entry.beforeState);
+          break;
+        case UNDO_TYPES.STORE_DELETE:
+          restoreStoreDelete(entry.beforeState);
+          break;
+        case UNDO_TYPES.STORE_EDIT_FIELD:
+          restoreStoreField(entry.beforeState);
+          break;
+        case UNDO_TYPES.NOTE_DELETE:
+          restoreNoteDelete(entry.beforeState);
+          break;
+        case UNDO_TYPES.NOTE_EDIT:
+          restoreNoteEdit(entry.beforeState);
+          break;
+        case UNDO_TYPES.DASHER_CATEGORY_DELETE:
+          restoreDasherCategoryDelete(entry.beforeState);
+          break;
+        case UNDO_TYPES.DASHER_CATEGORY_RENAME:
+          restoreDasherCategoryRename(entry.beforeState);
+          break;
+        case UNDO_TYPES.STORE_CATEGORY_DELETE:
+          restoreStoreCategoryDelete(entry.beforeState);
+          break;
+        case UNDO_TYPES.STORE_CATEGORY_RENAME:
+          restoreStoreCategoryRename(entry.beforeState);
+          break;
+        case UNDO_TYPES.NOTE_CATEGORY_DELETE:
+          restoreNoteCategoryDelete(entry.beforeState);
+          break;
+        case UNDO_TYPES.NOTE_CATEGORY_RENAME:
+          restoreNoteCategoryRename(entry.beforeState);
+          break;
+        default:
+          console.warn('[UNDO] Unknown action type:', entry.type);
+          return;
+      }
+
+      // Remove from stack
+      undoStack.current.splice(entryIndex, 1);
+
+      // Hide toast and show confirmation
+      setUndoNotification(null);
+      setCopyNotification(`✓ Undone: ${entry.description}`);
+      setTimeout(() => setCopyNotification(''), 2000);
+    } catch (error) {
+      console.error('[UNDO] Error performing undo:', error);
+      setCopyNotification(`❌ Undo failed: ${error.message}`);
+      setTimeout(() => setCopyNotification(''), 3000);
+    }
+  };
+
+  /**
+   * Dismiss undo notification without performing undo
+   * @param {string} undoId - ID of the undo entry to dismiss
+   */
+  const dismissUndo = (undoId) => {
+    // Remove from stack
+    const entryIndex = undoStack.current.findIndex(e => e.id === undoId);
+    if (entryIndex !== -1) {
+      undoStack.current.splice(entryIndex, 1);
+    }
+
+    // Hide toast
+    setUndoNotification(null);
+  };
+
+  // ======================== UNDO RESTORATION FUNCTIONS ========================
+
+  const restoreDasherMove = (beforeState) => {
+    const { dasherId, fromKey, toKey } = beforeState;
+    // Move back to original location
+    moveDasher(toKey, fromKey, dasherId, { skipUndo: true });
+  };
+
+  const restoreDasherDelete = (beforeState) => {
+    const { dasher, categoryKey, categoryId, index } = beforeState;
+    const insertAt = (list) => {
+      const next = [...(list || [])];
+      const safeIndex =
+        typeof index === "number" && index >= 0 && index <= next.length
+          ? index
+          : next.length;
+      next.splice(safeIndex, 0, dasher);
+      return next;
+    };
+
+    // Check ALL buckets for ID collision (not just original category)
+    const exists = findDasherAcrossBuckets(dasher.id);
+    if (exists) {
+      console.warn('[UNDO] Cannot restore deleted dasher: ID collision');
+      return;
+    }
+
+    // Restore to original location
+    if (categoryKey === 'main') {
+      setDasherCategories(cats =>
+        cats.map(cat =>
+          cat.id === categoryId
+            ? { ...cat, dashers: insertAt(cat.dashers || []) }
+            : cat
+        )
+      );
+    } else {
+      // Handle bucket restoration
+      const setterMap = {
+        'ready': setReadyDashers,
+        'currently-using': setCurrentlyUsingDashers,
+        'appealed': setAppealedDashers,
+        'applied-pending': setAppliedPendingDashers,
+        'reverif': setReverifDashers,
+        'locked': setLockedDashers,
+        'deactivated': setDeactivatedDashers,
+        'archived': setArchivedDashers,
+      };
+      const setter = setterMap[categoryKey];
+      if (setter) {
+        setter(dashers => insertAt(dashers));
+      }
+    }
+
+    requestPersist();
+  };
+
+  const restoreDasherBalance = (beforeState) => {
+    const { dasherId, oldBalance } = beforeState;
+    const found = findDasherAcrossBuckets(dasherId);
+    if (!found) {
+      updateDasherEverywhere(dasherId, { balance: oldBalance });
+      return;
+    }
+
+    const currentBalance = parseBalanceValue(found.dasher.balance);
+    const prevBalance = parseBalanceValue(oldBalance);
+    const delta = currentBalance - prevBalance;
+    const history = Array.isArray(found.dasher.earningsHistory)
+      ? [...found.dasher.earningsHistory]
+      : [];
+
+    if (delta > POSITIVE_DELTA_THRESHOLD) {
+      const fromEnd = [...history].reverse().findIndex(
+        (entry) =>
+          entry &&
+          entry.source === "balance-edit" &&
+          Math.abs(parseBalanceValue(entry.amount) - delta) < 0.01,
+      );
+      if (fromEnd !== -1) {
+        const removeIndex = history.length - 1 - fromEnd;
+        history.splice(removeIndex, 1);
+      }
+    }
+
+    updateDasherEverywhere(dasherId, {
+      balance: oldBalance,
+      earningsHistory: history,
+    });
+  };
+
+  const restoreDasherField = (beforeState) => {
+    const { dasherId, field, oldValue } = beforeState;
+    updateDasherEverywhere(dasherId, { [field]: oldValue });
+  };
+
+  const restoreDasherCashOut = (beforeState) => {
+    const { dasherId, sourceKey, amount, cashOutEntryId } = beforeState;
+    
+    const found = findDasherAcrossBuckets(dasherId, sourceKey);
+    if (!found) {
+      console.warn('[UNDO] Dasher not found for cash out undo');
+      return;
+    }
+
+    // Restore balance and remove cash out entry
+    const history = Array.isArray(found.dasher.cashOutHistory)
+      ? found.dasher.cashOutHistory
+      : [];
+    let nextHistory = history;
+    if (cashOutEntryId) {
+      const filtered = history.filter((entry) => entry?.id !== cashOutEntryId);
+      nextHistory = filtered.length === history.length
+        ? history.slice(1)
+        : filtered;
+    } else {
+      nextHistory = history.slice(1);
+    }
+    updateDasherEverywhere(dasherId, {
+      balance: Number((parseBalanceValue(found.dasher.balance) + Number(amount)).toFixed(2)),
+      cashOutHistory: nextHistory,
+    });
+  };
+
+  const restoreDasherFlag = (beforeState) => {
+    const { dasherId, flag, oldValue } = beforeState;
+    updateDasherEverywhere(dasherId, { [flag]: oldValue });
+  };
+
+  const restoreMessageDelete = (beforeState) => {
+    const { prevMessages, index, message } = beforeState;
+    if (Array.isArray(prevMessages)) {
+      setMessages(prevMessages);
+      requestPersist();
+      return;
+    }
+    setMessages(msgs => {
+      const newMsgs = [...msgs];
+      const safeIndex =
+        typeof index === "number" && index >= 0 && index <= newMsgs.length
+          ? index
+          : newMsgs.length;
+      newMsgs.splice(safeIndex, 0, message);
+      return newMsgs;
+    });
+    requestPersist();
+  };
+
+  const restoreMessageEdit = (beforeState) => {
+    const { prevMessages, index, oldText } = beforeState;
+    if (Array.isArray(prevMessages)) {
+      setMessages(prevMessages);
+      requestPersist();
+      return;
+    }
+    setMessages(msgs => {
+      const newMsgs = [...msgs];
+      if (typeof index === "number" && index >= 0 && index < newMsgs.length) {
+        newMsgs[index] = oldText;
+      }
+      return newMsgs;
+    });
+    requestPersist();
+  };
+
+  const restoreMessageReorder = (beforeState) => {
+    const { oldOrder } = beforeState;
+    setMessages(oldOrder);
+    requestPersist();
+  };
+
+  const restoreMessageAdd = (beforeState) => {
+    const { prevMessages, index, message } = beforeState;
+    if (Array.isArray(prevMessages)) {
+      setMessages(prevMessages);
+      requestPersist();
+      return;
+    }
+    setMessages(msgs => {
+      const next = [...msgs];
+      if (
+        typeof index === "number" &&
+        index >= 0 &&
+        index < next.length &&
+        (!message || next[index] === message)
+      ) {
+        next.splice(index, 1);
+        return next;
+      }
+      if (message) {
+        const fallbackIndex = next.lastIndexOf(message);
+        if (fallbackIndex !== -1) {
+          next.splice(fallbackIndex, 1);
+        }
+      }
+      return next;
+    });
+    requestPersist();
+  };
+
+  const restoreStoreDelete = (beforeState) => {
+    const { categoryId, store, index } = beforeState;
+    setCategories(cats =>
+      cats.map(cat =>
+        cat.id === categoryId
+          ? {
+              ...cat,
+              stores: (() => {
+                const next = [...(cat.stores || [])];
+                const safeIndex =
+                  typeof index === "number" &&
+                  index >= 0 &&
+                  index <= next.length
+                    ? index
+                    : next.length;
+                next.splice(safeIndex, 0, store);
+                return next;
+              })(),
+            }
+          : cat
+      )
+    );
+    requestPersist();
+  };
+
+  const restoreStoreField = (beforeState) => {
+    const { categoryId, storeId, field, oldValue } = beforeState;
+    setCategories(cats =>
+      cats.map(cat =>
+        cat.id === categoryId
+          ? {
+              ...cat,
+              stores: cat.stores.map(store =>
+                store.id === storeId
+                  ? { ...store, [field]: oldValue }
+                  : store
+              ),
+            }
+          : cat
+      )
+    );
+    requestPersist();
+  };
+
+  const restoreNoteDelete = (beforeState) => {
+    const { categoryId, noteIndex, prevNotes } = beforeState;
+    const noteText = beforeState.noteText ?? beforeState.note;
+    setNoteCategories(cats =>
+      cats.map(cat => {
+        if (cat.id === categoryId) {
+          const newNotes = Array.isArray(prevNotes)
+            ? [...prevNotes]
+            : [...(cat.notes || [])];
+          if (!Array.isArray(prevNotes)) {
+            const safeIndex =
+              typeof noteIndex === "number" &&
+              noteIndex >= 0 &&
+              noteIndex <= newNotes.length
+                ? noteIndex
+                : newNotes.length;
+            newNotes.splice(safeIndex, 0, noteText);
+          }
+          return { ...cat, notes: newNotes };
+        }
+        return cat;
+      })
+    );
+    requestPersist();
+  };
+
+  const restoreNoteEdit = (beforeState) => {
+    const { categoryId, noteIndex, oldText, prevNotes } = beforeState;
+    setNoteCategories(cats =>
+      cats.map(cat => {
+        if (cat.id === categoryId) {
+          const newNotes = Array.isArray(prevNotes)
+            ? [...prevNotes]
+            : [...(cat.notes || [])];
+          if (!Array.isArray(prevNotes)) {
+            if (
+              typeof noteIndex === "number" &&
+              noteIndex >= 0 &&
+              noteIndex < newNotes.length
+            ) {
+              newNotes[noteIndex] = oldText;
+            }
+          }
+          return { ...cat, notes: newNotes };
+        }
+        return cat;
+      })
+    );
+    requestPersist();
+  };
+
+  const restoreDasherCategoryDelete = (beforeState) => {
+    const { category, index } = beforeState;
+    setDasherCategories(cats => {
+      const next = [...cats];
+      const safeIndex =
+        typeof index === "number" && index >= 0 && index <= next.length
+          ? index
+          : next.length;
+      next.splice(safeIndex, 0, category);
+      return next;
+    });
+    requestPersist();
+  };
+
+  const restoreDasherCategoryRename = (beforeState) => {
+    const { categoryId, oldName } = beforeState;
+    setDasherCategories(cats =>
+      cats.map(cat =>
+        cat.id === categoryId
+          ? { ...cat, name: oldName }
+          : cat
+      )
+    );
+    requestPersist();
+  };
+
+  const restoreStoreCategoryDelete = (beforeState) => {
+    const { category, index } = beforeState;
+    setCategories(cats => {
+      const next = [...cats];
+      const safeIndex =
+        typeof index === "number" && index >= 0 && index <= next.length
+          ? index
+          : next.length;
+      next.splice(safeIndex, 0, category);
+      return next;
+    });
+    requestPersist();
+  };
+
+  const restoreStoreCategoryRename = (beforeState) => {
+    const { categoryId, oldName } = beforeState;
+    setCategories(cats =>
+      cats.map(cat =>
+        cat.id === categoryId
+          ? { ...cat, name: oldName }
+          : cat
+      )
+    );
+    requestPersist();
+  };
+
+  const restoreNoteCategoryDelete = (beforeState) => {
+    const { category, index } = beforeState;
+    setNoteCategories(cats => {
+      const next = [...cats];
+      const safeIndex =
+        typeof index === "number" && index >= 0 && index <= next.length
+          ? index
+          : next.length;
+      next.splice(safeIndex, 0, category);
+      return next;
+    });
+    requestPersist();
+  };
+
+  const restoreNoteCategoryRename = (beforeState) => {
+    const { categoryId, oldName } = beforeState;
+    setNoteCategories(cats =>
+      cats.map(cat =>
+        cat.id === categoryId
+          ? { ...cat, name: oldName }
+          : cat
+      )
+    );
+    requestPersist();
+  };
 
   // Load from localStorage on component mount
   useEffect(() => {
@@ -2111,8 +2723,20 @@ const EnhancedCalculator = () => {
 
   const saveEdit = () => {
     if (editText.trim()) {
+      // Record undo before edit
+      const prevMessages = [...messages];
+      const oldText = messages[editingIndex];
+      const newText = editText.trim();
+      if (oldText !== newText) {
+        recordUndo(
+          UNDO_TYPES.MESSAGE_EDIT,
+          { index: editingIndex, oldText, prevMessages },
+          `Edited message: "${oldText.substring(0, 20)}..." → "${newText.substring(0, 20)}..."`
+        );
+      }
+
       const newMessages = [...messages];
-      newMessages[editingIndex] = editText.trim();
+      newMessages[editingIndex] = newText;
       setMessages(newMessages);
 
       // Auto-save messages
@@ -2130,6 +2754,17 @@ const EnhancedCalculator = () => {
   };
 
   const deleteMessage = (index) => {
+    // Record undo before deletion
+    const prevMessages = [...messages];
+    const message = messages[index];
+    if (message) {
+      recordUndo(
+        UNDO_TYPES.MESSAGE_DELETE,
+        { index, message, prevMessages },
+        `Deleted message: "${message.substring(0, 30)}..."`
+      );
+    }
+
     const newMessages = messages.filter((_, i) => i !== index);
     setMessages(newMessages);
     if (editingIndex === index) {
@@ -2157,6 +2792,13 @@ const EnhancedCalculator = () => {
     e.preventDefault();
     if (draggedIndex === -1 || draggedIndex === dropIndex) return;
 
+    // Record undo before reordering
+    recordUndo(
+      UNDO_TYPES.MESSAGE_REORDER,
+      { oldOrder: [...messages] },
+      `Reordered message from position ${draggedIndex + 1} to ${dropIndex + 1}`
+    );
+
     const newMessages = [...messages];
     const draggedMessage = newMessages[draggedIndex];
     newMessages.splice(draggedIndex, 1);
@@ -2172,7 +2814,16 @@ const EnhancedCalculator = () => {
 
   const addNewMessage = () => {
     if (newMessageText.trim()) {
-      const newMessages = [...messages, newMessageText.trim()];
+      const newText = newMessageText.trim();
+
+      // Record undo before adding
+      recordUndo(
+        UNDO_TYPES.MESSAGE_ADD,
+        { index: messages.length, message: newText, prevMessages: [...messages] },
+        `Added message: "${newText.substring(0, 30)}..."`
+      );
+
+      const newMessages = [...messages, newText];
       setMessages(newMessages);
       setNewMessageText("");
       setIsAddingNew(false);
@@ -2298,7 +2949,7 @@ const EnhancedCalculator = () => {
     const apply = (d) => {
       if (d.id !== dasherId) return d;
       const history = Array.isArray(d.cashOutHistory)
-        ? [...d.cashOutHistory, base]
+        ? [base, ...d.cashOutHistory]
         : [base];
       let balance = d.balance;
       if (adjustBalance) {
@@ -2314,7 +2965,7 @@ const EnhancedCalculator = () => {
         balance,
         cashOutHistory: history,
         lastCashOutRef: adjustBalance
-          ? { id: base.id, index: history.length - 1 }
+          ? { id: base.id, index: 0 }
           : d.lastCashOutRef || null,
       };
     };
@@ -4444,7 +5095,7 @@ const EnhancedCalculator = () => {
           at: nowIso,
         };
         const history = ensureArray(existing.cashOutHistory);
-        const nextHistory = [...history, base];
+        const nextHistory = [base, ...history];
         let nextBalance = existing.balance;
         if (adjustBalance) {
           const cur = parseBalanceValue(existing.balance || "0");
@@ -4456,7 +5107,7 @@ const EnhancedCalculator = () => {
           balance: nextBalance,
           cashOutHistory: nextHistory,
           lastCashOutRef: adjustBalance
-            ? { id: base.id, index: nextHistory.length - 1 }
+            ? { id: base.id, index: 0 }
             : existing.lastCashOutRef || null,
         };
       };
@@ -5329,16 +5980,14 @@ const EnhancedCalculator = () => {
 
     const nowIso = new Date().toISOString();
 
-    lastCashOutRef.current = {
-      dasherId: targetId,
-      sourceKey: effectiveSourceKey,
-      amount: currentBalance,
-      method: normalizedMethod,
-      timestamp: nowIso,
-    };
-
     if (descriptors.length > 0) {
       descriptors.forEach((descriptor) => {
+        // Generate unique ID for each dasher's cash-out
+        const historyEntryId =
+          typeof crypto !== "undefined" && crypto.randomUUID
+            ? crypto.randomUUID()
+            : `co-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        
         mutateDasherByMeta(descriptor, (existing) => {
           if (!existing) return existing;
           const existingBalance = parseBalanceValue(existing.balance);
@@ -5349,8 +5998,22 @@ const EnhancedCalculator = () => {
                 : currentBalance
             ).toFixed(2),
           );
+          
+          // Record undo for THIS specific dasher
+          recordUndo(
+            UNDO_TYPES.DASHER_CASH_OUT,
+            {
+              dasherId: existing.id,
+              sourceKey: effectiveSourceKey,
+              amount: entryAmount,
+              cashOutEntryId: historyEntryId,
+            },
+            `Cashed out $${entryAmount.toFixed(2)} from ${existing.name || existing.id}`
+          );
+          
           const history = ensureArray(existing.cashOutHistory);
           const historyEntry = {
+            id: historyEntryId,
             amount: entryAmount,
             method: selLabel || normalizedMethod,
             at: nowIso,
@@ -5368,6 +6031,31 @@ const EnhancedCalculator = () => {
       return;
     }
 
+    // Single-dasher path: generate unique ID and record undo
+    const historyEntryId =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `co-${Date.now()}`;
+    
+    recordUndo(
+      UNDO_TYPES.DASHER_CASH_OUT,
+      {
+        dasherId: targetId,
+        sourceKey: effectiveSourceKey,
+        amount: currentBalance,
+        cashOutEntryId: historyEntryId,
+      },
+      `Cashed out $${currentBalance.toFixed(2)}`
+    );
+
+    const historyEntry = {
+      id: historyEntryId,
+      amount: currentBalance,
+      method: selLabel || normalizedMethod,
+      at: nowIso,
+      ...(autoNotes ? { notes: autoNotes } : {}),
+    };
+
     const commit = (mutator) => {
       mutator();
       requestPersist();
@@ -5382,23 +6070,8 @@ const EnhancedCalculator = () => {
                 ...d,
                 balance: 0,
                 cashOutHistory: d.cashOutHistory
-                  ? [
-                    {
-                      amount: currentBalance,
-                      method: selLabel || normalizedMethod,
-                      at: nowIso,
-                      ...(autoNotes ? { notes: autoNotes } : {}),
-                    },
-                    ...d.cashOutHistory,
-                  ]
-                  : [
-                    {
-                      amount: currentBalance,
-                      method: selLabel || normalizedMethod,
-                      at: nowIso,
-                      ...(autoNotes ? { notes: autoNotes } : {}),
-                    },
-                  ],
+                  ? [historyEntry, ...d.cashOutHistory]
+                  : [historyEntry],
               }
               : d,
           ),
@@ -5487,85 +6160,10 @@ const EnhancedCalculator = () => {
     setDasherCategories, setReadyDashers, setCurrentlyUsingDashers, setAppealedDashers,
     setReverifDashers, setLockedDashers, setAppliedPendingDashers, setArchivedDashers,
     deriveDasherIdentity, parseBalanceValue, requestPersist, setSaveNotification,
-    saveNotificationTimeoutRef, moveToastActiveRef
+    saveNotificationTimeoutRef, moveToastActiveRef, recordUndo
   ]); // [PERF-STAGE3]
 
-  // Undo last cash out - restores balance and removes history entry
-  const undoLastCashOut = () => {
-    const last = lastCashOutRef.current;
-    if (!last) return;
-
-    const { dasherId, sourceKey, amount } = last;
-
-    const commit = (mutator) => {
-      mutator();
-      requestPersist();
-    };
-
-    const restoreList = (list, setter) =>
-      commit(() => {
-        setter(
-          list.map((d) =>
-            idsEq(d.id, dasherId)
-              ? {
-                ...d,
-                balance: parseBalanceValue(d.balance) + amount,
-                cashOutHistory: (d.cashOutHistory || []).slice(1),
-              }
-              : d,
-          ),
-        );
-      });
-
-    if (sourceKey === "ready") restoreList(readyDashers, setReadyDashers);
-    else if (sourceKey === "currently-using")
-      restoreList(currentlyUsingDashers, setCurrentlyUsingDashers);
-    else if (sourceKey === "appealed")
-      restoreList(appealedDashers, setAppealedDashers);
-    else if (sourceKey === "locked")
-      restoreList(lockedDashers, setLockedDashers);
-    else if (sourceKey === "reverif")
-      restoreList(reverifDashers, setReverifDashers);
-    else if (sourceKey === "applied-pending")
-      restoreList(appliedPendingDashers, setAppliedPendingDashers);
-    else if (sourceKey === "deactivated")
-      restoreList(deactivatedDashers, setDeactivatedDashers);
-    else if (sourceKey === "archived")
-      restoreList(archivedDashers, setArchivedDashers);
-    else {
-      commit(() => {
-        setDasherCategories((prev) =>
-          prev.map((cat) => {
-            if (cat.id !== sourceKey) return cat;
-            return {
-              ...cat,
-              dashers: cat.dashers.map((d) =>
-                idsEq(d.id, dasherId)
-                  ? {
-                    ...d,
-                    balance: parseBalanceValue(d.balance) + amount,
-                    cashOutHistory: (d.cashOutHistory || []).slice(1),
-                  }
-                  : d,
-              ),
-            };
-          }),
-        );
-      });
-    }
-
-    // Keep consistent modern toast for undo as well
-    if (saveNotificationTimeoutRef.current) {
-      clearTimeout(saveNotificationTimeoutRef.current);
-      saveNotificationTimeoutRef.current = null;
-    }
-    setSaveNotification(`Undid cash out of $${amount.toFixed(2)}`);
-    saveNotificationTimeoutRef.current = setTimeout(() => {
-      setSaveNotification("");
-      saveNotificationTimeoutRef.current = null;
-    }, 2000);
-    lastCashOutRef.current = null;
-  };
+  // Old undoLastCashOut function removed - replaced by universal undo system
 
   // Sorting helper
   const sortDashers = (arr, sortCfg) => {
@@ -6336,7 +6934,44 @@ const EnhancedCalculator = () => {
     }, 100);
   };
 
+  const beginCategoryEdit = (categoryId) => {
+    const category = categories.find((cat) => cat.id === categoryId);
+    categoryEditOriginalRef.current = category
+      ? { id: categoryId, name: category.name }
+      : { id: categoryId, name: "" };
+    setEditingCategory(categoryId);
+  };
+
+  const commitCategoryEdit = (categoryId) => {
+    const original = categoryEditOriginalRef.current;
+    const category = categories.find((cat) => cat.id === categoryId);
+    if (category && original && original.id === categoryId) {
+      const oldName = original.name ?? "";
+      const newName = category.name ?? "";
+      if (oldName !== newName) {
+        recordUndo(
+          UNDO_TYPES.STORE_CATEGORY_RENAME,
+          { categoryId, oldName },
+          `Renamed store category: \"${oldName}\" → \"${newName}\"`
+        );
+      }
+    }
+    categoryEditOriginalRef.current = null;
+    setEditingCategory(-1);
+  };
+
   const deleteCategory = (categoryId) => {
+    // Find category before deleting (for undo)
+    const category = categories.find(cat => cat.id === categoryId);
+    const categoryIndex = categories.findIndex(cat => cat.id === categoryId);
+    if (category) {
+      recordUndo(
+        UNDO_TYPES.STORE_CATEGORY_DELETE,
+        { category: JSON.parse(JSON.stringify(category)), index: categoryIndex },
+        `Deleted store category "${category.name}"`
+      );
+    }
+
     setCategories(categories.filter((cat) => cat.id !== categoryId));
 
     // Auto-save
@@ -6390,6 +7025,24 @@ const EnhancedCalculator = () => {
   };
 
   const deleteStore = (categoryId, storeId) => {
+    // Find the store before deleting (for undo)
+    const category = categories.find(cat => cat.id === categoryId);
+    const store = category?.stores?.find(s => s.id === storeId);
+    const storeIndex = category?.stores?.findIndex(s => s.id === storeId);
+
+    if (store) {
+      const storeName = store.name || store.id;
+      recordUndo(
+        UNDO_TYPES.STORE_DELETE,
+        {
+          categoryId,
+          store: JSON.parse(JSON.stringify(store)), // Deep clone
+          index: storeIndex,
+        },
+        `Deleted store "${storeName}"`
+      );
+    }
+
     setCategories(
       categories.map((cat) =>
         cat.id === categoryId
@@ -6408,14 +7061,58 @@ const EnhancedCalculator = () => {
   };
 
   const toggleEditStore = (categoryId, storeId) => {
-    if (
+    const isEditing =
       editingStore.categoryId === categoryId &&
-      editingStore.storeId === storeId
-    ) {
+      editingStore.storeId === storeId;
+
+    if (isEditing) {
+      const snapshot = storeEditOriginalRef.current;
+      const category = categories.find((cat) => cat.id === categoryId);
+      const store = category?.stores?.find((s) => s.id === storeId);
+      if (
+        store &&
+        snapshot &&
+        snapshot.categoryId === categoryId &&
+        snapshot.storeId === storeId
+      ) {
+        const storeLabel = store.address || store.id;
+        ["address", "openTime", "closeTime", "notes"].forEach((field) => {
+          const oldValue = snapshot[field] ?? "";
+          const newValue = store[field] ?? "";
+          if (oldValue !== newValue) {
+            recordUndo(
+              UNDO_TYPES.STORE_EDIT_FIELD,
+              {
+                categoryId,
+                storeId,
+                field,
+                oldValue,
+              },
+              `Edited store \"${storeLabel}\" ${field}: \"${oldValue}\" → \"${newValue}\"`
+            );
+          }
+        });
+      }
+      storeEditOriginalRef.current = null;
       setEditingStore({ categoryId: -1, storeId: -1 });
-    } else {
-      setEditingStore({ categoryId, storeId });
+      return;
     }
+
+    const category = categories.find((cat) => cat.id === categoryId);
+    const store = category?.stores?.find((s) => s.id === storeId);
+    if (store) {
+      storeEditOriginalRef.current = {
+        categoryId,
+        storeId,
+        address: store.address ?? "",
+        openTime: store.openTime ?? "",
+        closeTime: store.closeTime ?? "",
+        notes: store.notes ?? "",
+      };
+    } else {
+      storeEditOriginalRef.current = null;
+    }
+    setEditingStore({ categoryId, storeId });
   };
 
   const isStoreEditing = (categoryId, storeId) => {
@@ -6556,12 +7253,49 @@ const EnhancedCalculator = () => {
     }, 100);
   };
 
+  const beginNoteCategoryEdit = (categoryId) => {
+    const category = noteCategories.find((cat) => cat.id === categoryId);
+    noteCategoryEditOriginalRef.current = category
+      ? { id: categoryId, name: category.name }
+      : { id: categoryId, name: "" };
+    setEditingNoteCategory(categoryId);
+  };
+
+  const commitNoteCategoryEdit = (categoryId) => {
+    const original = noteCategoryEditOriginalRef.current;
+    const category = noteCategories.find((cat) => cat.id === categoryId);
+    if (category && original && original.id === categoryId) {
+      const oldName = original.name ?? "";
+      const newName = category.name ?? "";
+      if (oldName !== newName) {
+        recordUndo(
+          UNDO_TYPES.NOTE_CATEGORY_RENAME,
+          { categoryId, oldName },
+          `Renamed note category: \"${oldName}\" → \"${newName}\"`
+        );
+      }
+    }
+    noteCategoryEditOriginalRef.current = null;
+    setEditingNoteCategory(-1);
+  };
+
   const deleteNoteCategory = (categoryId) => {
     if (noteCategories.length === 1) {
       setSaveNotification("❌ Cannot delete the last category");
       announceFailure("Cannot delete the last note category");
       setTimeout(() => setSaveNotification(""), 3000);
       return;
+    }
+
+    // Find category before deleting (for undo)
+    const category = noteCategories.find(cat => cat.id === categoryId);
+    const categoryIndex = noteCategories.findIndex(cat => cat.id === categoryId);
+    if (category) {
+      recordUndo(
+        UNDO_TYPES.NOTE_CATEGORY_DELETE,
+        { category: JSON.parse(JSON.stringify(category)), index: categoryIndex },
+        `Deleted note category "${category.name}"`
+      );
     }
 
     setNoteCategories(
@@ -6590,6 +7324,12 @@ const EnhancedCalculator = () => {
     );
     if (categoryIndex !== -1) {
       const newNoteIndex = noteCategories[categoryIndex].notes.length;
+      noteEditOriginalRef.current = {
+        categoryId,
+        noteIndex: newNoteIndex,
+        text: "",
+        prevNotes: [...noteCategories[categoryIndex].notes, ""],
+      };
       setEditingNote({ categoryId, noteIndex: newNoteIndex });
     }
 
@@ -6620,6 +7360,27 @@ const EnhancedCalculator = () => {
   };
 
   const deleteNote = (categoryId, noteIndex) => {
+    // Find the note before deleting (for undo)
+    const category = noteCategories.find(cat => cat.id === categoryId);
+    const note = category?.notes?.[noteIndex];
+    const prevNotes = Array.isArray(category?.notes)
+      ? [...category.notes]
+      : [];
+
+    if (note !== undefined) {
+      const categoryName = category.name || 'Unknown';
+      recordUndo(
+        UNDO_TYPES.NOTE_DELETE,
+        {
+          categoryId,
+          noteIndex,
+          note,
+          prevNotes,
+        },
+        `Deleted note from "${categoryName}": "${note.substring(0, 30)}..."`
+      );
+    }
+
     setNoteCategories(
       noteCategories.map((cat) =>
         cat.id === categoryId
@@ -6638,14 +7399,52 @@ const EnhancedCalculator = () => {
   };
 
   const toggleNoteEdit = (categoryId, noteIndex) => {
-    if (
+    const isEditing =
       editingNote.categoryId === categoryId &&
-      editingNote.noteIndex === noteIndex
-    ) {
+      editingNote.noteIndex === noteIndex;
+
+    if (isEditing) {
+      const snapshot = noteEditOriginalRef.current;
+      const category = noteCategories.find((cat) => cat.id === categoryId);
+      const newText = category?.notes?.[noteIndex] ?? "";
+      if (
+        category &&
+        snapshot &&
+        snapshot.categoryId === categoryId &&
+        snapshot.noteIndex === noteIndex
+      ) {
+        const oldText = snapshot.text ?? "";
+        if (oldText !== newText) {
+          const categoryName = category.name || "Unknown";
+          recordUndo(
+            UNDO_TYPES.NOTE_EDIT,
+            {
+              categoryId,
+              noteIndex,
+              oldText,
+              prevNotes: snapshot.prevNotes,
+            },
+            `Edited note in \"${categoryName}\": \"${oldText.substring(0, 20)}...\" → \"${newText.substring(0, 20)}...\"`
+          );
+        }
+      }
+      noteEditOriginalRef.current = null;
       setEditingNote({ categoryId: "", noteIndex: -1 });
-    } else {
-      setEditingNote({ categoryId, noteIndex });
+      return;
     }
+
+    const category = noteCategories.find((cat) => cat.id === categoryId);
+    const prevNotes = Array.isArray(category?.notes)
+      ? [...category.notes]
+      : [];
+    const oldText = prevNotes[noteIndex] ?? "";
+    noteEditOriginalRef.current = {
+      categoryId,
+      noteIndex,
+      text: oldText,
+      prevNotes,
+    };
+    setEditingNote({ categoryId, noteIndex });
   };
 
   const isNoteEditing = (categoryId, noteIndex) => {
@@ -6758,6 +7557,32 @@ const EnhancedCalculator = () => {
     );
   };
 
+  const beginDasherCategoryEdit = (categoryId) => {
+    const category = dasherCategories.find((cat) => cat.id === categoryId);
+    dasherCategoryEditOriginalRef.current = category
+      ? { id: categoryId, name: category.name }
+      : { id: categoryId, name: "" };
+    setEditingDasherCategory(categoryId);
+  };
+
+  const commitDasherCategoryEdit = (categoryId) => {
+    const original = dasherCategoryEditOriginalRef.current;
+    const category = dasherCategories.find((cat) => cat.id === categoryId);
+    if (category && original && original.id === categoryId) {
+      const oldName = original.name ?? "";
+      const newName = category.name ?? "";
+      if (oldName !== newName) {
+        recordUndo(
+          UNDO_TYPES.DASHER_CATEGORY_RENAME,
+          { categoryId, oldName },
+          `Renamed dasher category: \"${oldName}\" → \"${newName}\"`
+        );
+      }
+    }
+    dasherCategoryEditOriginalRef.current = null;
+    setEditingDasherCategory(-1);
+  };
+
   const deleteDasherCategory = (categoryId) => {
     // Don't delete if it's the last category
     if (dasherCategories.length === 1) {
@@ -6768,7 +7593,18 @@ const EnhancedCalculator = () => {
     showConfirm(
       `Delete this category and all its dashers?`,
       () => {
-        // Use functional update to avoid stale state capture
+        // Find category before deleting (for undo)
+        const category = dasherCategories.find(cat => cat.id === categoryId);
+        const categoryIndex = dasherCategories.findIndex(
+          cat => cat.id === categoryId,
+        );
+        if (category) {
+          recordUndo(
+            UNDO_TYPES.DASHER_CATEGORY_DELETE,
+            { category: JSON.parse(JSON.stringify(category)), index: categoryIndex },
+            `Deleted dasher category "${category.name}"`
+          );
+        }
         setDasherCategories((prev) =>
           prev.filter((cat) => cat.id !== categoryId),
         );
@@ -6975,6 +7811,25 @@ const EnhancedCalculator = () => {
   };
 
   const deleteDasher = (categoryId, dasherId) => {
+    // Find the dasher before deleting (for undo)
+    const category = dasherCategories.find(cat => cat.id === categoryId);
+    const dasher = category?.dashers?.find(d => d.id === dasherId);
+    const dasherIndex = category?.dashers?.findIndex(d => d.id === dasherId);
+    
+    if (dasher) {
+      const dasherName = dasher.name || dasher.phone || dasher.id;
+      recordUndo(
+        UNDO_TYPES.DASHER_DELETE,
+        {
+          dasher: JSON.parse(JSON.stringify(dasher)), // Deep clone
+          categoryKey: 'main',
+          categoryId: categoryId,
+          index: dasherIndex,
+        },
+        `Deleted dasher "${dasherName}"`
+      );
+    }
+
     setDasherCategories(
       dasherCategories.map((cat) =>
         cat.id === categoryId
@@ -7228,6 +8083,24 @@ const EnhancedCalculator = () => {
     ) {
       // Exiting edit mode - save the balance value
       if (editingBalanceValue.trim() !== "") {
+        // Record undo for balance edit (find current balance first)
+        const dasher = findDasherById(categoryId, dasherId);
+        if (dasher) {
+          const oldBalance = dasher.balance || 0;
+          const newBalance = editingBalanceValue;
+          if (oldBalance !== newBalance) {
+            const dasherName = dasher.name || dasher.phone || dasher.id;
+            recordUndo(
+              UNDO_TYPES.DASHER_EDIT_BALANCE,
+              {
+                dasherId,
+                oldBalance,
+              },
+              `Changed "${dasherName}" balance from $${oldBalance} to $${newBalance}`
+            );
+          }
+        }
+        
         updateDasherEverywhere(dasherId, { balance: editingBalanceValue });
       }
       setEditingDasher({ categoryId: "", dasherId: "" });
@@ -7315,6 +8188,10 @@ const EnhancedCalculator = () => {
       // Handle balance specially with delta calculation and history tracking
       let finalBalance = dasher.balance;
       let finalHistory = dasher.earningsHistory || [];
+      const hasExplicitHistory = Object.prototype.hasOwnProperty.call(
+        updates,
+        "earningsHistory",
+      );
       
       if (updates.balance !== undefined) {
         const rawInput = updates.balance;
@@ -7327,7 +8204,7 @@ const EnhancedCalculator = () => {
         finalBalance = rawInput; // Keep raw input for typing experience
 
         // Add to earningsHistory if positive delta
-        if (delta > POSITIVE_DELTA_THRESHOLD) {
+        if (!hasExplicitHistory && delta > POSITIVE_DELTA_THRESHOLD) {
           const historyEntry = {
             amount: Number(delta.toFixed(2)),
             at: new Date().toISOString(),
@@ -7336,7 +8213,13 @@ const EnhancedCalculator = () => {
           finalHistory = [...finalHistory, historyEntry];
         }
       }
-      
+
+      if (hasExplicitHistory) {
+        finalHistory = Array.isArray(updates.earningsHistory)
+          ? updates.earningsHistory
+          : [];
+      }
+
       return {
         ...dasher,
         ...(updates.name !== undefined && { name: updates.name }),
@@ -7344,9 +8227,12 @@ const EnhancedCalculator = () => {
         ...(updates.phone !== undefined && { phone: updates.phone }),
         ...(updates.emailPw !== undefined && { emailPw: updates.emailPw }),
         ...(updates.dasherPw !== undefined && { dasherPw: updates.dasherPw }),
-        ...(updates.balance !== undefined && { 
+        ...((updates.balance !== undefined || hasExplicitHistory) && { 
           balance: finalBalance,
           earningsHistory: finalHistory
+        }),
+        ...(updates.cashOutHistory !== undefined && {
+          cashOutHistory: updates.cashOutHistory,
         }),
         ...(updates.notes !== undefined && {
           notes: Array.isArray(updates.notes)
@@ -7418,6 +8304,48 @@ const EnhancedCalculator = () => {
   const onDraftCommit = useCallback((dasherId, draft) => {
     if (!dasherId) return;
 
+    // Find the dasher to get old values (for undo)
+    const result = findDasherAcrossBuckets(dasherId);
+    if (result?.dasher) {
+      const dasher = result.dasher;
+      const dasherName = dasher.name || dasher.phone || dasher.id;
+
+      // Record undo for each changed field
+      const normalizeText = (value) =>
+        value === undefined || value === null ? "" : String(value);
+      const normalizeNotes = (value) =>
+        Array.isArray(value) ? value.join("\n") : normalizeText(value);
+
+      const currentName = normalizeText(dasher.name);
+      const nextName = normalizeText(draft.name);
+      if (draft.name !== undefined && nextName !== currentName) {
+        recordUndo(
+          UNDO_TYPES.DASHER_EDIT_FIELD,
+          { dasherId, field: 'name', oldValue: dasher.name },
+          `Edited "${dasherName}" name: "${dasher.name}" → "${draft.name}"`
+        );
+      }
+      const currentEmail = normalizeText(dasher.email);
+      const nextEmail = normalizeText(draft.email);
+      if (draft.email !== undefined && nextEmail !== currentEmail) {
+        recordUndo(
+          UNDO_TYPES.DASHER_EDIT_FIELD,
+          { dasherId, field: 'email', oldValue: dasher.email },
+          `Edited "${dasherName}" email: "${dasher.email}" → "${draft.email}"`
+        );
+      }
+      const currentNotes = normalizeNotes(dasher.notes);
+      const nextNotes = normalizeNotes(draft.notes);
+      if (draft.notes !== undefined && nextNotes !== currentNotes) {
+        recordUndo(
+          UNDO_TYPES.DASHER_EDIT_FIELD,
+          { dasherId, field: 'notes', oldValue: dasher.notes },
+          `Edited "${dasherName}" notes`
+        );
+      }
+      // Note: balance editing undo is handled separately in toggleEditDasher
+    }
+
     // Use centralized update helper
     updateDasherEverywhere(dasherId, {
       name: draft.name,
@@ -7425,7 +8353,7 @@ const EnhancedCalculator = () => {
       balance: draft.balance,
       notes: draft.notes
     });
-  }, [updateDasherEverywhere]);
+  }, [updateDasherEverywhere, findDasherAcrossBuckets, recordUndo]);
 
   // [PERSISTENCE-FIX v1.9.8] Toggle must handle ?? true default
   // undefined/null → collapsed by default, so toggle to false (expand)
@@ -9375,7 +10303,7 @@ const EnhancedCalculator = () => {
     }
   };
 
-  const moveDasher = (fromKey, toKey, dasherId) => {
+  const moveDasher = (fromKey, toKey, dasherId, options = {}) => {
     if (!dasherId || !toKey || fromKey === toKey) return;
 
     const beforeCounts = DEV ? getBucketCounts() : null;
@@ -9391,6 +10319,22 @@ const EnhancedCalculator = () => {
     const { sourceKey, categoryId, dasher } = location;
     const fromCategoryId =
       sourceKey === "main" ? categoryId : dasher.originalCategory || null;
+
+    // Record undo before move (skip when restoring from undo)
+    if (!options.skipUndo) {
+      const dasherName = dasher.name || dasher.phone || dasher.id;
+      const fromLabel = sourceKey === 'main' ? 'Main' : (sourceKey || 'Unknown');
+      const toLabel = toKey === 'main' ? 'Main' : (toKey || 'Unknown');
+      recordUndo(
+        UNDO_TYPES.DASHER_MOVE,
+        {
+          dasherId,
+          fromKey: sourceKey,
+          toKey,
+        },
+        `Moved "${dasherName}" from ${fromLabel} to ${toLabel}`
+    );
+    }
 
     removeDasherFromState(location);
     insertDasherIntoBucket(dasher, toKey, fromCategoryId);
@@ -10691,6 +11635,17 @@ const EnhancedCalculator = () => {
         </div>
       )}
 
+      {/* Undo Notification Toast - Compact */}
+      {undoNotification && (
+        <button
+          onClick={() => performUndo(undoNotification.undoId)}
+          className="fixed top-3 right-3 z-50 bg-slate-800/90 border border-slate-600/40 p-2 rounded-lg shadow-md backdrop-blur-sm hover:bg-slate-700/90 transition-colors group"
+          title={`Undo: ${undoNotification.message}`}
+        >
+          <RotateCcw size={16} className="text-amber-400/80 group-hover:text-amber-300" />
+        </button>
+      )}
+
       {/* [FIX-B] Custom Confirm Modal */}
       {confirmModal.isOpen && (
         <div
@@ -11434,10 +12389,10 @@ const EnhancedCalculator = () => {
                                 )
                               }
                               className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-gray-400"
-                              onBlur={() => setEditingCategory(-1)}
+                              onBlur={() => commitCategoryEdit(category.id)}
                               onKeyPress={(e) =>
                                 e.key === "Enter" &&
-                                setEditingCategory(-1)
+                                commitCategoryEdit(category.id)
                               }
                               onClick={(e) => e.stopPropagation()}
                               autoFocus
@@ -11506,7 +12461,7 @@ const EnhancedCalculator = () => {
                           </button>
                           <button
                             onClick={() =>
-                              setEditingCategory(category.id)
+                              beginCategoryEdit(category.id)
                             }
                             className="text-yellow-400 hover:text-yellow-300 p-1"
                             title="Edit category"
@@ -12000,10 +12955,10 @@ const EnhancedCalculator = () => {
                                   )
                                 }
                                 className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm text-white focus:outline-none"
-                                onBlur={() => setEditingNoteCategory(-1)}
+                                onBlur={() => commitNoteCategoryEdit(category.id)}
                                 onKeyPress={(e) =>
                                   e.key === "Enter" &&
-                                  setEditingNoteCategory(-1)
+                                  commitNoteCategoryEdit(category.id)
                                 }
                                 onClick={(e) => e.stopPropagation()}
                                 autoFocus
@@ -12027,7 +12982,7 @@ const EnhancedCalculator = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setEditingNoteCategory(category.id);
+                                beginNoteCategoryEdit(category.id);
                               }}
                               className="text-yellow-400 hover:text-yellow-300 p-1"
                               title="Rename category"
@@ -12937,11 +13892,11 @@ const EnhancedCalculator = () => {
                                     }
                                     className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm text-white focus:outline-none"
                                     onBlur={() =>
-                                      setEditingDasherCategory(-1)
+                                      commitDasherCategoryEdit(category.id)
                                     }
                                     onKeyPress={(e) =>
                                       e.key === "Enter" &&
-                                      setEditingDasherCategory(-1)
+                                      commitDasherCategoryEdit(category.id)
                                     }
                                     onClick={(e) => e.stopPropagation()}
                                     autoFocus
@@ -12995,7 +13950,7 @@ const EnhancedCalculator = () => {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setEditingDasherCategory(category.id);
+                                  beginDasherCategoryEdit(category.id);
                                 }}
                                 className="text-yellow-400 hover:text-yellow-300 p-1"
                                 title="Rename category"
@@ -16850,7 +17805,7 @@ const EnhancedCalculator = () => {
                 <span className="text-lg font-medium">
                   State Management{" "}
                   <span className="text-sm text-gray-400 ml-2">
-                    v{window.APP_VERSION || "1.11.1"}
+                    v{window.APP_VERSION || "1.11.6"}
                   </span>
                   {/* [PERSISTENCE-FIX] Last saved indicator */}
                   {lastSavedAt && (
@@ -16960,20 +17915,7 @@ const EnhancedCalculator = () => {
                     <span className="text-sm font-medium">Clear All</span>
                   </button>
 
-                  {/* Undo Last Cash Out */}
-                  {lastCashOutRef.current && (
-                    <button
-                      onClick={undoLastCashOut}
-                      className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-                      title={`Undo cash out of $${lastCashOutRef.current.amount?.toFixed(2) || "0.00"}`}
-                      aria-label={`Undo cash out of $${lastCashOutRef.current.amount?.toFixed(2) || "0.00"}`}
-                    >
-                      <RotateCcw size={18} />
-                      <span className="text-sm font-medium">
-                        Undo Cash Out
-                      </span>
-                    </button>
-                  )}
+                  {/* Old Undo Cash Out button removed - replaced by universal undo toast */}
 
                   {/* Edit Mode Toggle */}
                   <button
