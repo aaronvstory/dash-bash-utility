@@ -289,7 +289,8 @@
 
     <!-- Diagnostic: Log all component names being used -->
     <script>
-      (function() {
+      // Run diagnostics AFTER all scripts have loaded
+      window.addEventListener('load', function() {
         console.log("🔍 Checking all components are defined:");
         const components = [
           'Icon', 'Trash2', 'Plus', 'Copy', 'ChevronDown', 'ChevronUp',
@@ -319,7 +320,7 @@
         } else {
           console.error("❌ getVirtualList is not defined!");
         }
-      })();
+      });
     </script>
   </body>
 </html>
