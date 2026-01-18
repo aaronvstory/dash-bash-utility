@@ -1310,6 +1310,40 @@ body.dragging {
   transform: scaleY(1.05);
 }
 
+.quick-message-row[data-tint]:not([data-tint="none"]) {
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.08);
+}
+
+.quick-message-row[data-tint="indigo"] {
+  background: rgba(79, 70, 229, 0.16);
+  border-color: rgba(129, 140, 248, 0.45);
+}
+
+.quick-message-row[data-tint="emerald"] {
+  background: rgba(16, 185, 129, 0.16);
+  border-color: rgba(52, 211, 153, 0.45);
+}
+
+.quick-message-row[data-tint="amber"] {
+  background: rgba(245, 158, 11, 0.16);
+  border-color: rgba(251, 191, 36, 0.45);
+}
+
+.quick-message-row[data-tint="rose"] {
+  background: rgba(244, 63, 94, 0.16);
+  border-color: rgba(251, 113, 133, 0.45);
+}
+
+.quick-message-row[data-tint="sky"] {
+  background: rgba(14, 165, 233, 0.16);
+  border-color: rgba(56, 189, 248, 0.45);
+}
+
+.quick-message-row[data-tint="slate"] {
+  background: rgba(100, 116, 139, 0.18);
+  border-color: rgba(148, 163, 184, 0.45);
+}
+
 .quick-message-row[data-tint="indigo"]::before {
   background: linear-gradient(180deg, rgba(129, 140, 248, 0.95), rgba(99, 102, 241, 0.85));
 }
@@ -1334,11 +1368,6 @@ body.dragging {
   background: linear-gradient(180deg, rgba(148, 163, 184, 0.9), rgba(100, 116, 139, 0.85));
 }
 
-.quick-message-row[data-tint]:not([data-tint="none"]) {
-  background: rgba(30, 41, 59, 0.82);
-  border-color: rgba(148, 163, 184, 0.4);
-  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.08);
-}
 
 .tint-picker {
   position: absolute;
