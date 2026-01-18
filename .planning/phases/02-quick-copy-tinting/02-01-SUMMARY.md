@@ -58,11 +58,14 @@ Each task was committed atomically:
 1. **Task 1: Add message tint model + persistence** - `24ccd1b` (feat)
 2. **Task 2: Add tint picker affordance next to edit/delete** - `2a58bdc` (feat)
 3. **Task 3: Apply tint styling to message rows** - `2a58bdc` (feat)
+4. **Post-verify fix: Distinct tint backgrounds** - `609b4fe` (fix)
+5. **Rebuild compiled assets** - `37d8b73` (chore)
 
-**Plan metadata:** pending
+**Plan metadata:** `93618c3` (docs)
 
 ## Authentication Gates
 None
+
 
 
 ## Files Created/Modified
@@ -74,7 +77,25 @@ None
 
 ## Deviations from Plan
 
-None - plan executed exactly as written.
+### Auto-fixed Issues
+
+**1. [Rule 1 - Bug] Distinct tint background colors were not visible**
+- **Found during:** Verification checkpoint (after Task 3)
+- **Issue:** All tints looked identical; row background tint color not applied
+- **Fix:** Added per-tint row background + border styling for each color
+- **Files modified:** styles.css, tailwind.css
+- **Verification:** Pending manual re-check
+- **Commit:** 609b4fe
+
+### Deferred Enhancements
+
+None
+
+---
+
+**Total deviations:** 1 auto-fixed (1 bug), 0 deferred
+**Impact on plan:** Fix required for tint visibility; no scope creep.
+
 
 ## Issues Encountered
 None
