@@ -110,6 +110,8 @@ const RotateCcw = (props) =>
   React.createElement(Icon, { ...props, name: "rotate-ccw" });
 const ShieldCheck = (props) =>
   React.createElement(Icon, { ...props, name: "shield-check" });
+const Palette = (props) =>
+  React.createElement(Icon, { ...props, name: "palette" });
 
 // =========================================================================
 // Constants
@@ -1032,25 +1034,79 @@ const EnhancedCalculator = () => {
   const [copyNotification, setCopyNotification] = useState("");
   // Undo notification state: { message: string, undoId: string } | null
   const [undoNotification, setUndoNotification] = useState(null);
-  const [messages, setMessages] = useState([
-    "hi can u pls see if u can help get a dasher assigned quicker!? I'm in a rush to get to work asap! Thank you",
-    "Ok someone got it! darn it i just noticed i put the tip so high by accident :( can u help change the tip to $0 pls?",
-    "Thanks, have a great day! <3",
-    "Yes",
-    "unassign this driver, we have had issues in the past, restraining order, stole my order last time, ASAP PLEASE, Thank you!",
-    "Adjust dasher tip to $0 for the current order",
-    "customer asked for refund if out of stock",
-    "Got 1⚡",
-    "canceled ❌❌❌",
-    "looking for offer 👀",
-    "Got 2nd⚡⚡",
-    "Got 2nd⚡⚡  Arrived, pls lmk when removed. 🦆🦆🦆",
-    "AGENT",
-    "It applies to the other order as well! Cancel the other order I am on as well, please.  🤗",
-    "Got 1, waiting on 2nd 🤗🤗🤗",
-    "Yes I see the 3 dots but when i click it it says as everything is unavailable I need to contact support for it to be cancelled",
-    "Hello 👋 the stores oven is broken",
-  ]);
+  const createMessageEntry = (text, tint = null) => ({
+    text: typeof text === "string" ? text : String(text ?? ""),
+    tint: tint || null,
+  });
+  const NO_TINT = "none";
+  const MESSAGE_TINT_OPTIONS = [
+    { id: "none", label: "None" },
+    { id: "indigo", label: "Indigo" },
+    { id: "emerald", label: "Emerald" },
+    { id: "amber", label: "Amber" },
+    { id: "rose", label: "Rose" },
+    { id: "sky", label: "Sky" },
+    { id: "slate", label: "Slate" },
+  ];
+  const normalizeMessageEntry = (entry) => {
+    if (typeof entry === "string") {
+      return createMessageEntry(entry);
+    }
+    if (entry && typeof entry === "object") {
+      const text =
+        typeof entry.text === "string"
+          ? entry.text
+          : typeof entry.message === "string"
+            ? entry.message
+            : String(entry.text ?? "");
+      const tint = entry.tint ?? null;
+      return createMessageEntry(text, tint);
+    }
+    return createMessageEntry("");
+  };
+  const normalizeMessages = (list) =>
+    ensureArray(list).map((entry) => normalizeMessageEntry(entry));
+  const getMessageText = (entry) =>
+    typeof entry === "string" ? entry : entry?.text ?? "";
+  const getMessageTint = (entry) => entry?.tint ?? null;
+  const resolveMessageTint = (tint) =>
+    tint && tint !== NO_TINT ? tint : null;
+  const getTintLabel = (tint) => {
+    const resolved = tint || NO_TINT;
+    const match = MESSAGE_TINT_OPTIONS.find((option) => option.id === resolved);
+    return match ? match.label : "None";
+  };
+  const getTintClass = (tint) => {
+    if (tint && tint !== 'none') {
+      return `tint-chip tint-${tint}`;
+    }
+    return "tint-chip";
+  };
+  const cloneMessages = (list) =>
+    normalizeMessages(list).map((entry) => ({ ...entry }));
+  const [messages, setMessages] = useState(() =>
+    normalizeMessages([
+      "hi can u pls see if u can help get a dasher assigned quicker!? I'm in a rush to get to work asap! Thank you",
+      "Ok someone got it! darn it i just noticed i put the tip so high by accident :( can u help change the tip to $0 pls?",
+      "Thanks, have a great day! <3",
+      "Yes",
+      "unassign this driver, we have had issues in the past, restraining order, stole my order last time, ASAP PLEASE, Thank you!",
+      "Adjust dasher tip to $0 for the current order",
+      "customer asked for refund if out of stock",
+      "Got 1⚡",
+      "canceled ❌❌❌",
+      "looking for offer 👀",
+      "Got 2nd⚡⚡",
+      "Got 2nd⚡⚡  Arrived, pls lmk when removed. 🦆🦆🦆",
+      "AGENT",
+      "It applies to the other order as well! Cancel the other order I am on as well, please.  🤗",
+      "Got 1, waiting on 2nd 🤗🤗🤗",
+      "Yes I see the 3 dots but when i click it it says as everything is unavailable I need to contact support for it to be cancelled",
+      "Hello 👋 the stores oven is broken",
+    ]),
+  );
+  const [tintPickerIndex, setTintPickerIndex] = useState(-1);
+  const tintPickerCloseTimeout = useRef(null);
 
   // Address Book state
   const [categories, setCategories] = useState([
@@ -1907,33 +1963,42 @@ const EnhancedCalculator = () => {
   const restoreMessageDelete = (beforeState) => {
     const { prevMessages, index, message } = beforeState;
     if (Array.isArray(prevMessages)) {
-      setMessages(prevMessages);
+      setMessages(cloneMessages(prevMessages));
       requestPersist();
       return;
     }
-    setMessages(msgs => {
+    setMessages((msgs) => {
       const newMsgs = [...msgs];
       const safeIndex =
         typeof index === "number" && index >= 0 && index <= newMsgs.length
           ? index
           : newMsgs.length;
-      newMsgs.splice(safeIndex, 0, message);
+      newMsgs.splice(
+        safeIndex,
+        0,
+        normalizeMessageEntry(message || createMessageEntry("")),
+      );
       return newMsgs;
     });
     requestPersist();
   };
 
   const restoreMessageEdit = (beforeState) => {
-    const { prevMessages, index, oldText } = beforeState;
+    const { prevMessages, index, oldText, tint } = beforeState;
     if (Array.isArray(prevMessages)) {
-      setMessages(prevMessages);
+      setMessages(cloneMessages(prevMessages));
       requestPersist();
       return;
     }
-    setMessages(msgs => {
+    setMessages((msgs) => {
       const newMsgs = [...msgs];
       if (typeof index === "number" && index >= 0 && index < newMsgs.length) {
-        newMsgs[index] = oldText;
+        const existing = newMsgs[index];
+        newMsgs[index] = {
+          ...normalizeMessageEntry(existing),
+          text: typeof oldText === "string" ? oldText : String(oldText ?? ""),
+          tint: tint !== undefined ? tint : existing?.tint ?? null,
+        };
       }
       return newMsgs;
     });
@@ -1942,30 +2007,40 @@ const EnhancedCalculator = () => {
 
   const restoreMessageReorder = (beforeState) => {
     const { oldOrder } = beforeState;
-    setMessages(oldOrder);
+    setMessages(cloneMessages(oldOrder));
     requestPersist();
   };
 
   const restoreMessageAdd = (beforeState) => {
     const { prevMessages, index, message } = beforeState;
     if (Array.isArray(prevMessages)) {
-      setMessages(prevMessages);
+      setMessages(cloneMessages(prevMessages));
       requestPersist();
       return;
     }
-    setMessages(msgs => {
+    setMessages((msgs) => {
       const next = [...msgs];
-      if (
-        typeof index === "number" &&
-        index >= 0 &&
-        index < next.length &&
-        (!message || next[index] === message)
-      ) {
-        next.splice(index, 1);
-        return next;
+      if (typeof index === "number" && index >= 0 && index < next.length) {
+        const existing = next[index];
+        if (!message) {
+          next.splice(index, 1);
+          return next;
+        }
+        const matchText = typeof message === "string"
+          ? message
+          : normalizeMessageEntry(message).text;
+        if (existing?.text === matchText) {
+          next.splice(index, 1);
+          return next;
+        }
       }
       if (message) {
-        const fallbackIndex = next.lastIndexOf(message);
+        const matchText = typeof message === "string"
+          ? message
+          : normalizeMessageEntry(message).text;
+        const fallbackIndex = next.findIndex(
+          (entry) => entry?.text === matchText,
+        );
         if (fallbackIndex !== -1) {
           next.splice(fallbackIndex, 1);
         }
@@ -2172,7 +2247,7 @@ const EnhancedCalculator = () => {
 
         // Load other state
         setPrices(state.prices || []);
-        setMessages(state.messages || messages);
+        setMessages(normalizeMessages(state.messages || messages));
         setCategories(state.categories || []);
         // Load archived dashers
         if (state.archivedDashers) {
@@ -2295,7 +2370,7 @@ const EnhancedCalculator = () => {
           if (idbData.target) setTarget(idbData.target);
           if (idbData.targetPreset) setTargetPreset(idbData.targetPreset);
           if (idbData.prices) setPrices(idbData.prices);
-          if (idbData.messages) setMessages(idbData.messages);
+          if (idbData.messages) setMessages(normalizeMessages(idbData.messages));
           if (idbData.categories) setCategories(idbData.categories);
           if (idbData.noteCategories) setNoteCategories(idbData.noteCategories);
           if (idbData.dasherCategories) setDasherCategories(idbData.dasherCategories);
@@ -2702,10 +2777,11 @@ const EnhancedCalculator = () => {
 
   // Message management functions
   const copyToClipboard = async (text) => {
+    const safeText = String(text ?? "");
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(safeText);
       const preview =
-        text.length > 40 ? text.substring(0, 40) + "..." : text;
+        safeText.length > 40 ? safeText.substring(0, 40) + "..." : safeText;
       setCopyNotification(`✅ Copied: "${preview}"`);
       setTimeout(() => setCopyNotification(""), 3000);
     } catch (err) {
@@ -2718,25 +2794,25 @@ const EnhancedCalculator = () => {
 
   const startEdit = (index) => {
     setEditingIndex(index);
-    setEditText(messages[index]);
+    setEditText(messages[index]?.text ?? "");
   };
 
   const saveEdit = () => {
     if (editText.trim()) {
       // Record undo before edit
-      const prevMessages = [...messages];
-      const oldText = messages[editingIndex];
+      const prevMessages = cloneMessages(messages);
+      const oldText = messages[editingIndex]?.text ?? "";
       const newText = editText.trim();
       if (oldText !== newText) {
         recordUndo(
           UNDO_TYPES.MESSAGE_EDIT,
-          { index: editingIndex, oldText, prevMessages },
+          { index: editingIndex, oldText, prevMessages, tint: messages[editingIndex]?.tint ?? null },
           `Edited message: "${oldText.substring(0, 20)}..." → "${newText.substring(0, 20)}..."`
         );
       }
 
       const newMessages = [...messages];
-      newMessages[editingIndex] = newText;
+      newMessages[editingIndex] = { ...newMessages[editingIndex], text: newText };
       setMessages(newMessages);
 
       // Auto-save messages
@@ -2755,13 +2831,13 @@ const EnhancedCalculator = () => {
 
   const deleteMessage = (index) => {
     // Record undo before deletion
-    const prevMessages = [...messages];
+    const prevMessages = cloneMessages(messages);
     const message = messages[index];
     if (message) {
       recordUndo(
         UNDO_TYPES.MESSAGE_DELETE,
         { index, message, prevMessages },
-        `Deleted message: "${message.substring(0, 30)}..."`
+        `Deleted message: "${(message.text || "").substring(0, 30)}..."`
       );
     }
 
@@ -2783,6 +2859,32 @@ const EnhancedCalculator = () => {
     e.dataTransfer.effectAllowed = "move";
   };
 
+  const toggleTintPicker = (index) => {
+    setTintPickerIndex((prev) => (prev === index ? -1 : index));
+  };
+
+  const applyMessageTint = (index, tint) => {
+    const resolvedTint = resolveMessageTint(tint);
+    const prevMessages = cloneMessages(messages);
+    const targetMessage = messages[index];
+    if (targetMessage && targetMessage.tint !== resolvedTint) {
+      recordUndo(
+        UNDO_TYPES.MESSAGE_EDIT,
+        { index, oldText: targetMessage.text ?? "", prevMessages, tint: targetMessage.tint },
+        `Updated message tint: "${(targetMessage.text || "").substring(0, 20)}..."`
+      );
+    }
+    setMessages((prev) =>
+      prev.map((entry, idx) =>
+        idx === index
+          ? { ...entry, tint: resolvedTint }
+          : entry,
+      ),
+    );
+    setTintPickerIndex(-1);
+    requestPersist();
+  };
+
   const handleDragOver = (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
@@ -2795,7 +2897,7 @@ const EnhancedCalculator = () => {
     // Record undo before reordering
     recordUndo(
       UNDO_TYPES.MESSAGE_REORDER,
-      { oldOrder: [...messages] },
+      { oldOrder: cloneMessages(messages) },
       `Reordered message from position ${draggedIndex + 1} to ${dropIndex + 1}`
     );
 
@@ -2819,11 +2921,11 @@ const EnhancedCalculator = () => {
       // Record undo before adding
       recordUndo(
         UNDO_TYPES.MESSAGE_ADD,
-        { index: messages.length, message: newText, prevMessages: [...messages] },
+        { index: messages.length, message: newText, prevMessages: cloneMessages(messages) },
         `Added message: "${newText.substring(0, 30)}..."`
       );
 
-      const newMessages = [...messages, newText];
+      const newMessages = [...messages, createMessageEntry(newText)];
       setMessages(newMessages);
       setNewMessageText("");
       setIsAddingNew(false);
@@ -3585,7 +3687,7 @@ const EnhancedCalculator = () => {
         }
 
         setPrices(state.prices || []);
-        setMessages(state.messages || []);
+        setMessages(normalizeMessages(state.messages || []));
         setCategories(state.categories || []);
         // Don't use defaults if we have saved state
         if (state.noteCategories) setNoteCategories(state.noteCategories);
@@ -4291,6 +4393,10 @@ const EnhancedCalculator = () => {
       }
     });
 
+    if (normalized.messages) {
+      normalized.messages = normalizeMessages(normalized.messages);
+    }
+
     const collapsedMaps = [
       "collapsedCategories",
       "collapsedStores",
@@ -4776,9 +4882,9 @@ const EnhancedCalculator = () => {
         }
 
         if (state.messages && state.messages.length > 0) {
-          const existing = new Set((messages || []).map((m) => String(m)));
-          const toAdd = (state.messages || []).filter(
-            (m) => !existing.has(String(m)),
+          const existing = new Set((messages || []).map((m) => String(m?.text ?? m)));
+          const toAdd = normalizeMessages(state.messages || []).filter(
+            (m) => !existing.has(String(m?.text ?? m)),
           );
           if (toAdd.length > 0)
             setMessages([...(messages || []), ...toAdd]);
@@ -4809,7 +4915,7 @@ const EnhancedCalculator = () => {
           }
 
           setPrices(normalized.prices || []);
-          setMessages(normalized.messages || []);
+          setMessages(normalizeMessages(normalized.messages || []));
           setCategories(normalized.categories || []);
 
           if (normalized.noteCategories) setNoteCategories(normalized.noteCategories);
@@ -4911,7 +5017,7 @@ const EnhancedCalculator = () => {
         setCustomTarget("");
         setIsEditingTarget(false);
         setPrices([]);
-        setMessages([
+        setMessages(normalizeMessages([
           "Ok someone got it! darn it i just noticed i put the tip so high by accident :( can u help change the tip to $0 pls?",
           "Thanks, have a great day! <3",
           "Yes",
@@ -4920,7 +5026,7 @@ const EnhancedCalculator = () => {
           "unassign this driver, we have had issues in the past, restraining order, stole my order last time, ASAP PLEASE, Thank you!",
           "Adjust dasher tip to $0 for the current order",
           "customer asked for refund if out of stock",
-        ]);
+        ]));
         setCategories([]);
         setNoteCategories([
           { id: Date.now().toString(), name: "General", notes: [] },
@@ -6252,10 +6358,8 @@ const EnhancedCalculator = () => {
     [categoryDashersFlat, showNonZeroOnly, dasherSort, globalQuery],
   );
 
-  // [PERF-FIX3] Only compute stats metadata when Statistics section is open
+  // Dasher metadata for identity tracking and descriptor resolution
   const dashersMeta = useMemo(() => {
-    if (!isStatisticsOpen) return []; // Early return when stats closed
-
     const meta = [];
 
     dasherCategories.forEach((category, catIndex) => {
@@ -6326,7 +6430,6 @@ const EnhancedCalculator = () => {
 
     return meta;
   }, [
-    isStatisticsOpen, // [PERF-FIX3] Gate computation
     dasherCategories,
     readyDashers,
     currentlyUsingDashers,
@@ -9326,6 +9429,7 @@ const EnhancedCalculator = () => {
                       const applyBalance = inlineApplyBalance;
                       const nowIso = new Date().toISOString();
                       const targets = gatherDescriptorsForDasher();
+                      console.log('[DEBUG] gatherDescriptorsForDasher result:', { targets, dasher, categoryId, identityKey: deriveDasherIdentity(dasher, `${categoryId ?? "bucket"}-${dasher?.id ?? dasher?.email ?? dasher?.phone ?? "dash"}`) });
 
                       if (!targets || targets.length === 0) {
                         const errMsg =
@@ -12132,10 +12236,11 @@ const EnhancedCalculator = () => {
                 {messages.map((message, index) => (
                   <div
                     key={index}
-                    className={`bg-gray-700/60 hover:bg-gray-700 rounded-lg p-2 transition-colors border border-gray-600/30 ${draggedIndex === index
+                    className={`quick-message-row bg-gray-700/60 ${getMessageTint(message) ? "" : "hover:bg-gray-700"} rounded-lg p-2 transition-colors border border-gray-600/30 ${draggedIndex === index
                       ? "opacity-50 bg-gray-600"
                       : ""
                       }`}
+                    data-tint={getMessageTint(message) || "none"}
                     draggable
                     onDragStart={(e) => handleDragStart(e, index)}
                     onDragOver={handleDragOver}
@@ -12162,10 +12267,10 @@ const EnhancedCalculator = () => {
                         ) : (
                           <div
                             className="text-base text-gray-100 leading-relaxed whitespace-pre-wrap break-words cursor-pointer hover:text-blue-300 transition-colors"
-                            onClick={() => copyToClipboard(message)}
+                            onClick={() => copyToClipboard(getMessageText(message))}
                             title="Click to copy"
                           >
-                            {message}
+                            {getMessageText(message)}
                           </div>
                         )}
                       </div>
@@ -12190,6 +12295,52 @@ const EnhancedCalculator = () => {
                           </React.Fragment>
                         ) : (
                           <React.Fragment>
+                            <div
+                              className="relative"
+                              onMouseEnter={() => {
+                                if (tintPickerCloseTimeout.current) {
+                                  clearTimeout(tintPickerCloseTimeout.current);
+                                  tintPickerCloseTimeout.current = null;
+                                }
+                                setTintPickerIndex(index);
+                              }}
+                              onMouseLeave={() => {
+                                tintPickerCloseTimeout.current = setTimeout(() => {
+                                  setTintPickerIndex(-1);
+                                }, 200);
+                              }}
+                            >
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleTintPicker(index);
+                                }}
+                                className="icon-btn text-sky-300 hover:text-sky-200"
+                                title={`Tint: ${getTintLabel(getMessageTint(message))}`}
+                                aria-label={`Set message tint. Current: ${getTintLabel(getMessageTint(message))}`}
+                                type="button"
+                              >
+                                <Palette size={12} />
+                              </button>
+                              {tintPickerIndex === index && (
+                                <div className="tint-picker">
+                                  {MESSAGE_TINT_OPTIONS.map((option) => (
+                                    <button
+                                      key={option.id}
+                                      type="button"
+                                      className={`tint-swatch ${getTintClass(option.id)} ${option.id === "none" ? "tint-none" : ""}`}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        applyMessageTint(index, option.id);
+                                      }}
+                                      title={option.label}
+                                      aria-label={`Set tint ${option.label}`}
+                                      data-active={getMessageTint(message) === (option.id === "none" ? null : option.id) ? "true" : "false"}
+                                    />
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                             <button
                               onClick={() => startEdit(index)}
                               className="text-yellow-400 hover:text-yellow-300 p-1"

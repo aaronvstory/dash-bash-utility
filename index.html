@@ -285,41 +285,6 @@
       window.addEventListener("focus", () => requestVersionCheck("focus"));
     </script>
 
-    <script src="dash-bash-compiled.js?v=639037799365201488"></script>
-
-    <!-- Diagnostic: Log all component names being used -->
-    <script>
-      (function() {
-        console.log("🔍 Checking all components are defined:");
-        const components = [
-          'Icon', 'Trash2', 'Plus', 'Copy', 'ChevronDown', 'ChevronUp',
-          'ChevronsDown', 'ChevronsUp', 'Edit2', 'Check', 'Save', 'X',
-          'GripVertical', 'Clock', 'MapPin', 'Calculator', 'MessageSquare',
-          'Building2', 'Settings', 'Download', 'Upload', 'RefreshCw',
-          'CheckSquare', 'FolderOpen', 'FileText', 'Timer', 'Users',
-          'TimerOff', 'BarChart3', 'Archive', 'ArchiveRestore', 'UserX',
-          'UserCheck', 'CircleCheck', 'Activity', 'Banknote', 'Lock',
-          'RotateCcw', 'ShieldCheck', 'Spinner', 'CalculatorSection',
-          'MessagesSection', 'AddressBookSection', 'NotesSection',
-          'StatisticsSection', 'DasherCard', 'EnhancedCalculator'
-        ];
-
-        components.forEach(name => {
-          if (typeof window[name] === 'undefined') {
-            console.error(`❌ ${name} is UNDEFINED!`);
-          } else {
-            console.log(`✅ ${name}: ${typeof window[name]}`);
-          }
-        });
-
-        console.log("🔍 Checking getVirtualList:");
-        if (typeof getVirtualList === 'function') {
-          const VList = getVirtualList();
-          console.log(`✅ getVirtualList() returns: ${typeof VList}`, VList);
-        } else {
-          console.error("❌ getVirtualList is not defined!");
-        }
-      })();
-    </script>
+    <script src="dash-bash-compiled.js?v=1768241544624"></script>
   </body>
 </html>
