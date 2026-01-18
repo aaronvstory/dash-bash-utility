@@ -1077,22 +1077,10 @@ const EnhancedCalculator = () => {
     return match ? match.label : "None";
   };
   const getTintClass = (tint) => {
-    switch (tint) {
-      case "indigo":
-        return "tint-chip tint-indigo";
-      case "emerald":
-        return "tint-chip tint-emerald";
-      case "amber":
-        return "tint-chip tint-amber";
-      case "rose":
-        return "tint-chip tint-rose";
-      case "sky":
-        return "tint-chip tint-sky";
-      case "slate":
-        return "tint-chip tint-slate";
-      default:
-        return "tint-chip";
+    if (tint && tint !== 'none') {
+      return `tint-chip tint-${tint}`;
     }
+    return "tint-chip";
   };
   const cloneMessages = (list) =>
     normalizeMessages(list).map((entry) => ({ ...entry }));
@@ -2881,7 +2869,7 @@ const EnhancedCalculator = () => {
     if (targetMessage && targetMessage.tint !== resolvedTint) {
       recordUndo(
         UNDO_TYPES.MESSAGE_EDIT,
-        { index, oldText: targetMessage.text ?? "", prevMessages, tint: resolvedTint },
+        { index, oldText: targetMessage.text ?? "", prevMessages, tint: targetMessage.tint },
         `Updated message tint: "${(targetMessage.text || "").substring(0, 20)}..."`
       );
     }
@@ -12247,7 +12235,7 @@ const EnhancedCalculator = () => {
                 {messages.map((message, index) => (
                   <div
                     key={index}
-                    className={`quick-message-row bg-gray-700/60 hover:bg-gray-700 rounded-lg p-2 transition-colors border border-gray-600/30 ${draggedIndex === index
+                    className={`quick-message-row bg-gray-700/60 ${getMessageTint(message) ? "" : "hover:bg-gray-700"} rounded-lg p-2 transition-colors border border-gray-600/30 ${draggedIndex === index
                       ? "opacity-50 bg-gray-600"
                       : ""
                       }`}

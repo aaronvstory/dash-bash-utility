@@ -1425,27 +1425,27 @@ body.dragging {
 }
 
 .tint-chip.tint-indigo {
-  background: linear-gradient(135deg, rgba(129, 140, 248, 0.9), rgba(99, 102, 241, 0.8));
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.95), rgba(67, 56, 202, 0.95));
 }
 
 .tint-chip.tint-emerald {
-  background: linear-gradient(135deg, rgba(52, 211, 153, 0.9), rgba(16, 185, 129, 0.8));
+  background: linear-gradient(135deg, rgba(5, 150, 105, 0.95), rgba(4, 120, 87, 0.95));
 }
 
 .tint-chip.tint-amber {
-  background: linear-gradient(135deg, rgba(251, 191, 36, 0.9), rgba(245, 158, 11, 0.8));
+  background: linear-gradient(135deg, rgba(217, 119, 6, 0.95), rgba(180, 83, 9, 0.95));
 }
 
 .tint-chip.tint-rose {
-  background: linear-gradient(135deg, rgba(251, 113, 133, 0.9), rgba(244, 63, 94, 0.8));
+  background: linear-gradient(135deg, rgba(225, 29, 72, 0.95), rgba(190, 18, 60, 0.95));
 }
 
 .tint-chip.tint-sky {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.9), rgba(14, 165, 233, 0.8));
+  background: linear-gradient(135deg, rgba(3, 105, 161, 0.95), rgba(7, 89, 133, 0.95));
 }
 
 .tint-chip.tint-slate {
-  background: linear-gradient(135deg, rgba(148, 163, 184, 0.9), rgba(100, 116, 139, 0.8));
+  background: linear-gradient(135deg, rgba(71, 85, 105, 0.95), rgba(51, 65, 85, 0.95));
 }
 
 /* ================================================================
