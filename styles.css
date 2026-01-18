@@ -1340,8 +1340,8 @@ body.dragging {
 }
 
 .quick-message-row[data-tint="slate"] {
-  background: rgba(100, 116, 139, 0.18);
-  border-color: rgba(148, 163, 184, 0.45);
+  background: rgba(234, 179, 8, 0.16);
+  border-color: rgba(250, 204, 21, 0.45);
 }
 
 .quick-message-row[data-tint="indigo"]::before {
@@ -1365,7 +1365,7 @@ body.dragging {
 }
 
 .quick-message-row[data-tint="slate"]::before {
-  background: linear-gradient(180deg, rgba(148, 163, 184, 0.9), rgba(100, 116, 139, 0.85));
+  background: linear-gradient(180deg, rgba(250, 204, 21, 0.9), rgba(234, 179, 8, 0.85));
 }
 
 
@@ -1445,7 +1445,7 @@ body.dragging {
 }
 
 .tint-chip.tint-slate {
-  background: linear-gradient(135deg, rgba(100, 116, 139, 0.95), rgba(71, 85, 105, 0.95));
+  background: linear-gradient(135deg, rgba(250, 204, 21, 0.95), rgba(234, 179, 8, 0.95));
 }
 
 /* ================================================================
