@@ -1106,6 +1106,7 @@ const EnhancedCalculator = () => {
     ]),
   );
   const [tintPickerIndex, setTintPickerIndex] = useState(-1);
+  const tintPickerCloseTimeout = useRef(null);
 
   // Address Book state
   const [categories, setCategories] = useState([
@@ -12294,13 +12295,26 @@ const EnhancedCalculator = () => {
                           </React.Fragment>
                         ) : (
                           <React.Fragment>
-                            <div className="relative">
+                            <div
+                              className="relative"
+                              onMouseEnter={() => {
+                                if (tintPickerCloseTimeout.current) {
+                                  clearTimeout(tintPickerCloseTimeout.current);
+                                  tintPickerCloseTimeout.current = null;
+                                }
+                                setTintPickerIndex(index);
+                              }}
+                              onMouseLeave={() => {
+                                tintPickerCloseTimeout.current = setTimeout(() => {
+                                  setTintPickerIndex(-1);
+                                }, 200);
+                              }}
+                            >
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   toggleTintPicker(index);
                                 }}
-                                onMouseEnter={() => setTintPickerIndex(index)}
                                 className="icon-btn text-sky-300 hover:text-sky-200"
                                 title={`Tint: ${getTintLabel(getMessageTint(message))}`}
                                 aria-label={`Set message tint. Current: ${getTintLabel(getMessageTint(message))}`}
@@ -12309,10 +12323,7 @@ const EnhancedCalculator = () => {
                                 <Palette size={12} />
                               </button>
                               {tintPickerIndex === index && (
-                                <div
-                                  className="tint-picker"
-                                  onMouseLeave={() => setTintPickerIndex(-1)}
-                                >
+                                <div className="tint-picker">
                                   {MESSAGE_TINT_OPTIONS.map((option) => (
                                     <button
                                       key={option.id}
