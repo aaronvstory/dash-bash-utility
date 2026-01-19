@@ -2884,6 +2884,29 @@ const EnhancedCalculator = () => {
     requestPersist();
   };
 
+  // Close tint picker when clicking outside
+  useEffect(() => {
+    if (tintPickerIndex === -1) return;
+
+    const handleClickOutside = (event) => {
+      // Check if click is outside the tint picker
+      const tintPicker = document.querySelector('.tint-picker');
+      const paletteButton = event.target.closest('[aria-label*="Set message tint"]');
+      
+      if (tintPicker && !tintPicker.contains(event.target) && !paletteButton) {
+        setTintPickerIndex(-1);
+      }
+    };
+
+    // Add event listener
+    document.addEventListener('mousedown', handleClickOutside);
+    
+    // Cleanup
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [tintPickerIndex]);
+
   const handleDragOver = (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
