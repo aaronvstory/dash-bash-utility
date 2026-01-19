@@ -2908,11 +2908,11 @@ const EnhancedCalculator = () => {
     };
 
     // Add event listener
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('pointerdown', handleClickOutside);
 
     // Cleanup
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('pointerdown', handleClickOutside);
     };
   }, [tintPickerIndex]);
 
@@ -12363,7 +12363,15 @@ const EnhancedCalculator = () => {
                           </React.Fragment>
                         ) : (
                           <React.Fragment>
-                            <div className="relative">
+                            <div
+                              className="relative"
+                              onMouseLeave={(e) => {
+                                // Only close if this message's picker is open
+                                if (tintPickerIndex === index) {
+                                  setTintPickerIndex(-1);
+                                }
+                              }}
+                            >
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
