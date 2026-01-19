@@ -1047,6 +1047,11 @@ const EnhancedCalculator = () => {
     { id: "rose", label: "Rose" },
     { id: "sky", label: "Sky" },
     { id: "slate", label: "Slate" },
+    { id: "violet", label: "Violet" },
+    { id: "cyan", label: "Cyan" },
+    { id: "lime", label: "Lime" },
+    { id: "orange", label: "Orange" },
+    { id: "fuchsia", label: "Fuchsia" },
   ];
   const normalizeMessageEntry = (entry) => {
     if (typeof entry === "string") {
@@ -1106,7 +1111,7 @@ const EnhancedCalculator = () => {
     ]),
   );
   const [tintPickerIndex, setTintPickerIndex] = useState(-1);
-  const tintPickerCloseTimeout = useRef(null);
+  const tintPickerRef = useRef(null);
 
   // Address Book state
   const [categories, setCategories] = useState([
@@ -2884,6 +2889,70 @@ const EnhancedCalculator = () => {
     setTintPickerIndex(-1);
     requestPersist();
   };
+
+  // Close tint picker when clicking outside
+  // Note: Only one tint picker can be open at a time (tintPickerIndex is a single number),
+  // so tintPickerRef always points to the currently open picker
+  useEffect(() => {
+    if (tintPickerIndex === -1) return;
+
+    const handleClickOutside = (event) => {
+      // Check if click is on a palette button (let it handle the toggle)
+      // Use optional chaining to handle text nodes (which don't have .closest)
+      const paletteButton = event.target.closest?.('[aria-label*="Set message tint"]');
+      if (paletteButton) return;
+
+      // Check if click is inside the tint picker using ref
+      if (tintPickerRef.current && !tintPickerRef.current.contains(event.target)) {
+        setTintPickerIndex(-1);
+      }
+    };
+
+    // Add event listener
+    document.addEventListener('pointerdown', handleClickOutside);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('pointerdown', handleClickOutside);
+    };
+  }, [tintPickerIndex]);
+
+  // Keyboard navigation for tint picker
+  useEffect(() => {
+    if (tintPickerIndex === -1) return;
+
+    const handleKeyDown = (event) => {
+      // Escape closes the picker
+      if (event.key === 'Escape') {
+        setTintPickerIndex(-1);
+        event.preventDefault();
+      }
+    };
+
+    // Add event listener
+    document.addEventListener('keydown', handleKeyDown);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [tintPickerIndex]);
+
+  // Viewport overflow detection for tint picker positioning
+  useEffect(() => {
+    if (tintPickerIndex === -1 || !tintPickerRef.current) return;
+
+    const picker = tintPickerRef.current;
+    const rect = picker.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+
+    // Check if picker overflows bottom of viewport
+    if (rect.bottom > viewportHeight - 20) {
+      picker.classList.add('position-above');
+    } else {
+      picker.classList.remove('position-above');
+    }
+  }, [tintPickerIndex]);
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -12297,17 +12366,11 @@ const EnhancedCalculator = () => {
                           <React.Fragment>
                             <div
                               className="relative"
-                              onMouseEnter={() => {
-                                if (tintPickerCloseTimeout.current) {
-                                  clearTimeout(tintPickerCloseTimeout.current);
-                                  tintPickerCloseTimeout.current = null;
-                                }
-                                setTintPickerIndex(index);
-                              }}
-                              onMouseLeave={() => {
-                                tintPickerCloseTimeout.current = setTimeout(() => {
+                              onMouseLeave={(e) => {
+                                // Only close if this message's picker is open
+                                if (tintPickerIndex === index) {
                                   setTintPickerIndex(-1);
-                                }, 200);
+                                }
                               }}
                             >
                               <button
@@ -12323,7 +12386,7 @@ const EnhancedCalculator = () => {
                                 <Palette size={12} />
                               </button>
                               {tintPickerIndex === index && (
-                                <div className="tint-picker">
+                                <div className="tint-picker" ref={tintPickerRef}>
                                   {MESSAGE_TINT_OPTIONS.map((option) => (
                                     <button
                                       key={option.id}
