@@ -5,6 +5,7 @@
   "description": "Progressive Web App for DoorDash delivery drivers with target calculator, dashers management, and address book",
   "license": "UNLICENSED",
   "scripts": {
+    "test": "node test-dom-smoke.js",
     "test:dom": "node test-dom-smoke.js",
     "extract-jsx": "node extract-jsx.js",
     "compile": "babel dash-bash-component.jsx --out-file dash-bash-compiled.js --presets @babel/preset-react --compact --no-comments",

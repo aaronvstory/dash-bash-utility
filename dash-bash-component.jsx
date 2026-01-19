@@ -2937,6 +2937,22 @@ const EnhancedCalculator = () => {
     };
   }, [tintPickerIndex]);
 
+  // Viewport overflow detection for tint picker positioning
+  useEffect(() => {
+    if (tintPickerIndex === -1 || !tintPickerRef.current) return;
+
+    const picker = tintPickerRef.current;
+    const rect = picker.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+
+    // Check if picker overflows bottom of viewport
+    if (rect.bottom > viewportHeight - 20) {
+      picker.classList.add('position-above');
+    } else {
+      picker.classList.remove('position-above');
+    }
+  }, [tintPickerIndex]);
+
   const handleDragOver = (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
