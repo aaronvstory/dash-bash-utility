@@ -1046,9 +1046,9 @@ const EnhancedCalculator = () => {
     { id: "amber", label: "Amber" },
     { id: "rose", label: "Rose" },
     { id: "sky", label: "Sky" },
-    { id: "slate", label: "Slate" },
+    { id: "stone", label: "Stone" },
     { id: "violet", label: "Violet" },
-    { id: "cyan", label: "Cyan" },
+    { id: "teal", label: "Teal" },
     { id: "lime", label: "Lime" },
     { id: "orange", label: "Orange" },
     { id: "fuchsia", label: "Fuchsia" },
@@ -12364,22 +12364,18 @@ const EnhancedCalculator = () => {
                           </React.Fragment>
                         ) : (
                           <React.Fragment>
-                            <div
-                              className="relative"
-                              onMouseLeave={(e) => {
-                                // Only close if this message's picker is open
-                                if (tintPickerIndex === index) {
-                                  setTintPickerIndex(-1);
-                                }
-                              }}
-                            >
+                            <div className="relative">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   toggleTintPicker(index);
                                 }}
-                                className="icon-btn text-sky-300 hover:text-sky-200"
-                                title={`Tint: ${getTintLabel(getMessageTint(message))}`}
+                                className={`icon-btn ${
+    tintPickerIndex === index
+      ? 'bg-gray-700 ring-2 ring-sky-400 text-sky-100'
+      : 'text-sky-300 hover:text-sky-200'
+  }`}
+  title={`Tint: ${getTintLabel(getMessageTint(message))}`}
                                 aria-label={`Set message tint. Current: ${getTintLabel(getMessageTint(message))}`}
                                 type="button"
                               >
