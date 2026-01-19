@@ -2886,6 +2886,8 @@ const EnhancedCalculator = () => {
   };
 
   // Close tint picker when clicking outside
+  // Note: Only one tint picker can be open at a time (tintPickerIndex is a single number),
+  // so tintPickerRef always points to the currently open picker
   useEffect(() => {
     if (tintPickerIndex === -1) return;
 
