@@ -1106,6 +1106,7 @@ const EnhancedCalculator = () => {
     ]),
   );
   const [tintPickerIndex, setTintPickerIndex] = useState(-1);
+  const tintPickerRef = useRef(null);
 
   // Address Book state
   const [categories, setCategories] = useState([
@@ -2889,11 +2890,12 @@ const EnhancedCalculator = () => {
     if (tintPickerIndex === -1) return;
 
     const handleClickOutside = (event) => {
-      // Check if click is outside the tint picker
-      const tintPicker = document.querySelector('.tint-picker');
+      // Check if click is on a palette button (let it handle the toggle)
       const paletteButton = event.target.closest('[aria-label*="Set message tint"]');
+      if (paletteButton) return;
       
-      if (tintPicker && !tintPicker.contains(event.target) && !paletteButton) {
+      // Check if click is inside the tint picker using ref
+      if (tintPickerRef.current && !tintPickerRef.current.contains(event.target)) {
         setTintPickerIndex(-1);
       }
     };
@@ -12331,7 +12333,7 @@ const EnhancedCalculator = () => {
                                 <Palette size={12} />
                               </button>
                               {tintPickerIndex === index && (
-                                <div className="tint-picker">
+                                <div className="tint-picker" ref={tintPickerRef}>
                                   {MESSAGE_TINT_OPTIONS.map((option) => (
                                     <button
                                       key={option.id}
