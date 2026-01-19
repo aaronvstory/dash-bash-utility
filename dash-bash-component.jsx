@@ -12305,7 +12305,7 @@ const EnhancedCalculator = () => {
                 {messages.map((message, index) => (
                   <div
                     key={index}
-                    className={`quick-message-row bg-gray-700/60 ${getMessageTint(message) ? "" : "hover:bg-gray-700"} rounded-lg p-2 transition-colors border border-gray-600/30 ${draggedIndex === index
+                    className={`quick-message-row ${getTintClass(getMessageTint(message))} bg-gray-700/60 ${getMessageTint(message) ? "" : "hover:bg-gray-700"} rounded-lg p-2 transition-colors border border-gray-600/30 ${draggedIndex === index
                       ? "opacity-50 bg-gray-600"
                       : ""
                       }`}
