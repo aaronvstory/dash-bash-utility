@@ -1,5 +1,4 @@
 @echo off
-echo Starting Dash Bash PWA Server...
-echo.
-python serve-pwa.py
+REM Simple launcher that calls the full PowerShell script
+powershell -ExecutionPolicy Bypass -File "%~dp0serve-pwa.ps1"
 pause
