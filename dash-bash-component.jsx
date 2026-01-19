@@ -1106,7 +1106,6 @@ const EnhancedCalculator = () => {
     ]),
   );
   const [tintPickerIndex, setTintPickerIndex] = useState(-1);
-  const tintPickerCloseTimeout = useRef(null);
 
   // Address Book state
   const [categories, setCategories] = useState([
@@ -12295,21 +12294,7 @@ const EnhancedCalculator = () => {
                           </React.Fragment>
                         ) : (
                           <React.Fragment>
-                            <div
-                              className="relative"
-                              onMouseEnter={() => {
-                                if (tintPickerCloseTimeout.current) {
-                                  clearTimeout(tintPickerCloseTimeout.current);
-                                  tintPickerCloseTimeout.current = null;
-                                }
-                                setTintPickerIndex(index);
-                              }}
-                              onMouseLeave={() => {
-                                tintPickerCloseTimeout.current = setTimeout(() => {
-                                  setTintPickerIndex(-1);
-                                }, 200);
-                              }}
-                            >
+                            <div className="relative">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
