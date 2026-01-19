@@ -1106,6 +1106,7 @@ const EnhancedCalculator = () => {
     ]),
   );
   const [tintPickerIndex, setTintPickerIndex] = useState(-1);
+  const tintPickerRef = useRef(null);
 
   // Address Book state
   const [categories, setCategories] = useState([
@@ -2883,6 +2884,53 @@ const EnhancedCalculator = () => {
     setTintPickerIndex(-1);
     requestPersist();
   };
+
+  // Close tint picker when clicking outside
+  // Note: Only one tint picker can be open at a time (tintPickerIndex is a single number),
+  // so tintPickerRef always points to the currently open picker
+  useEffect(() => {
+    if (tintPickerIndex === -1) return;
+
+    const handleClickOutside = (event) => {
+      // Check if click is on a palette button (let it handle the toggle)
+      const paletteButton = event.target.closest('[aria-label*="Tint:"]');
+      if (paletteButton) return;
+
+      // Check if click is inside the tint picker using ref
+      if (tintPickerRef.current && !tintPickerRef.current.contains(event.target)) {
+        setTintPickerIndex(-1);
+      }
+    };
+
+    // Add event listener
+    document.addEventListener('mousedown', handleClickOutside);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [tintPickerIndex]);
+
+  // Keyboard navigation for tint picker
+  useEffect(() => {
+    if (tintPickerIndex === -1) return;
+
+    const handleKeyDown = (event) => {
+      // Escape closes the picker
+      if (event.key === 'Escape') {
+        setTintPickerIndex(-1);
+        event.preventDefault();
+      }
+    };
+
+    // Add event listener
+    document.addEventListener('keydown', handleKeyDown);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [tintPickerIndex]);
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -12308,7 +12356,7 @@ const EnhancedCalculator = () => {
                                 <Palette size={12} />
                               </button>
                               {tintPickerIndex === index && (
-                                <div className="tint-picker">
+                                <div className="tint-picker" ref={tintPickerRef}>
                                   {MESSAGE_TINT_OPTIONS.map((option) => (
                                     <button
                                       key={option.id}
