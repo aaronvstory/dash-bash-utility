@@ -1047,6 +1047,11 @@ const EnhancedCalculator = () => {
     { id: "rose", label: "Rose" },
     { id: "sky", label: "Sky" },
     { id: "slate", label: "Slate" },
+    { id: "violet", label: "Violet" },
+    { id: "cyan", label: "Cyan" },
+    { id: "lime", label: "Lime" },
+    { id: "orange", label: "Orange" },
+    { id: "fuchsia", label: "Fuchsia" },
   ];
   const normalizeMessageEntry = (entry) => {
     if (typeof entry === "string") {
@@ -2893,7 +2898,7 @@ const EnhancedCalculator = () => {
 
     const handleClickOutside = (event) => {
       // Check if click is on a palette button (let it handle the toggle)
-      const paletteButton = event.target.closest('[aria-label*="Tint:"]');
+      const paletteButton = event.target.closest('[aria-label*="Set message tint"]');
       if (paletteButton) return;
 
       // Check if click is inside the tint picker using ref
